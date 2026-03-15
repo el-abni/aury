@@ -1,96 +1,161 @@
-# 💜 Aury
-![Versão](https://img.shields.io/badge/versão-1.1-purple)
-![Licença](https://img.shields.io/badge/licença-MIT-green)
+#💜Aury
+
+**Terminal Assistant for CachyOS (Fish shell)**
+
+A Aury é uma assistente de terminal criada para simplificar tarefas comuns no CachyOS e Arch Linux usando comandos em linguagem natural.
+
+![Version](https://img.shields.io/badge/version-1.2-purple)
 ![Shell](https://img.shields.io/badge/shell-fish-blue)
-
-Assistente de terminal para Linux.
-
-A Aury é uma assistente de linha de comando criada para **CachyOS e sistemas baseados em Arch Linux**.  
-Ela ajuda a executar tarefas comuns do sistema usando comandos simples e diretos.
+![License](https://img.shields.io/badge/license-MIT-green)
 
 ---
 
-## ✨ Recursos
+# Sobre
 
-- 📦 Instalar e remover pacotes  
-- 🔎 Procurar pacotes  
-- 🚀 Otimizar o sistema  
-- 📊 Ver informações do sistema  
-- 🌐 Testar conexão de rede  
-- 📁 Criar e remover arquivos ou pastas  
-- 🛠 Ferramentas para desenvolvimento (`aury dev`)
+A Aury funciona como uma **assistente inteligente para o terminal**, permitindo executar operações comuns do sistema com comandos simples e naturais.
 
----
+Ela foi projetada para ser:
 
-## ⚙️ Requisitos
+* simples
+* rápida
+* amigável para iniciantes
+* útil para usuários avançados
 
-- Linux  
-- Fish Shell  
-- Sistema baseado em Arch Linux (pacman / paru)
+Tudo rodando diretamente no **Fish shell**.
 
 ---
 
-## 📦 Instalação
+# Recursos
+
+## Pacotes
+
+```bash
+aury instalar firefox
+aury remover vlc
+aury procurar steam
+```
+
+A Aury gerencia pacotes usando:
+
+* pacman
+* paru (se disponível)
+* flatpak (fallback)
+
+---
+
+## Sistema
+
+```bash
+aury atualizar sistema
+aury otimizar sistema
+aury status
+```
+
+A Aury pode:
+
+* atualizar o sistema
+* limpar cache
+* remover pacotes órfãos
+* mostrar uma visão geral do sistema
+
+---
+
+## Informações do sistema
+
+```bash
+aury ver cpu
+aury ver memória
+aury ver disco
+aury ver gpu
+aury ver processos
+```
+
+A Aury mostra informações úteis do sistema diretamente no terminal.
+
+---
+
+## Rede
+
+```bash
+aury ver ip
+aury testar internet
+aury ping google.com
+```
+
+A Aury também pode ajudar no diagnóstico de conectividade.
+
+---
+
+## Arquivos
+
+```bash
+aury criar arquivo teste.txt
+aury criar pasta projetos
+aury copiar arquivo teste.txt backup.txt
+aury mover arquivo teste.txt pasta/teste.txt
+aury renomear arquivo teste.txt novo.txt
+aury remover arquivo teste.txt
+```
+
+A Aury permite gerenciar arquivos e pastas usando linguagem natural.
+
+---
+
+## Utilidades internas
+
+```bash
+aury reload
+aury dev
+```
+
+* **reload** → recarrega a Aury
+* **dev** → verifica se o código da Aury contém erros
+
+---
+
+# Instalação
 
 Clone o repositório:
 
+```bash
 git clone https://github.com/el-abni/aury.git
-
-Entre na pasta do projeto:
-
 cd aury
+```
 
 Execute o instalador:
 
+```bash
 ./install.sh
+```
 
 ---
 
-## 🚀 Uso
+# Requisitos
 
-Alguns exemplos de comandos:
-
-aury instalar firefox  
-aury remover vlc  
-aury procurar steam  
-
-aury ver cpu  
-aury ver memória  
-aury ver disco  
-
-aury testar internet  
-aury ping google.com  
+* CachyOS ou Arch Linux
+* Fish shell
 
 ---
 
-## 🛠 Desenvolvimento
-
-Verificar o código da Aury:
-
-aury dev
-
-Recarregar a assistente após alterações:
-
-aury reload
-
----
-
-## 📂 Estrutura do projeto
+# Estrutura do projeto
 
 ```
 aury
-├─ bin/
-│  └─ aury.fish
-├─ CHANGELOG.md
-├─ LICENSE.md
-├─ README.md
-├─ VERSION
-├─ install.sh
-└─ uninstall.sh
+ ├── bin/
+ │   └── aury.fish
+ ├── install.sh
+ ├── uninstall.sh
+ ├── README.md
+ ├── CHANGELOG.md
+ └── VERSION
 ```
 
 ---
 
-## 📜 Licença
+# Licença
 
-Este projeto está licenciado sob a licença MIT.
+MIT License
+
+---
+
+Projeto criado por **Abni**
