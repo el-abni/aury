@@ -5,7 +5,7 @@
 
 Assistente de terminal para Linux.
 
-Aury é uma assistente de linha de comando criada para **CachyOS e sistemas baseados em Arch Linux**.  
+A Aury é uma assistente de linha de comando criada para **CachyOS e sistemas baseados em Arch Linux**.  
 Ela ajuda a executar tarefas comuns do sistema usando comandos simples e diretos.
 
 ---
