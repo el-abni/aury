@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 echo ""
-echo "💜 Instalando Aury..."
+echo "💜 Instalando a Aury..."
 echo ""
 
 mkdir -p ~/.config/fish/functions
@@ -9,7 +9,7 @@ mkdir -p ~/.config/fish/functions
 cp bin/aury.fish ~/.config/fish/functions/
 
 echo ""
-echo "✅ Aury foi instalada com sucesso!"
+echo "✅A Aury foi instalada com sucesso!"
 echo ""
 echo "Para começar, execute:"
 echo ""
