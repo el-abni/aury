@@ -6,7 +6,7 @@ O formato segue o padrão de versionamento do projeto.
 
 ---
 
-## 1.1
+## v1.1
 
 ### Adicionado
 - Proteção avançada na entrada de comandos
@@ -20,7 +20,7 @@ O formato segue o padrão de versionamento do projeto.
 
 ---
 
-## 1.0
+## v1.0
 
 ### Inicial
 - Primeira versão funcional da Aury
