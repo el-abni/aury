@@ -43,7 +43,11 @@ aury instalar firefox
 aury remover vlc  
 aury procurar steam  
 aury ver cpu  
-aury testar internet  
+aury testar internet
+
+Ajuda com comandos:
+
+aury ajuda  
 
 ---
 
