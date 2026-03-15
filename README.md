@@ -1,4 +1,7 @@
 # 💜 Aury
+![Versão](https://img.shields.io/badge/versão-1.1-purple)
+![Licença](https://img.shields.io/badge/licença-MIT-green)
+![Shell](https://img.shields.io/badge/shell-fish-blue)
 
 Assistente de terminal para Linux.
 
