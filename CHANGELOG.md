@@ -4,6 +4,22 @@ Todas as mudanças importantes da Aury serão documentadas aqui.
 
 O formato segue o padrão de versionamento do projeto.
 
+## v1.2
+
+### Melhorias
+- Parser de comandos mais robusto
+- Melhor normalização de linguagem natural
+- Preservação correta de nomes de arquivos e caminhos
+- Melhor suporte a múltiplas ações
+
+### Correções
+- Corrigido problema de compatibilidade com `test` no Fish
+- Corrigido escopo de variáveis que afetava operações de arquivo
+- Corrigidas operações de criar, copiar, renomear e mover arquivos
+- `aury reload` e `aury dev` funcionando corretamente
+
+### Estabilidade
+- Versão validada em testes reais no CachyOS com Fish shell
 ---
 
 ## v1.1

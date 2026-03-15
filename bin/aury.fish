@@ -1,167 +1,206 @@
 # ==========================================================
-# 💜 Aury v1.1
+# 💜 Aury 1.2
 # Terminal Assistant for CachyOS
 # Shell: fish
 # ==========================================================
 
 function aury
 
-# -------------------------------------------------
-# 0. proteção
-# -------------------------------------------------
+    # -------------------------------------------------
+    # helpers internos
+    # -------------------------------------------------
 
-# sem argumentos
-if test (count $argv) -eq 0
-    echo "💜 Aury"
-    echo "Digite: aury ajuda"
-    return
-end
+    function __aury_norm_token --argument-names tok
+        set -l t (string lower -- $tok)
+        set t (string replace -ra '^[[:punct:]]+|[[:punct:]]+$' '' -- $t)
 
-# juntar argumentos
-set raw (string join " " $argv)
+        switch $t
+            case o a os as um uma uns umas de do da dos das pra para por com sobre em no na nos nas ao aos à às \
+                 porfavor favor gentileza me mim ai aí pode poderia poderiame poderia-me
+                echo __IGNORE__
 
-# remover espaços extras
-set raw (string trim $raw)
+            case e
+                echo e
 
-# remover quebras de linha
-set raw (string replace -a "\n" " " $raw)
+            case ajuda help socorro manual comandos
+                echo ajuda
 
-# se entrada ficou vazia
-if test -z "$raw"
-    echo "💜 Aury"
-    echo "Digite: aury ajuda"
-    return
-end
+            case reload recarregar reiniciar
+                echo reload
+            case dev developer desenvolvedor diagnostico diagnóstico validar verificar
+                echo dev
 
-# proteger contra apenas pontuação
-set test_clean (string replace -ra "[[:punct:]]" "" $raw)
+            case instalar instala instale instalaram adicionar add instalr isntalar instal
+                echo instalar
+            case remover remove remov deletar excluir apagar desinstalar desinstala desinstale uninstall removr remvoe
+                echo remover
+            case procurar procura buscar busca pesquise pesquisar acha achar encontrar localizar procra procuar pesquisr
+                echo procurar
 
-if test -z (string trim $test_clean)
-    echo "❌ comando inválido"
-    return
-end
+            case criar cria crie gerar fazer
+                echo criar
+            case copiar copia cp duplicar copar copiarr
+                echo copiar
+            case mover move mv movr moevr enviar
+                echo mover
+            case renomear renomeia renomeie rename renomar renoemar renomea
+                echo renomear
+            case status estado info infos informação informacoes informações
+                echo status
+            case ver veja mostra mostrar exibir listar
+                echo ver
+            case atualizar atualiza update upgrade sincronizar
+                echo atualizar
+            case otimizar otimiza limpar limpa melhorar
+                echo otimizar
+            case abrir abre open
+                echo abrir
 
-# -------------------------------------------------
-# 1. parser base
-# -------------------------------------------------
+            case testar teste internet rede conexão conexao conectar
+                echo internet
+            case ping
+                echo ping
 
-# normalizar texto
-set lower (string lower $raw)
+            case pasta diretório diretorio folder diretoro
+                echo pasta
+            case arquivo ficheiro file
+                echo arquivo
+            case pacote pacotes app aplicativo programa
+                echo __IGNORE__
+            case sistema
+                echo sistema
 
-# remover pontuações comuns
-set lower (string replace -a "," "" $lower)
-set lower (string replace -a "." "" $lower)
-set lower (string replace -a "?" "" $lower)
-set lower (string replace -a "!" "" $lower)
+            case processo processos
+                echo processos
+            case memoria memora memori ram memória
+                echo memória
+            case disco armazenamento hd ssd
+                echo disco
+            case gpu video vídeo grafico gráfico grafica gráfica
+                echo gpu
+            case cpu processador
+                echo cpu
+            case ip endereço endereco
+                echo ip
 
-# remover múltiplos espaços
-set lower (string replace -ra "\s+" " " $lower)
-
-# separar múltiplas ações
-# exemplo: "instalar firefox e abrir pasta"
-set actions (string split " e " $lower)
-
-for action in $actions
-
-    # limpar espaços laterais
-    set action (string trim $action)
-
-    # ignorar ação vazia
-    if test -z "$action"
-        continue
+            case '*'
+                echo $t
+        end
     end
 
-    # transformar frase em palavras
-    set words (string split " " $action)
+    function __aury_is_action_start --argument-names tok
+        set -l n (__aury_norm_token $tok)
 
-# -------------------------------------------------
-# 2. normalização inteligente
-# -------------------------------------------------
+        if contains -- $n ajuda reload dev instalar remover procurar criar copiar mover renomear status ver atualizar otimizar abrir internet ping
+            return 0
+        end
 
-set normalized
+        return 1
+    end
 
-for w in $words
+    # -------------------------------------------------
+    # 0 — proteção de entrada
+    # -------------------------------------------------
 
-# correção de digitação
-switch $w
-case instalr isntalar instal
-set w instalar
-case removr remvoe
-set w remover
-case procra procuar
-set w procurar
-end
+    if test (count $argv) -eq 0
+        echo "❌ comando inválido"
+        return 1
+    end
 
+    set -l raw_tokens $argv
+    set -l raw_text (string join " " -- $raw_tokens)
+    set raw_text (string trim -- $raw_text)
 
-switch $w
+    if test -z "$raw_text"
+        echo "❌ comando inválido"
+        return 1
+    end
 
-# palavras ignoradas
-case o a os as um uma de do da pra para por favor porfavor poderia pode poderia-me me mim ai aí
-continue
+    set -l clean_check (string replace -ra '[[:space:][:punct:]]' '' -- $raw_text)
 
-# instalar
-case instala instalar instale instalaram adicionar add
-set normalized $normalized instalar
+    if test -z "$clean_check"
+        echo "❌ comando inválido"
+        return 1
+    end
 
-# remover
-case remover remove remov deletar excluir apagar desinstalar desinstala desinstale uninstall
-set normalized $normalized remover
+    if string match -rq '^[0-9 ]+$' -- $raw_text
+        echo "❌ comando inválido"
+        return 1
+    end
 
-# procurar
-case procurar procura buscar busca pesquise pesquisar acha achar encontrar
-set normalized $normalized procurar
+    # -------------------------------------------------
+    # 1 — detectar múltiplas ações com "e"
+    # -------------------------------------------------
 
-# criar
-case criar cria crie gerar
-set normalized $normalized criar
+    set -l action_starts 1
+    set -l action_ends
 
-# ver
-case ver veja mostra mostrar exibir
-set normalized $normalized ver
+    set -l total (count $raw_tokens)
+    set -l i 1
 
-# atualizar
-case atualizar atualiza update upgrade
-set normalized $normalized atualizar
+    while test $i -lt $total
+        set -l current_norm (__aury_norm_token $raw_tokens[$i])
+        set -l next_token $raw_tokens[(math $i + 1)]
 
-# otimizar
-case limpar limpa otimizar otimiza
-set normalized $normalized otimizar
+        if test "$current_norm" = "e"
+            if __aury_is_action_start $next_token
+                set action_ends $action_ends (math $i - 1)
+                set action_starts $action_starts (math $i + 1)
+            end
+        end
 
-# rede
-case testar teste
-set normalized $normalized internet
+        set i (math $i + 1)
+    end
 
-# arquivos
-case pasta diretório diretorio folder
-set normalized $normalized pasta
+    set action_ends $action_ends $total
 
-case arquivo file
-set normalized $normalized arquivo
+    # -------------------------------------------------
+    # 2 — processar cada ação
+    # -------------------------------------------------
 
-case "*"
-set normalized $normalized $w
+    set -l action_idx 1
 
-end
+    while test $action_idx -le (count $action_starts)
+        set -l start $action_starts[$action_idx]
+        set -l finish $action_ends[$action_idx]
 
-end
+        if test $finish -lt $start
+            set action_idx (math $action_idx + 1)
+            continue
+        end
 
-set words $normalized
+        set -l action_tokens $raw_tokens[$start..$finish]
 
-if test (count $words) -eq 0
-continue
-end
+        set -l norm_words
+        set -l orig_words
 
-set last $words[-1]
+        for tok in $action_tokens
+            set -l norm (__aury_norm_token $tok)
 
+            if test "$norm" = "__IGNORE__"
+                continue
+            end
 
-# -------------------------------------------------
-# 3. ajuda
-# -------------------------------------------------
+            if test "$norm" = "e"
+                continue
+            end
 
-if contains ajuda $words
+            set norm_words $norm_words $norm
+            set orig_words $orig_words $tok
+        end
 
-echo "
-💜 Aury 1.1
+        if test (count $norm_words) -eq 0
+            set action_idx (math $action_idx + 1)
+            continue
+        end
+
+        # -------------------------------------------------
+        # 3 — ajuda
+        # -------------------------------------------------
+
+        if contains -- ajuda $norm_words
+            echo "
+💜 Aury 1.2
 
 PACOTES
 aury instalar firefox
@@ -189,320 +228,600 @@ ARQUIVOS
 aury criar arquivo teste.txt
 aury criar pasta projetos
 aury remover arquivo teste.txt
+aury copiar arquivo teste.txt backup.txt
+aury mover arquivo teste.txt pasta/teste.txt
+aury renomear arquivo teste.txt novo.txt
+
+EXTRAS
+aury reload
+aury dev
 "
-
-continue
-end
-
-# -------------------------------------------------
-# 3.1 recarregar aury
-# -------------------------------------------------
-
-if string match -q "*reload*" $raw
-
-    set file ~/.config/fish/functions/aury.fish
-
-    if not test -f $file
-        echo "❌ arquivo da Aury não encontrado"
-        return
-    end
-
-    echo "🔄 recarregando Aury..."
-
-    source $file
-
-    if test $status -eq 0
-        echo "✅ Aury recarregada"
-    else
-        echo "❌ erro ao recarregar"
-    end
-
-    return
-end
-
-# -------------------------------------------------
-# 3.2 modo desenvolvedor
-# -------------------------------------------------
-
-if string match -q "*dev*" $raw
-
-    set file ~/.config/fish/functions/aury.fish
-
-    if not test -f $file
-        echo "❌ arquivo da Aury não encontrado"
-        return
-    end
-
-    echo "🛠 verificando código da Aury..."
-
-    set result (fish --no-execute $file 2>&1)
-
-    if test $status -eq 0
-        echo "✅ código válido"
-    else
-        echo "❌ erro detectado"
-
-        set line (string match -r "linha [0-9]+" $result)
-
-        if test -n "$line"
-            echo "📍 erro encontrado na $line"
+            set action_idx (math $action_idx + 1)
+            continue
         end
 
-        echo ""
-        echo $result
+        # -------------------------------------------------
+        # 3.1 — reload
+        # -------------------------------------------------
+
+        if contains -- reload $norm_words
+            set -l file ~/.config/fish/functions/aury.fish
+
+            if not test -f $file
+                echo "❌ arquivo da Aury não encontrado"
+                return 1
+            end
+
+            echo "🔄 recarregando Aury..."
+
+            source $file
+
+            if test $status -eq 0
+                echo "✅ Aury recarregada"
+            else
+                echo "❌ erro ao recarregar"
+            end
+
+            return
+        end
+
+        # -------------------------------------------------
+        # 3.2 — dev
+        # -------------------------------------------------
+
+        if contains -- dev $norm_words
+            set -l file ~/.config/fish/functions/aury.fish
+
+            if not test -f $file
+                echo "❌ arquivo da Aury não encontrado"
+                return 1
+            end
+
+            echo "🛠 verificando código da Aury..."
+
+            set -l result (fish --no-execute $file 2>&1)
+
+            if test $status -eq 0
+                echo "✅ código válido"
+            else
+                echo "❌ erro detectado"
+
+                set -l line (string match -r 'line [0-9]+|linha [0-9]+' -- $result)
+
+                if test -n "$line"
+                    echo "📍 erro encontrado em: $line"
+                end
+
+                echo ""
+                echo $result
+            end
+
+            return
+        end
+
+        # -------------------------------------------------
+        # 4 — atualizar sistema
+        # -------------------------------------------------
+
+        if contains -- atualizar $norm_words
+            echo "📦 atualizando sistema"
+
+            if type -q paru
+                paru -Syu
+            else
+                sudo pacman -Syu
+            end
+
+            set action_idx (math $action_idx + 1)
+            continue
+        end
+
+        # -------------------------------------------------
+        # 5 — otimizar sistema
+        # -------------------------------------------------
+
+        if contains -- otimizar $norm_words
+            echo "🚀 otimizando sistema"
+
+            if type -q paccache
+                sudo paccache -rk2
+            end
+
+            sudo journalctl --vacuum-time=7d
+
+            set -l orphans (pacman -Qtdq 2>/dev/null)
+
+            if test -n "$orphans"
+                sudo pacman -Rns -- $orphans
+            else
+                echo "ℹ️ nenhum pacote órfão encontrado"
+            end
+
+            set action_idx (math $action_idx + 1)
+            continue
+        end
+
+        # -------------------------------------------------
+        # 6 — status
+        # -------------------------------------------------
+
+        if contains -- status $norm_words
+            echo "CPU"
+            lscpu | grep -i "model name"
+
+            echo ""
+            echo "RAM"
+            free -h
+
+            echo ""
+            echo "DISCO"
+            df -h /
+
+            echo ""
+            echo "UPTIME"
+            uptime -p
+
+            set action_idx (math $action_idx + 1)
+            continue
+        end
+
+        # -------------------------------------------------
+        # 7 — informações do sistema
+        # -------------------------------------------------
+
+        if contains -- cpu $norm_words
+            lscpu
+            set action_idx (math $action_idx + 1)
+            continue
+        end
+
+        if contains -- memória $norm_words
+            free -h
+            set action_idx (math $action_idx + 1)
+            continue
+        end
+
+        if contains -- disco $norm_words
+            df -h
+            set action_idx (math $action_idx + 1)
+            continue
+        end
+
+        if contains -- gpu $norm_words
+            lspci | grep -Ei "vga|3d|display"
+            set action_idx (math $action_idx + 1)
+            continue
+        end
+
+        if contains -- processos $norm_words
+            ps aux --sort=-%cpu | head -15
+            set action_idx (math $action_idx + 1)
+            continue
+        end
+
+        # -------------------------------------------------
+        # 8 — rede
+        # -------------------------------------------------
+
+        if contains -- ip $norm_words
+            ip a
+            set action_idx (math $action_idx + 1)
+            continue
+        end
+
+        if contains -- internet $norm_words; and not contains -- ping $norm_words
+            ping -c 2 -- 8.8.8.8
+            set action_idx (math $action_idx + 1)
+            continue
+        end
+
+        if contains -- ping $norm_words
+            set -l idx (contains -i -- ping $norm_words)
+
+            if test (count $orig_words) -le $idx
+                echo "❌ especifique host"
+            else
+                set -l host (string join " " -- $orig_words[(math $idx + 1)..-1])
+                ping -c 2 -- $host
+            end
+
+            set action_idx (math $action_idx + 1)
+            continue
+        end
+
+        # -------------------------------------------------
+        # 9 — procurar pacote
+        # -------------------------------------------------
+
+        if contains -- procurar $norm_words
+            set -l idx (contains -i -- procurar $norm_words)
+
+            if test (count $orig_words) -gt $idx
+                set -l search (string join " " -- $orig_words[(math $idx + 1)..-1])
+                pacman -Ss -- $search
+            else
+                echo "❌ termo não especificado"
+            end
+
+            set action_idx (math $action_idx + 1)
+            continue
+        end
+
+        # -------------------------------------------------
+        # 10 — instalar pacote
+        # -------------------------------------------------
+
+        if contains -- instalar $norm_words
+            set -l idx (contains -i -- instalar $norm_words)
+
+            if test (count $orig_words) -le $idx
+                echo "❌ pacote não especificado"
+                set action_idx (math $action_idx + 1)
+                continue
+            end
+
+            set -l pkg_words $orig_words[(math $idx + 1)..-1]
+            set -l pkg (string join "-" -- $pkg_words)
+
+            if test -z "$pkg"
+                echo "❌ pacote não especificado"
+                set action_idx (math $action_idx + 1)
+                continue
+            end
+
+            echo "📦 instalando $pkg"
+
+            sudo pacman -S -- $pkg
+
+            if test $status -ne 0
+                if type -q paru
+                    echo "ℹ️ tentando via paru..."
+                    paru -S -- $pkg
+                end
+            end
+
+            if test $status -ne 0
+                if type -q flatpak
+                    echo "ℹ️ tentando via flatpak..."
+                    flatpak install -y flathub $pkg
+                end
+            end
+
+            set action_idx (math $action_idx + 1)
+            continue
+        end
+
+        # -------------------------------------------------
+        # 11 — remover pacote
+        # -------------------------------------------------
+
+        if contains -- remover $norm_words; and not contains -- arquivo $norm_words; and not contains -- pasta $norm_words
+            set -l idx (contains -i -- remover $norm_words)
+
+            if test (count $orig_words) -le $idx
+                echo "❌ pacote não especificado"
+                set action_idx (math $action_idx + 1)
+                continue
+            end
+
+            set -l pkg_words $orig_words[(math $idx + 1)..-1]
+            set -l pkg (string join "-" -- $pkg_words)
+
+            if test -z "$pkg"
+                echo "❌ pacote não especificado"
+                set action_idx (math $action_idx + 1)
+                continue
+            end
+
+            echo "🗑 removendo $pkg"
+
+            sudo pacman -Rns -- $pkg
+
+            if test $status -ne 0
+                if type -q paru
+                    paru -Rns -- $pkg
+                end
+            end
+
+            set action_idx (math $action_idx + 1)
+            continue
+        end
+
+        # -------------------------------------------------
+        # 12 — criar arquivo ou pasta
+        # -------------------------------------------------
+
+        if contains -- criar $norm_words
+            set -l idx
+            set -l target
+
+            if contains -- pasta $norm_words
+                set idx (contains -i -- pasta $norm_words)
+
+                if test (count $orig_words) -le $idx
+                    echo "❌ nome da pasta não especificado"
+                    set action_idx (math $action_idx + 1)
+                    continue
+                end
+
+                set target (string join " " -- $orig_words[(math $idx + 1)..-1])
+
+                mkdir -p -- $target
+
+                if test $status -eq 0
+                    echo "📁 pasta criada: $target"
+                else
+                    echo "❌ erro ao criar pasta"
+                end
+
+                set action_idx (math $action_idx + 1)
+                continue
+            end
+
+            if contains -- arquivo $norm_words
+                set idx (contains -i -- arquivo $norm_words)
+
+                if test (count $orig_words) -le $idx
+                    echo "❌ nome do arquivo não especificado"
+                    set action_idx (math $action_idx + 1)
+                    continue
+                end
+
+                set target (string join " " -- $orig_words[(math $idx + 1)..-1])
+            else
+                set idx (contains -i -- criar $norm_words)
+
+                if test (count $orig_words) -le $idx
+                    echo "❌ nome não especificado"
+                    set action_idx (math $action_idx + 1)
+                    continue
+                end
+
+                set target (string join " " -- $orig_words[(math $idx + 1)..-1])
+            end
+
+            set -l parent_dir (dirname -- $target)
+
+            if test "$parent_dir" != "."
+                mkdir -p -- $parent_dir
+            end
+
+            touch -- $target
+
+            if test $status -eq 0
+                echo "📄 arquivo criado: $target"
+            else
+                echo "❌ erro ao criar arquivo"
+            end
+
+            set action_idx (math $action_idx + 1)
+            continue
+        end
+
+        # -------------------------------------------------
+        # 13 — remover arquivo ou pasta
+        # -------------------------------------------------
+
+        if contains -- remover $norm_words; and begin
+            contains -- arquivo $norm_words; or contains -- pasta $norm_words
+        end
+            set -l type_word arquivo
+
+            if contains -- pasta $norm_words
+                set type_word pasta
+            end
+
+            set -l idx (contains -i -- $type_word $norm_words)
+
+            if test (count $orig_words) -le $idx
+                echo "❌ alvo não especificado"
+                set action_idx (math $action_idx + 1)
+                continue
+            end
+
+            set -l target (string join " " -- $orig_words[(math $idx + 1)..-1])
+
+            if not test -e $target
+                echo "❌ não encontrado: $target"
+                set action_idx (math $action_idx + 1)
+                continue
+            end
+
+            echo "⚠ confirmar exclusão de '$target' (s/n)"
+            read -l confirm
+
+            if test "$confirm" = "s" -o "$confirm" = "S"
+                if test "$type_word" = "pasta"
+                    rm -rf -- $target
+                else
+                    rm -f -- $target
+                end
+
+                if test $status -eq 0
+                    echo "🗑 removido: $target"
+                else
+                    echo "❌ erro ao remover"
+                end
+            else
+                echo "❌ cancelado"
+            end
+
+            set action_idx (math $action_idx + 1)
+            continue
+        end
+
+        # -------------------------------------------------
+        # 14 — copiar arquivo ou pasta
+        # -------------------------------------------------
+
+        if contains -- copiar $norm_words
+            set -l idx
+            set -l source
+            set -l dest
+
+            if contains -- arquivo $norm_words
+                set idx (contains -i -- arquivo $norm_words)
+            else if contains -- pasta $norm_words
+                set idx (contains -i -- pasta $norm_words)
+            else
+                set idx (contains -i -- copiar $norm_words)
+            end
+
+            if test (count $orig_words) -lt (math $idx + 2)
+                echo "❌ argumentos insuficientes"
+                set action_idx (math $action_idx + 1)
+                continue
+            end
+
+            set source $orig_words[(math $idx + 1)]
+            set dest   $orig_words[(math $idx + 2)]
+
+            if not test -e $source
+                echo "❌ origem não encontrada: $source"
+                set action_idx (math $action_idx + 1)
+                continue
+            end
+
+            set -l dest_dir (dirname -- $dest)
+
+            if test "$dest_dir" != "."
+                mkdir -p -- $dest_dir
+            end
+
+            if test -d $source
+                cp -r -- $source $dest
+                set -l copy_type pasta
+            else
+                cp -- $source $dest
+                set -l copy_type arquivo
+            end
+
+            if test $status -eq 0
+                if test "$copy_type" = "pasta"
+                    echo "📁 pasta copiada: $source → $dest"
+                else
+                    echo "📄 arquivo copiado: $source → $dest"
+                end
+            else
+                echo "❌ erro ao copiar"
+            end
+
+            set action_idx (math $action_idx + 1)
+            continue
+        end
+
+        # -------------------------------------------------
+        # 15 — mover arquivo ou pasta
+        # -------------------------------------------------
+
+        if contains -- mover $norm_words
+            set -l idx
+            set -l source
+            set -l dest
+
+            if contains -- arquivo $norm_words
+                set idx (contains -i -- arquivo $norm_words)
+            else if contains -- pasta $norm_words
+                set idx (contains -i -- pasta $norm_words)
+            else
+                set idx (contains -i -- mover $norm_words)
+            end
+
+            if test (count $orig_words) -lt (math $idx + 2)
+                echo "❌ argumentos insuficientes"
+                set action_idx (math $action_idx + 1)
+                continue
+            end
+
+            set source $orig_words[(math $idx + 1)]
+            set dest   $orig_words[(math $idx + 2)]
+
+            if not test -e $source
+                echo "❌ origem não encontrada: $source"
+                set action_idx (math $action_idx + 1)
+                continue
+            end
+
+            set -l dest_dir (dirname -- $dest)
+
+            if test "$dest_dir" != "."
+                mkdir -p -- $dest_dir
+            end
+
+            if test -d $source
+                set -l move_type pasta
+            else
+                set -l move_type arquivo
+            end
+
+            mv -- $source $dest
+
+            if test $status -eq 0
+                if test "$move_type" = "pasta"
+                    echo "📁 pasta movida: $source → $dest"
+                else
+                    echo "📄 arquivo movido: $source → $dest"
+                end
+            else
+                echo "❌ erro ao mover"
+            end
+
+            set action_idx (math $action_idx + 1)
+            continue
+        end
+
+        # -------------------------------------------------
+        # 16 — renomear arquivo ou pasta
+        # -------------------------------------------------
+
+        if contains -- renomear $norm_words
+            set -l idx
+            set -l source
+            set -l newname
+
+            if contains -- arquivo $norm_words
+                set idx (contains -i -- arquivo $norm_words)
+            else if contains -- pasta $norm_words
+                set idx (contains -i -- pasta $norm_words)
+            else
+                set idx (contains -i -- renomear $norm_words)
+            end
+
+            if test (count $orig_words) -lt (math $idx + 2)
+                echo "❌ argumentos insuficientes"
+                set action_idx (math $action_idx + 1)
+                continue
+            end
+
+            set source  $orig_words[(math $idx + 1)]
+            set newname $orig_words[(math $idx + 2)]
+
+            if not test -e $source
+                echo "❌ arquivo ou pasta não encontrado: $source"
+                set action_idx (math $action_idx + 1)
+                continue
+            end
+
+            mv -- $source $newname
+
+            if test $status -eq 0
+                echo "✏️ renomeado: $source → $newname"
+            else
+                echo "❌ erro ao renomear"
+            end
+
+            set action_idx (math $action_idx + 1)
+            continue
+        end
+
+        # -------------------------------------------------
+        # fallback
+        # -------------------------------------------------
+
+        echo "❓ Não entendi: "(string join " " -- $action_tokens)
+        echo "Digite: aury ajuda"
+
+        set action_idx (math $action_idx + 1)
     end
-
-    return
-end
-
-# -------------------------------------------------
-# 4. atualizar sistema
-# -------------------------------------------------
-
-if contains atualizar $words
-
-echo "📦 atualizando sistema"
-
-if type -q paru
-paru -Syu
-else
-sudo pacman -Syu
-end
-
-continue
-end
-
-
-# -------------------------------------------------
-# 5. otimizar sistema
-# -------------------------------------------------
-
-if contains otimizar $words
-
-echo "🚀 otimizando sistema"
-
-sudo paccache -ruk1
-sudo journalctl --vacuum-time=7d
-
-set orphans (pacman -Qtdq)
-
-if test -n "$orphans"
-sudo pacman -Rns $orphans
-end
-
-continue
-end
-
-
-# -------------------------------------------------
-# 6. status
-# -------------------------------------------------
-
-if contains status $words
-
-echo "CPU"
-lscpu | grep -i model
-
-echo ""
-echo "RAM"
-free -h
-
-echo ""
-echo "DISCO"
-df -h /
-
-continue
-end
-
-
-# -------------------------------------------------
-# 7. informações sistema
-# -------------------------------------------------
-
-if contains cpu $words
-lscpu
-continue
-end
-
-if contains memória $words
-free -h
-continue
-end
-
-if contains disco $words
-df -h
-continue
-end
-
-if contains gpu $words
-lspci | grep -i vga
-continue
-end
-
-if contains processos $words
-ps aux | head
-continue
-end
-
-
-# -------------------------------------------------
-# 8. rede
-# -------------------------------------------------
-
-if contains ip $words
-ip a
-continue
-end
-
-if contains internet $words
-ping -c 2 8.8.8.8
-continue
-end
-
-if contains ping $words
-
-if test -z "$last"
-echo "❌ especifique host"
-else
-ping -c 2 $last
-end
-
-continue
-end
-
-
-# -------------------------------------------------
-# 9. procurar pacote
-# -------------------------------------------------
-
-if contains procurar $words
-
-set idx (contains -i procurar $words)
-
-if test (count $words) -gt $idx
-set search (string join " " $words[(math $idx + 1)..-1])
-pacman -Ss $search
-else
-echo "❌ termo não especificado"
-end
-
-continue
-end
-
-
-# -------------------------------------------------
-# 10. instalar pacote
-# -------------------------------------------------
-
-if contains instalar $words
-
-set idx (contains -i instalar $words)
-
-if test (count $words) -gt $idx
-
-set pkg_words $words[(math $idx + 1)..-1]
-set pkg (string join "-" $pkg_words)
-
-echo "📦 instalando $pkg"
-
-sudo pacman -S $pkg
-
-if test $status -ne 0
-if type -q paru
-paru -S $pkg
-end
-end
-
-if test $status -ne 0
-if type -q flatpak
-flatpak install -y flathub $pkg
-end
-end
-
-else
-echo "❌ pacote não especificado"
-end
-
-continue
-end
-
-
-# -------------------------------------------------
-# 11. remover pacote
-# -------------------------------------------------
-
-if contains remover $words; and not contains arquivo $words
-
-set idx (contains -i remover $words)
-
-if test (count $words) -gt $idx
-
-set pkg_words $words[(math $idx + 1)..-1]
-set pkg (string join "-" $pkg_words)
-
-echo "🗑 removendo $pkg"
-
-sudo pacman -Rns $pkg
-
-if test $status -ne 0
-if type -q paru
-paru -Rns $pkg
-end
-end
-
-else
-echo "❌ pacote não especificado"
-end
-
-continue
-end
-
-
-# -------------------------------------------------
-# 12. criar arquivos
-# -------------------------------------------------
-
-if contains criar $words
-
-if contains pasta $words
-mkdir -p $last
-echo "📁 pasta criada"
-else
-touch $last
-echo "📄 arquivo criado"
-end
-
-continue
-end
-
-
-# -------------------------------------------------
-# 13. remover arquivo
-# -------------------------------------------------
-
-if contains remover $words; and contains arquivo $words
-
-echo "⚠ confirmar exclusão (s/n)"
-read confirm
-
-if test "$confirm" = "s"
-rm $last
-echo "🗑 removido"
-else
-echo "❌ cancelado"
-end
-
-continue
-end
-
-
-# -------------------------------------------------
-# fallback
-# -------------------------------------------------
-
-echo "❓ Não entendi: $action"
-echo "Digite: aury ajuda"
-
-end
 
 end
