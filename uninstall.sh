@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 
 echo ""
-echo "🗑 Removendo Aury..."
+echo "🗑 Removendo a Aury..."
 echo ""
 
 rm -f ~/.config/fish/functions/aury.fish
 
 echo ""
-echo "✅ Aury foi removida do sistema."
+echo "✅A Aury foi removida do sistema."
 echo ""
