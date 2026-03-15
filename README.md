@@ -77,14 +77,17 @@ aury reload
 
 ## 📂 Estrutura do projeto
 
+```
 aury
-├─ bin/           Código principal da assistente Aury
-├─ CHANGELOG.md   Histórico de versões da Aury
-├─ LICENSE.md     Licença do projeto
-├─ README.md      Documentação e instruções de uso
-├─ VERSION        Versão atual da Aury
-├─ install.sh     Script de instalação da Aury
-└─ uninstall.sh   Script de remoção da Aury
+├─ bin/
+│  └─ aury.fish
+├─ CHANGELOG.md
+├─ LICENSE.md
+├─ README.md
+├─ VERSION
+├─ install.sh
+└─ uninstall.sh
+```
 
 ---
 
