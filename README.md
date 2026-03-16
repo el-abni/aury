@@ -89,7 +89,7 @@ A versão atual da **💜 Aury** já oferece:
 - conectores como `e`, `para`, `pra` e `em`
 - suporte a vocativo como `Aury,`
 - suporte a pontuação estilo chat
-- refinamento global de conversacionalidade na linha 1.4.1
+- refinamento global de conversacionalidade na versão 1.4.1
 
 ---
 
