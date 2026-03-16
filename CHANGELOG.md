@@ -4,7 +4,7 @@ Todas as mudanças importantes da **💜 Aury** são documentadas neste arquivo.
 
 ---
 
-## 1.4.1
+## v1.4.1
 
 ### Adicionado
 - refinamento global de conversacionalidade do parser
@@ -39,7 +39,7 @@ A versão **1.4.1** da Aury fecha a fase de refinamento conversacional da série
 
 ---
 
-## 1.4.0
+## v1.4.0
 
 ### Adicionado
 - interpretação de frases mais naturais
@@ -65,7 +65,7 @@ aury mover arquivo teste.txt para pasta/teste.txt
 
 ---
 
-## 1.3.1
+## v1.3.1
 
 ### Adicionado
 - suporte a vocativo `Aury,`
@@ -81,7 +81,7 @@ aury mover arquivo teste.txt para pasta/teste.txt
 
 ---
 
-## 1.3.0
+## v1.3.0
 
 ### Adicionado
 - parser mais natural para comandos comuns
@@ -103,7 +103,7 @@ aury mover arquivo teste.txt para pasta/teste.txt
 
 ---
 
-## 1.2.1
+## v1.2.1
 
 ### Refatoração
 - reorganização da arquitetura
@@ -113,7 +113,7 @@ aury mover arquivo teste.txt para pasta/teste.txt
 
 ---
 
-## 1.2
+## v1.2
 
 ### Melhorado
 - normalização de linguagem
@@ -123,7 +123,7 @@ aury mover arquivo teste.txt para pasta/teste.txt
 
 ---
 
-## 1.1
+## v1.1
 
 ### Adicionado
 - proteção de entrada
@@ -133,7 +133,7 @@ aury mover arquivo teste.txt para pasta/teste.txt
 
 ---
 
-## 1.0
+## v1.0
 
 ### Primeira versão funcional
 
