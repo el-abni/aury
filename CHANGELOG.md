@@ -1,8 +1,4 @@
-# 📜 Histórico de versões (Changelog)
-
-Todas as mudanças importantes da Aury serão documentadas aqui.
-
-O formato segue o padrão de versionamento do projeto.
+# Changelog
 
 ## v1.2.1
 
@@ -21,6 +17,7 @@ O formato segue o padrão de versionamento do projeto.
 - Base pronta para expansão gradual até a 2.0
 
 ---
+
 ## v1.2
 
 ### Melhorias
@@ -37,6 +34,7 @@ O formato segue o padrão de versionamento do projeto.
 
 ### Estabilidade
 - Versão validada em testes reais no CachyOS com Fish shell
+
 ---
 
 ## v1.1
