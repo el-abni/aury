@@ -1,4 +1,4 @@
-#💜Aury
+# 💜Aury
 
 **Terminal Assistant for CachyOS (Fish shell)**
 
