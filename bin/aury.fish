@@ -1,5 +1,5 @@
 # ==========================================================
-# 💜 Aury 1.2.1
+# 💜 Aury 1.3.0
 # Terminal Assistant for CachyOS
 # Shell: fish
 # ==========================================================
@@ -25,15 +25,44 @@ function __aury_msg_warn --argument-names text
 end
 
 # -------------------------------------------------
+# dicionários
+# -------------------------------------------------
+
+function __aury_intents
+    printf '%s\n' ajuda reload dev atualizar otimizar status procurar instalar remover criar copiar mover renomear ping ver internet abrir
+end
+
+function __aury_internal_intents
+    printf '%s\n' ajuda reload dev
+end
+
+function __aury_file_intents
+    printf '%s\n' criar copiar mover renomear
+end
+
+function __aury_system_keywords
+    printf '%s\n' cpu memória disco gpu processos status sistema atualizar otimizar
+end
+
+function __aury_network_keywords
+    printf '%s\n' ip internet ping
+end
+
+function __aury_package_keywords
+    printf '%s\n' pacote instalar procurar
+end
+
+# -------------------------------------------------
 # ajuda
 # -------------------------------------------------
 
 function __aury_show_help
     echo "
-💜 Aury 1.2.1
+💜 Aury 1.3.0
 
 PACOTES
 aury instalar firefox
+aury instala firefox
 aury remover vlc
 aury procurar steam
 
@@ -41,13 +70,8 @@ SISTEMA
 aury atualizar sistema
 aury otimizar sistema
 aury status
-
-INFO
-aury ver cpu
-aury ver memória
-aury ver disco
-aury ver gpu
-aury ver processos
+aury mostrar cpu
+aury checar memória
 
 REDE
 aury ver ip
@@ -56,9 +80,8 @@ aury ping google.com
 
 ARQUIVOS
 aury criar arquivo teste.txt
+aury criar teste.txt
 aury criar pasta projetos
-aury remover arquivo teste.txt
-aury remover pasta projetos
 aury copiar arquivo teste.txt backup.txt
 aury mover arquivo teste.txt pasta/teste.txt
 aury renomear arquivo teste.txt novo.txt
@@ -81,85 +104,85 @@ function __aury_normalize_token --argument-names tok
         case ''
             echo __IGNORE__
 
-        case o a os as um uma uns umas de do da dos das no na nos nas em com sobre ao aos à às pra para por pro me mim ai aí favor porfavor gentileza pode poderia poderiame poderia-me
+        case o a os as um uma uns umas de do da dos das no na nos nas em com sobre ao aos à às pra para por pro me mim ai aí favor porfavor gentileza pode poderia poderiame poderia-me porgentileza pfvr porfa pra mim comigo
             echo __IGNORE__
 
         case e
             echo e
 
-        case ajuda help socorro manual comandos
+        case ajuda help socorro manual comandos comando
             echo ajuda
 
         case reload recarregar reiniciar
             echo reload
 
-        case dev developer desenvolvedor diagnostico diagnóstico validar verificar
+        case dev developer desenvolvedor diagnostico diagnóstico validar verificar debug
             echo dev
 
-        case instalar instala instale instalaram adicionar add instalr isntalar instal
+        case instalar instala instale instalaram adicionar adiciona adicione add instalr isntalar instal botar colocar
             echo instalar
 
-        case remover remove remov deletar excluir apagar desinstalar desinstala desinstale uninstall removr remvoe
+        case remover remove remov deletar excluir apagar desinstalar desinstala desinstale uninstall removr remvoe tirar
             echo remover
 
-        case procurar procura buscar busca pesquise pesquisar acha achar encontrar localizar procra procuar pesquisr
+        case procurar procura buscar busca pesquise pesquisar acha achar encontrar localizar procra procuar pesquisr consultar pesquisa
             echo procurar
 
-        case criar cria crie gerar fazer
+        case criar cria crie gerar fazer monte montar
             echo criar
 
-        case copiar copia cp duplicar copar copiarr
+        case copiar copia cp duplicar copar copiarr clone clonar
             echo copiar
 
-        case mover move mv movr moevr enviar
+        case mover move mv movr moevr enviar deslocar
             echo mover
 
-        case renomear renomeia renomeie rename renomar renoemar renomea
+        case renomear renomeia renomeie rename renomar renoemar renomea nomear
             echo renomear
 
-        case status estado info infos informação informacoes informações
+        case status estado info infos informação informacoes informações situacao situação
             echo status
 
-        case ver veja mostra mostrar exibir listar
+        case ver veja mostra mostrar exibir listar checar checa consulte consultar visualizar olhar monitorar
             echo ver
 
-        case atualizar atualiza update upgrade sincronizar
+        case atualizar atualiza update upgrade sincronizar atualizara
             echo atualizar
 
-        case otimizar otimiza limpar limpa melhorar
+        case otimizar otimiza limpar limpa melhorar acelerar
             echo otimizar
 
         case abrir abre open
             echo abrir
 
-        case testar teste internet rede conexão conexao conectar
+        case testar teste internet rede conexão conexao conectar online
             echo internet
 
         case ping
             echo ping
 
-        case pasta diretório diretorio folder diretoro
+        case pasta diretório diretorio folder diretoro diretórios diretorios
             echo pasta
 
-        case arquivo ficheiro file
+        case arquivo ficheiro file documento
             echo arquivo
 
-        case pacote pacotes app aplicativo programa
+        case pacote pacotes app aplicativo aplicativos programa programas
             echo pacote
 
-        case sistema
+        case sistema computador máquina maquina pc
             echo sistema
 
-        case processo processos
+        case processo processos tarefa tarefas
             echo processos
 
         case memoria memora memori ram memória
             echo memória
 
-        case disco armazenamento hd ssd
+        case disco armazenamento hd ssd espaço espaco
             echo disco
 
-        case gpu video vídeo grafico gráfico grafica gráfica
+        case gpu video vídeo grafico gráfico grafica gráfica placa
             echo gpu
 
         case cpu processador
@@ -176,8 +199,37 @@ end
 function __aury_is_command_token --argument-names tok
     set -l normalized (__aury_normalize_token $tok)
 
-    if contains -- $normalized ajuda reload dev instalar remover procurar criar copiar mover renomear status ver atualizar otimizar abrir internet ping
+    if contains -- $normalized (__aury_intents)
         return 0
+    end
+
+    return 1
+end
+
+function __aury_has_any --argument-names haystack_varname
+    set -l haystack $$haystack_varname
+    set -e argv[1]
+
+    for item in $argv
+        if contains -- $item $haystack
+            return 0
+        end
+    end
+
+    return 1
+end
+
+function __aury_has_pathlike_tokens
+    set -l words $argv
+
+    for word in $words
+        if string match -rq '[/~]' -- $word
+            return 0
+        end
+
+        if string match -rq '\.[[:alnum:]_-]+$' -- $word
+            return 0
+        end
     end
 
     return 1
@@ -212,21 +264,44 @@ end
 # parser base
 # -------------------------------------------------
 
+function __aury_find_next_command_index --argument-names start_index
+    set -l total (count $argv_tokens_global)
+    set -l j $start_index
+
+    while test $j -le $total
+        if __aury_is_command_token $argv_tokens_global[$j]
+            echo $j
+            return 0
+        end
+
+        set -l norm (__aury_normalize_token $argv_tokens_global[$j])
+        if test "$norm" != "__IGNORE__"; and test "$norm" != "e"
+            break
+        end
+
+        set j (math $j + 1)
+    end
+
+    return 1
+end
+
 function __aury_split_actions
-    set -l raw_tokens $argv
+    set -g argv_tokens_global $argv
     set -l starts 1
     set -l ends
-    set -l total (count $raw_tokens)
+    set -l total (count $argv_tokens_global)
     set -l i 1
 
     while test $i -lt $total
-        set -l current_norm (__aury_normalize_token $raw_tokens[$i])
-        set -l next_token $raw_tokens[(math $i + 1)]
+        set -l current_norm (__aury_normalize_token $argv_tokens_global[$i])
 
         if test "$current_norm" = "e"
-            if __aury_is_command_token $next_token
+            set -l next_idx (__aury_find_next_command_index (math $i + 1))
+
+            if test -n "$next_idx"
                 set ends $ends (math $i - 1)
-                set starts $starts (math $i + 1)
+                set starts $starts $next_idx
+                set i (math $next_idx - 1)
             end
         end
 
@@ -241,12 +316,14 @@ function __aury_split_actions
         set -l finish $ends[$idx]
 
         if test $finish -ge $start
-            string join \n -- $raw_tokens[$start..$finish]
+            string join \n -- $argv_tokens_global[$start..$finish]
             echo __AURY_ACTION_BREAK__
         end
 
         set idx (math $idx + 1)
     end
+
+    set -e argv_tokens_global
 end
 
 function __aury_prepare_action
@@ -276,7 +353,7 @@ end
 function __aury_detect_intent
     set -l norm_words $argv
 
-    for candidate in ajuda reload dev atualizar otimizar status procurar instalar remover criar copiar mover renomear ping ver internet abrir
+    for candidate in ajuda reload dev atualizar otimizar procurar instalar remover criar copiar mover renomear ping internet ver status abrir
         if contains -- $candidate $norm_words
             echo $candidate
             return 0
@@ -286,8 +363,15 @@ function __aury_detect_intent
     echo unknown
 end
 
-function __aury_detect_domain
+function __aury_detect_domain --argument-names intent
+    set -e argv[1]
     set -l norm_words $argv
+    set -l orig_words $orig_words_global
+
+    if contains -- ajuda $norm_words; or contains -- reload $norm_words; or contains -- dev $norm_words
+        echo interno
+        return 0
+    end
 
     if contains -- arquivo $norm_words
         echo arquivo
@@ -309,18 +393,55 @@ function __aury_detect_domain
         return 0
     end
 
-    if contains -- instalar $norm_words; or contains -- procurar $norm_words
+    if test "$intent" = "instalar"; or test "$intent" = "procurar"
         echo pacote
         return 0
     end
 
-    if contains -- remover $norm_words
+    if test "$intent" = "remover"
+        if contains -- arquivo $norm_words; or contains -- pasta $norm_words
+            if contains -- arquivo $norm_words
+                echo arquivo
+            else
+                echo pasta
+            end
+            return 0
+        end
+
+        if test (count $orig_words) -gt 0
+            set -l last_token $orig_words[-1]
+
+            if string match -rq '/' -- $last_token; or string match -rq '\.' -- $last_token
+                echo arquivo
+                return 0
+            end
+        end
+
         echo pacote
         return 0
     end
 
-    if contains -- reload $norm_words; or contains -- dev $norm_words; or contains -- ajuda $norm_words
-        echo interno
+    if test "$intent" = "criar"; or test "$intent" = "copiar"; or test "$intent" = "mover"; or test "$intent" = "renomear"
+        if contains -- pasta $norm_words
+            echo pasta
+            return 0
+        end
+
+        if contains -- arquivo $norm_words
+            echo arquivo
+            return 0
+        end
+
+        if test (count $orig_words) -gt 0
+            for tok in $orig_words
+                if string match -rq '/' -- $tok; or string match -rq '\.' -- $tok
+                    echo arquivo
+                    return 0
+                end
+            end
+        end
+
+        echo arquivo
         return 0
     end
 
@@ -335,7 +456,19 @@ function __aury_after_keyword
     set -l keyword $argv[1]
     set -e argv[1]
     set -l words $argv
-    set -l idx (contains -i -- $keyword $words)
+    set -l idx ''
+    set -l i 1
+
+    while test $i -le (count $words)
+        set -l norm (__aury_normalize_token $words[$i])
+
+        if test "$norm" = "$keyword"
+            set idx $i
+            break
+        end
+
+        set i (math $i + 1)
+    end
 
     if test -z "$idx"
         echo ""
@@ -348,6 +481,22 @@ function __aury_after_keyword
     end
 
     string join " " -- $words[(math $idx + 1)..-1]
+end
+
+function __aury_after_normalized_keyword --argument-names keyword
+    set -l idx (contains -i -- $keyword $norm_words_global)
+
+    if test -z "$idx"
+        echo ""
+        return 1
+    end
+
+    if test (count $orig_words_global) -le $idx
+        echo ""
+        return 0
+    end
+
+    string join " " -- $orig_words_global[(math $idx + 1)..-1]
 end
 
 function __aury_extract_file_args
@@ -375,18 +524,38 @@ function __aury_extract_file_args
         set idx (contains -i -- $intent $norm_words)
     end
 
+    if test -z "$idx"
+        set idx 1
+    end
+
     if test "$intent" = "criar"; or test "$intent" = "remover"
-        if test (count $orig_words) -gt $idx
-            set -g __aury_arg_target (string join " " -- $orig_words[(math $idx + 1)..-1])
+        set -l start (math $idx + 1)
+
+        if test (count $norm_words) -ge $start
+            if test "$norm_words[$start]" = "arquivo"; or test "$norm_words[$start]" = "pasta"
+                set start (math $start + 1)
+            end
+        end
+
+        if test (count $orig_words) -ge $start
+            set -g __aury_arg_target (string join " " -- $orig_words[$start..-1])
         end
         return 0
     end
 
     if test "$intent" = "copiar"; or test "$intent" = "mover"; or test "$intent" = "renomear"
-        if test (count $orig_words) -gt (math $idx + 1)
-            set -g __aury_arg_source $orig_words[(math $idx + 1)]
-            set -g __aury_arg_dest $orig_words[(math $idx + 2)]
-            set -g __aury_arg_newname $orig_words[(math $idx + 2)]
+        set -l start (math $idx + 1)
+
+        if test (count $norm_words) -ge $start
+            if test "$norm_words[$start]" = "arquivo"; or test "$norm_words[$start]" = "pasta"
+                set start (math $start + 1)
+            end
+        end
+
+        if test (count $orig_words) -ge (math $start + 1)
+            set -g __aury_arg_source $orig_words[$start]
+            set -g __aury_arg_dest $orig_words[(math $start + 1)]
+            set -g __aury_arg_newname $orig_words[(math $start + 1)]
         end
         return 0
     end
@@ -538,7 +707,6 @@ function __aury_exec_network
     set -l intent $argv[1]
     set -e argv[1]
     set -l norm_words $argv
-    set -l orig_words $orig_words_global
 
     if contains -- ip $norm_words
         ip a
@@ -551,7 +719,7 @@ function __aury_exec_network
     end
 
     if test "$intent" = "ping"
-        set -l host (__aury_after_keyword ping $orig_words)
+        set -l host (__aury_after_normalized_keyword ping)
 
         if test -z "$host"
             __aury_msg_error "especifique host"
@@ -568,11 +736,10 @@ end
 function __aury_exec_packages
     set -l intent $argv[1]
     set -e argv[1]
-    set -l orig_words $orig_words_global
 
     switch $intent
         case procurar
-            set -l search (__aury_after_keyword procurar $orig_words)
+            set -l search (__aury_after_normalized_keyword procurar)
 
             if test -z "$search"
                 __aury_msg_error "termo não especificado"
@@ -583,7 +750,7 @@ function __aury_exec_packages
             return 0
 
         case instalar
-            set -l pkg_text (__aury_after_keyword instalar $orig_words)
+            set -l pkg_text (__aury_after_normalized_keyword instalar)
 
             if test -z "$pkg_text"
                 __aury_msg_error "pacote não especificado"
@@ -595,26 +762,35 @@ function __aury_exec_packages
 
             echo "📦 instalando $pkg"
 
-            sudo pacman -S -- $pkg
+            if pacman -Si -- $pkg >/dev/null 2>/dev/null
+                sudo pacman -S --needed -- $pkg
+                return 0
+            end
 
-            if test $status -ne 0
-                if type -q paru
+            if type -q paru
+                if paru -Si -- $pkg >/dev/null 2>/dev/null
                     __aury_msg_info "tentando via paru..."
-                    paru -S -- $pkg
+                    paru -S --needed -- $pkg
+                    return 0
                 end
             end
 
-            if test $status -ne 0
-                if type -q flatpak
-                    __aury_msg_info "tentando via flatpak..."
-                    flatpak install -y flathub $pkg
+            if type -q flatpak
+                __aury_msg_info "tentando via flatpak..."
+                flatpak install -y --system flathub $pkg
+
+                if test $status -ne 0
+                    flatpak install -y --user flathub $pkg
                 end
+
+                return 0
             end
 
+            __aury_msg_error "pacote não encontrado: $pkg"
             return 0
 
         case remover
-            set -l pkg_text (__aury_after_keyword remover $orig_words)
+            set -l pkg_text (__aury_after_normalized_keyword remover)
 
             if test -z "$pkg_text"
                 __aury_msg_error "pacote não especificado"
@@ -856,7 +1032,7 @@ function aury
             end
 
             set -l prepared (__aury_prepare_action $current_action)
-            set -l norm_words
+            set -g norm_words_global
             set -g orig_words_global
 
             for line in $prepared
@@ -864,9 +1040,9 @@ function aury
                     set -l payload (string replace 'NORM:' '' -- $line)
 
                     if test -n "$payload"
-                        set norm_words (string split \t -- $payload)
+                        set -g norm_words_global (string split \t -- $payload)
                     else
-                        set norm_words
+                        set -g norm_words_global
                     end
                 else if string match -q 'ORIG:*' -- $line
                     set -l payload (string replace 'ORIG:' '' -- $line)
@@ -879,15 +1055,15 @@ function aury
                 end
             end
 
-            if test (count $norm_words) -eq 0
+            if test (count $norm_words_global) -eq 0
                 set current_action
                 continue
             end
 
-            set -l intent (__aury_detect_intent $norm_words)
-            set -l domain (__aury_detect_domain $norm_words)
+            set -l intent (__aury_detect_intent $norm_words_global)
+            set -l domain (__aury_detect_domain $intent $norm_words_global)
 
-            if contains -- $intent ajuda reload dev
+            if contains -- $intent (__aury_internal_intents)
                 __aury_exec_internal $intent
                 set current_action
                 continue
@@ -895,25 +1071,25 @@ function aury
 
             switch $domain
                 case sistema
-                    if __aury_exec_system $intent $norm_words
+                    if __aury_exec_system $intent $norm_words_global
                         set current_action
                         continue
                     end
 
                 case rede
-                    if __aury_exec_network $intent $norm_words
+                    if __aury_exec_network $intent $norm_words_global
                         set current_action
                         continue
                     end
 
                 case arquivo pasta
-                    if __aury_exec_files $intent $norm_words
+                    if __aury_exec_files $intent $norm_words_global
                         set current_action
                         continue
                     end
 
                 case pacote
-                    if __aury_exec_packages $intent $norm_words
+                    if __aury_exec_packages $intent $norm_words_global
                         set current_action
                         continue
                     end
@@ -926,6 +1102,7 @@ function aury
         end
     end
 
+    set -e norm_words_global
     set -e orig_words_global
     set -e __aury_arg_type
     set -e __aury_arg_target
