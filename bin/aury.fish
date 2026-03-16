@@ -1,5 +1,5 @@
 # ==========================================================
-# 💜 Aury 1.3.0
+# 💜 Aury 1.3.1-dev2
 # Terminal Assistant for CachyOS
 # Shell: fish
 # ==========================================================
@@ -58,11 +58,12 @@ end
 
 function __aury_show_help
     echo "
-💜 Aury 1.3.0
+💜 Aury 1.3.1-dev2
 
 PACOTES
 aury instalar firefox
 aury instala firefox
+aury Aury, instala o obs studio.
 aury remover vlc
 aury procurar steam
 
@@ -104,7 +105,7 @@ function __aury_normalize_token --argument-names tok
         case ''
             echo __IGNORE__
 
-        case o a os as um uma uns umas de do da dos das no na nos nas em com sobre ao aos à às pra para por pro me mim ai aí favor porfavor gentileza pode poderia poderiame poderia-me porgentileza pfvr porfa pra mim comigo
+        case o a os as um uma uns umas de do da dos das no na nos nas em com sobre ao aos à às pra para por pro me mim ai aí favor porfavor gentileza pode poderia poderiame poderia-me porgentileza pfvr porfa comigo aury
             echo __IGNORE__
 
         case e
@@ -122,7 +123,7 @@ function __aury_normalize_token --argument-names tok
         case instalar instala instale instalaram adicionar adiciona adicione add instalr isntalar instal botar colocar
             echo instalar
 
-        case remover remove remov deletar excluir apagar desinstalar desinstala desinstale uninstall removr remvoe tirar
+        case remover remove remov deletar delete excluir apagar apague desinstalar desinstala desinstale uninstall removr remvoe tirar
             echo remover
 
         case procurar procura buscar busca pesquise pesquisar acha achar encontrar localizar procra procuar pesquisr consultar pesquisa
@@ -143,7 +144,7 @@ function __aury_normalize_token --argument-names tok
         case status estado info infos informação informacoes informações situacao situação
             echo status
 
-        case ver veja mostra mostrar exibir listar checar checa consulte consultar visualizar olhar monitorar
+        case ver veja mostra mostrar exibir listar checar checa consulte consultar visualizar olhar olhe monitorar
             echo ver
 
         case atualizar atualiza update upgrade sincronizar atualizara
@@ -233,6 +234,71 @@ function __aury_has_pathlike_tokens
     end
 
     return 1
+end
+
+function __aury_is_vocative_token --argument-names tok
+    set -l t (string lower -- $tok)
+    set t (string replace -ra '^[[:punct:]]+|[[:punct:]]+$' '' -- $t)
+
+    if test "$t" = "aury"
+        return 0
+    end
+
+    return 1
+end
+
+function __aury_preprocess_input
+    set -l tokens $argv
+
+    while test (count $tokens) -gt 0
+        if __aury_is_vocative_token $tokens[1]
+            set tokens $tokens[2..-1]
+            continue
+        end
+
+        break
+    end
+
+    printf '%s\n' $tokens
+end
+
+function __aury_find_token_index --argument-names needle
+    set -e argv[1]
+    set -l words $argv
+    set -l i 1
+
+    while test $i -le (count $words)
+        if test "$words[$i]" = "$needle"
+            echo $i
+            return 0
+        end
+
+        set i (math $i + 1)
+    end
+
+    return 1
+end
+
+function __aury_tokens_after --argument-names index
+    set -e argv[1]
+    set -l words $argv
+
+    if test (count $words) -le $index
+        return 0
+    end
+
+    printf '%s\n' $words[(math $index + 1)..-1]
+end
+
+function __aury_interpret_action
+    set -l norm_words $norm_words_global
+    set -l orig_words $orig_words_global
+
+    set -l intent (__aury_detect_intent $norm_words)
+    set -l domain (__aury_detect_domain $intent $norm_words)
+
+    echo "INTENT:$intent"
+    echo "DOMAIN:$domain"
 end
 
 # -------------------------------------------------
@@ -342,8 +408,14 @@ function __aury_prepare_action
             continue
         end
 
+        set -l clean_orig (string replace -ra '^[[:punct:]]+|[[:punct:]]+$' '' -- $tok)
+
+        if test -z "$clean_orig"
+            continue
+        end
+
         set norm_words $norm_words $norm
-        set orig_words $orig_words $tok
+        set orig_words $orig_words $clean_orig
     end
 
     echo "NORM:"(string join \t -- $norm_words)
@@ -484,7 +556,7 @@ function __aury_after_keyword
 end
 
 function __aury_after_normalized_keyword --argument-names keyword
-    set -l idx (contains -i -- $keyword $norm_words_global)
+    set -l idx (__aury_find_token_index $keyword $norm_words_global)
 
     if test -z "$idx"
         echo ""
@@ -1014,7 +1086,12 @@ function aury
         return 1
     end
 
-    set -l raw_tokens $argv
+    set -l raw_tokens (__aury_preprocess_input $argv)
+
+    if test (count $raw_tokens) -eq 0
+        __aury_msg_error "comando inválido"
+        return 1
+    end
     set -l raw_text (string join " " -- $raw_tokens)
     set raw_text (string trim -- $raw_text)
 
@@ -1060,8 +1137,17 @@ function aury
                 continue
             end
 
-            set -l intent (__aury_detect_intent $norm_words_global)
-            set -l domain (__aury_detect_domain $intent $norm_words_global)
+            set -l interpreted (__aury_interpret_action)
+            set -l intent unknown
+            set -l domain geral
+
+            for line in $interpreted
+                if string match -q 'INTENT:*' -- $line
+                    set intent (string replace 'INTENT:' '' -- $line)
+                else if string match -q 'DOMAIN:*' -- $line
+                    set domain (string replace 'DOMAIN:' '' -- $line)
+                end
+            end
 
             if contains -- $intent (__aury_internal_intents)
                 __aury_exec_internal $intent
@@ -1109,4 +1195,8 @@ function aury
     set -e __aury_arg_source
     set -e __aury_arg_dest
     set -e __aury_arg_newname
+end
+
+function Aury
+    aury $argv
 end

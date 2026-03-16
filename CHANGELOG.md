@@ -2,6 +2,22 @@
 
 Todas as mudanças importantes deste projeto serão documentadas neste arquivo.
 
+## v1.3.1
+
+Melhorias de naturalidade no parser e preparação para a série 1.4.
+
+### Adicionado
+- suporte a vocativo "Aury,"
+- suporte a pontuação estilo chat (. ! ? :)
+- comando `Aury` com letra maiúscula
+
+### Melhorado
+- limpeza de argumentos com pontuação
+- base interna preparada para interpretação mais avançada
+
+### Compatibilidade
+Nenhuma quebra de compatibilidade com a 1.3.0.
+
 ---
 
 ## v1.3.0
