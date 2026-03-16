@@ -296,9 +296,9 @@ No futuro, essa área pode crescer para incluir:
 
 ## Interpretação de linguagem natural
 
-A versão 1.4 da Aury ampliou significativamente a capacidade de interpretação da Aury.
+A linha 1.4 ampliou significativamente a capacidade de interpretação da Aury.
 
-Ela agora entende melhor:
+Ela entende melhor:
 
 ### frases mais humanas
 
@@ -333,6 +333,40 @@ aury criar arquivo em pasta/teste.txt
 
 ---
 
+## Refinamento conversacional na v1.4.1
+
+A versão **💜 Aury v1.4.1** consolidou a camada conversacional da linha 1.4.
+
+Além da base introduzida na v1.4.0, a Aury passou a lidar melhor com partículas e construções como:
+
+- `que`
+- `você`
+- `por favor`
+- `pra mim`
+- `me mostra`
+- `pinga`
+- `pingar`
+- `pingue`
+- `recarrega`
+- `verifica o código`
+- `valida o código`
+- `confere o código`
+
+Também ficou mais estável em frases como:
+
+```text
+Aury, pode instalar o firefox?
+Aury, por favor, me mostra o status do sistema.
+Aury, pinga o google.com.
+Aury, quero que você atualize, otimize o sistema e baixe o firefox.
+Aury, me ajuda a copiar base/origem.txt para backup3.txt.
+Aury, me ajuda a mover base/origem.txt para final.txt.
+```
+
+Essa camada não substitui o parser principal. Ela refina a entrada para que o restante do pipeline continue trabalhando de forma previsível.
+
+---
+
 ## Filosofia arquitetural
 
 A arquitetura da Aury segue alguns princípios importantes.
@@ -362,9 +396,9 @@ A série 2.x poderá usar IA sobre uma base muito mais sólida.
 
 ---
 
-## Estado atual na 1.4.0
+## Estado atual na v1.4.1
 
-Na versão **1.4.0**, a Aury já entrega:
+Na versão **💜 Aury v1.4.1**, a Aury já entrega:
 
 - comandos mais naturais
 - múltiplas intenções
@@ -372,9 +406,11 @@ Na versão **1.4.0**, a Aury já entrega:
 - conectores de argumento
 - vocativo `Aury,`
 - pontuação estilo chat
-- melhor interpretação semântica do que nas versões anteriores
+- partículas conversacionais mais bem tratadas
+- frases polidas com melhor interpretação
+- melhor estabilidade entre comandos diretos e conversacionais
 
-Isso coloca a Aury em um estágio muito mais maduro dentro da série 1.x.
+Isso coloca a Aury em um estágio mais maduro dentro da série 1.x.
 
 ---
 
@@ -412,6 +448,7 @@ Ela já possui:
 - pipeline bem definido
 - interpretação natural crescente
 - separação entre parser e execução
+- refinamento conversacional consolidado na v1.4.1
 - base preparada para evoluções maiores
 
 Aury continua sendo um projeto de terminal, mas com uma proposta clara: tornar o uso do terminal no **CachyOS** mais natural, confortável e poderoso.
