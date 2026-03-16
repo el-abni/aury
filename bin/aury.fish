@@ -105,7 +105,7 @@ aury dev
 end
 
 # -------------------------------------------------
-# linguagem / normalização
+# normalização de linguagem
 # -------------------------------------------------
 
 function __aury_normalize_token --argument-names tok
