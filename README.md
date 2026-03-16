@@ -154,28 +154,28 @@ aury atualiza, otimiza e baixa o firefox
 
 O roadmap mostra **apenas versões futuras planejadas**.
 
-### 1.5
+### v1.5
 
 - melhorias em argumentos
 - caminhos complexos
 
-### 1.6
+### v1.6
 
 - melhorias de rede
 
-### 1.7
+### v1.7
 
 - melhorias de pacotes
 
-### 1.8
+### v1.8
 
 - fallback inteligente
 
-### 1.9
+### v1.9
 
 - refinamento geral
 
-### 2.0
+### v2.0
 
 - IA local
 - conversação natural
