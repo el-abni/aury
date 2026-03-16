@@ -24,8 +24,6 @@ aury atualiza, otimiza e baixa o firefox
 aury mover arquivo teste.txt para pasta/teste.txt
 ```
 
-A ideia não é substituir o terminal, mas tornar o uso dele mais confortável, direto e acessível.
-
 ---
 
 ## Exemplos rápidos
@@ -194,22 +192,6 @@ Ela existe para:
 - tornar o terminal mais acessível para quem está começando no CachyOS
 
 O terminal continua poderoso. Aury apenas adiciona uma camada de conforto e interpretação.
-
----
-
-## Documentação
-
-A documentação complementar do projeto fica em:
-
-```text
-docs/
-```
-
-Arquivos esperados:
-
-- `docs/architecture.md`
-- `docs/commands.md` *(futuro)*
-- `docs/roadmap.md` *(futuro)*
 
 ---
 
