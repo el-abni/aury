@@ -381,28 +381,25 @@ Isso coloca a Aury em um estágio muito mais maduro dentro da série 1.x.
 ## Próximas direções
 
 ### 1.5
-
-Foco esperado:
-
-- caminhos mais inteligentes
-- contexto melhor para arquivos
-- parser de argumentos mais robusto
+- melhorias em argumentos
+- caminhos complexos
 
 ### 1.6
+- melhorias de rede
 
-Foco esperado:
+### 1.7
+- melhorias de pacotes
 
-- melhor inferência de intenção dominante
-- contexto entre comandos
-- refinamento do parser
+### 1.8
+- fallback inteligente
+
+### 1.9
+- refinamento geral
 
 ### 2.0
-
-Foco esperado:
-
-- integração com IA
-- interpretação semântica avançada
-- assistente mais conversacional
+- IA local
+- conversação natural
+- fallback de comandos complexos
 
 ---
 

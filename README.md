@@ -149,34 +149,34 @@ aury atualiza, otimiza e baixa o firefox
 
 ## Roadmap
 
-O roadmap mostra **apenas as próximas versões planejadas**.
+O roadmap mostra **apenas versões futuras planejadas**.
 
 ### 1.5
 
-Planejado:
-
-- interpretação de caminhos mais inteligente
-- melhor contexto para arquivos e destinos
-- expansão de sinônimos úteis
-- mais robustez no parser de argumentos
+- melhorias em argumentos
+- caminhos complexos
 
 ### 1.6
 
-Planejado:
+- melhorias de rede
 
-- melhor inferência de intenção dominante
-- contexto entre comandos
-- refinamento da arquitetura interna
-- preparação mais forte para a série 2.x
+### 1.7
+
+- melhorias de pacotes
+
+### 1.8
+
+- fallback inteligente
+
+### 1.9
+
+- refinamento geral
 
 ### 2.0
 
-Grande evolução da Aury:
-
-- integração com IA
-- interpretação semântica mais avançada
-- sugestões automáticas de comando
-- assistente de terminal mais conversacional
+- IA local
+- conversação natural
+- fallback de comandos complexos
 
 ---
 
