@@ -296,7 +296,7 @@ No futuro, essa área pode crescer para incluir:
 
 ## Interpretação de linguagem natural
 
-A linha 1.4 ampliou significativamente a capacidade de interpretação da Aury.
+A versão 1.4 ampliou significativamente a capacidade de interpretação da Aury.
 
 Ela entende melhor:
 
@@ -335,7 +335,7 @@ aury criar arquivo em pasta/teste.txt
 
 ## Refinamento conversacional na v1.4.1
 
-A versão **💜 Aury v1.4.1** consolidou a camada conversacional da linha 1.4.
+A **💜 Aury v1.4.1** consolidou a camada conversacional da linha 1.4.
 
 Além da base introduzida na v1.4.0, a Aury passou a lidar melhor com partículas e construções como:
 
@@ -398,7 +398,7 @@ A série 2.x poderá usar IA sobre uma base muito mais sólida.
 
 ## Estado atual na v1.4.1
 
-Na versão **💜 Aury v1.4.1**, a Aury já entrega:
+A Aury já entrega:
 
 - comandos mais naturais
 - múltiplas intenções
