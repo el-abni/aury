@@ -2,6 +2,26 @@
 
 Todas as mudanças importantes deste projeto serão documentadas neste arquivo.
 
+## v1.4.0
+
+### Adicionado
+- interpretação de frases mais naturais
+- suporte a auxiliares como `quero`, `pode`
+- suporte ao vocativo `Aury,`
+- suporte a pontuação estilo chat
+- suporte a conectores como `para` e `em`
+
+### Melhorado
+- interpretação de múltiplas intenções
+- interpretação de múltiplos alvos compartilhados
+- extração de argumentos para comandos de arquivo
+- naturalidade geral do parser
+
+### Compatibilidade
+- mantida compatibilidade com os comandos da série 1.3
+
+---
+
 ## v1.3.1
 
 Melhorias de naturalidade no parser e preparação para a série 1.4.
