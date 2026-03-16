@@ -1,61 +1,113 @@
 # 💜 Aury
 
 ![version](https://img.shields.io/badge/version-1.4.0-purple)
-![arch](https://img.shields.io/badge/arch-Arch%20%7C%20CachyOS-blue)
-![shell](https://img.shields.io/badge/shell-fish-00aaff)
-![license](https://img.shields.io/badge/license-MIT-green)
+![shell](https://img.shields.io/badge/shell-fish-blue)
+![platform](https://img.shields.io/badge/platform-CachyOS-orange)
 
-Aury é um assistente de terminal para **Arch Linux / CachyOS** que permite controlar o sistema usando **frases naturais**.
+**Aury** é uma assistente de terminal feita para **CachyOS**.
 
-A ideia é simples: usar o terminal como se estivesse **falando com o sistema**.
+Ela permite executar tarefas comuns do sistema usando **linguagem natural**, tornando o terminal mais acessível sem perder o poder das ferramentas tradicionais.
+
+Em vez de decorar comandos complexos, você pode simplesmente escrever o que quer fazer.
 
 ---
 
-# Exemplos rápidos
+# Ideia do projeto
 
-## Instalar programas
+Aury funciona como uma **camada de interpretação entre você e o sistema**.
 
-```text
-aury instalar firefox
+Ela entende frases humanas e traduz isso para comandos reais do sistema.
+
+Exemplo:
+
+```bash
 aury quero instalar obs studio
-aury baixa o vlc
-```
-
-## Informações do sistema
-
-```text
-aury mostrar cpu
 aury ver cpu e memória
-aury mostrar disco e gpu
-aury mostrar o status do sistema
+aury atualiza, otimiza e baixa o firefox
+aury mover arquivo teste.txt para pasta/teste.txt
 ```
 
-## Manutenção
+O objetivo do projeto é transformar o terminal em algo mais **natural, rápido e confortável de usar**.
 
-```text
+---
+
+# Funcionalidades
+
+## 📦 Pacotes
+
+Instalar, remover e buscar programas.
+
+Exemplos:
+
+```bash
+aury instalar firefox
+aury baixar obs studio
+aury remover vlc
+aury procurar steam
+```
+
+---
+
+## ⚙ Sistema
+
+Informações e manutenção do sistema.
+
+```bash
 aury atualizar sistema
 aury otimizar sistema
-aury atualiza e otimiza
+aury mostrar cpu
+aury checar memória
+aury status
 ```
 
-## Rede
+---
 
-```text
+## 🌐 Rede
+
+Ferramentas rápidas de diagnóstico.
+
+```bash
 aury ver ip
 aury testar internet
 aury ping google.com
 ```
 
-## Arquivos
+---
 
-```text
+## 📄 Arquivos
+
+Operações básicas de arquivos e pastas.
+
+```bash
 aury criar arquivo teste.txt
-aury cria um arquivo teste.txt
-aury copiar teste.txt para backup.txt
-aury mover teste.txt para pasta/teste.txt
-aury renomear teste.txt para novo.txt
-aury apaga o arquivo teste.txt
+aury criar pasta projetos
+aury copiar arquivo teste.txt backup.txt
+aury mover arquivo teste.txt pasta/teste.txt
+aury renomear arquivo teste.txt novo.txt
+aury remover arquivo teste.txt
 ```
+
+---
+
+# Linguagem natural
+
+Aury entende frases mais humanas.
+
+Exemplos válidos:
+
+```bash
+aury quero instalar obs studio
+aury pode instalar o firefox
+aury ver cpu e memória
+aury atualiza, otimiza e baixa o firefox
+aury Aury, instala o obs studio.
+```
+
+Ela também entende:
+
+- pontuação
+- conectores como **e**, **para**, **em**
+- múltiplas ações no mesmo comando
 
 ---
 
@@ -68,89 +120,74 @@ git clone https://github.com/el-abni/aury.git
 cd aury
 ```
 
-Copie o comando para o Fish:
+Copie a função para o Fish:
 
 ```bash
 cp bin/aury.fish ~/.config/fish/functions/aury.fish
 ```
 
-Recarregue o shell:
-
-```bash
-source ~/.config/fish/functions/aury.fish
-```
+Agora o comando `aury` estará disponível no terminal.
 
 ---
 
-# Como usar
-
-Digite:
+# Comando de ajuda
 
 ```bash
 aury ajuda
 ```
 
-Isso mostra os comandos disponíveis.
-
-A Aury aceita frases naturais como:
-
-```text
-aury Aury, instala o firefox
-aury quero instalar obs studio
-aury ver cpu e memória
-aury atualiza, otimiza e baixa o firefox
-```
+Mostra todos os exemplos disponíveis.
 
 ---
 
 # Roadmap
 
-### 1.0
-Base do assistente.
+O roadmap mostra **apenas as próximas versões planejadas**.
 
-### 1.1
-Estrutura inicial.
+## 1.5
 
-### 1.2
-Refatoração estrutural.
+Planejado:
 
-### 1.3
-Melhoria da arquitetura interna.
+- interpretação de caminhos mais inteligente
+- melhor contexto de arquivos
+- expansão de sinônimos
+- mais robustez no parser
 
-### 1.4
-Grande melhoria na interpretação de linguagem natural.
+## 1.6
 
-- frases naturais
-- múltiplas intenções
-- múltiplos alvos
-- conectores como `para` e `em`
-- comandos de arquivo mais humanos
+Planejado:
 
-### 1.5 (planejado)
+- sistema de contexto entre comandos
+- detecção automática de intenção dominante
+- melhorias na arquitetura interna
 
-- interpretação de caminhos mais inteligentes
-- melhorias na análise semântica
-- argumentos mais complexos
+## 2.0
 
-### 2.0 (planejado)
+Grande evolução da Aury:
 
-- comandos conversacionais completos
-- parser mais avançado
+- integração com IA
+- interpretação semântica mais avançada
+- sugestões automáticas de comando
+- assistente de terminal mais conversacional
 
 ---
 
 # Filosofia
 
-Aury tenta tornar o terminal mais acessível.
+Aury não tenta substituir o terminal.
 
-Em vez de decorar comandos complexos, o usuário pode simplesmente escrever algo como:
+Ela existe para:
 
-```text
-aury instala o firefox
-```
+- reduzir fricção
+- acelerar tarefas comuns
+- tornar o terminal mais humano
+
+O terminal continua sendo poderoso.
+
+Aury apenas torna ele **mais natural de usar**.
 
 ---
 
 # Licença
 
-MIT
+Projeto open source.
