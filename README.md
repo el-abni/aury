@@ -1,5 +1,11 @@
 # 💜Aury
 
+![Version](https://img.shields.io/badge/version-1.3.0-blue)
+![License](https://img.shields.io/badge/license-MIT-green)
+![Shell](https://img.shields.io/badge/shell-fish-4DB6AC)
+![Platform](https://img.shields.io/badge/platform-Linux-orange)
+![Status](https://img.shields.io/badge/status-active-success)
+
 Assistente de terminal para Linux com suporte a comandos em linguagem natural.
 
 Aury permite executar tarefas do sistema de forma simples e intuitiva usando frases diretamente no terminal.
