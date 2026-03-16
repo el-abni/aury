@@ -1,160 +1,165 @@
-# Aury
+# 💜Aury
 
-💜 Terminal Assistant for CachyOS (Fish shell)
+Assistente de terminal para Linux com suporte a comandos em linguagem natural.
 
-A Aury é uma assistente de terminal criada para simplificar tarefas comuns no CachyOS e Arch Linux usando comandos em linguagem natural.
+Aury permite executar tarefas do sistema de forma simples e intuitiva usando frases diretamente no terminal.
 
-![Version](https://img.shields.io/badge/version-1.2.1-purple)
-![Shell](https://img.shields.io/badge/shell-fish-blue)
-![License](https://img.shields.io/badge/license-MIT-green)
+Exemplos:
 
----
+```
+aury instalar firefox
+aury ver cpu
+aury criar arquivo teste.txt
+```
 
-# Sobre
-
-A Aury funciona como uma assistente inteligente para o terminal, permitindo executar operações comuns do sistema com comandos simples e naturais.
-
-Ela foi projetada para ser:
-
-- simples
-- rápida
-- amigável para iniciantes
-- útil para usuários avançados
-- pronta para evoluir de forma modular
-
-Tudo rodando diretamente no Fish shell.
+A ideia é tornar o terminal mais natural, rápido e acessível sem perder o poder das ferramentas do sistema.
 
 ---
 
-# Versão atual
-
-1.2.1 (stable)
-
-A versão 1.2.1 é uma refatoração estrutural da base da Aury.  
-Ela mantém compatibilidade com a 1.2, mas reorganiza o código para preparar as próximas versões até a futura 2.0 com IA.
-
----
-
-# Recursos
+# Exemplo de uso
 
 ## Pacotes
 
-aury instalar firefox  
-aury remover vlc  
-aury procurar steam  
-
-A Aury gerencia pacotes usando:
-
-- pacman
-- paru (se disponível)
-- flatpak (fallback)
-
----
+```
+aury instalar firefox
+aury remover vlc
+aury procurar steam
+```
 
 ## Sistema
 
-aury atualizar sistema  
-aury otimizar sistema  
-aury status  
+```
+aury atualizar sistema
+aury otimizar sistema
+aury status
+```
 
-A Aury pode:
+## Informações
 
-- atualizar o sistema
-- limpar cache
-- remover pacotes órfãos
-- mostrar visão geral do sistema
-
----
-
-## Informações do sistema
-
-aury ver cpu  
-aury ver memória  
-aury ver disco  
-aury ver gpu  
-aury ver processos  
-
----
+```
+aury ver cpu
+aury ver memória
+aury ver disco
+aury ver gpu
+aury ver processos
+```
 
 ## Rede
 
-aury ver ip  
-aury testar internet  
-aury ping google.com  
-
----
+```
+aury ver ip
+aury testar internet
+aury ping google.com
+```
 
 ## Arquivos
 
-aury criar arquivo teste.txt  
-aury criar pasta projetos  
-aury copiar arquivo teste.txt backup.txt  
-aury mover arquivo teste.txt pasta/teste.txt  
-aury renomear arquivo teste.txt novo.txt  
-aury remover arquivo teste.txt  
+```
+aury criar arquivo teste.txt
+aury criar pasta projetos
+aury copiar arquivo teste.txt backup.txt
+aury mover arquivo teste.txt pasta/teste.txt
+aury renomear arquivo teste.txt novo.txt
+aury remover arquivo teste.txt
+```
 
-Para nomes com espaço use aspas:
+## Extras
 
-aury criar arquivo "Minha Pasta/Meu Arquivo.txt"
+```
+aury reload
+aury dev
+```
 
 ---
 
-## Utilidades internas
+# Exemplos com linguagem mais natural
 
-aury reload  
-aury dev  
+A partir da versão **1.3.0**, a Aury aceita variações mais naturais de linguagem:
 
-reload → recarrega A Aury  
-dev → verifica se o código da Aury contém erros
+```
+aury instala firefox
+aury mostrar cpu
+aury checar memória
+aury criar teste.txt
+aury ver cpu e mostrar memória
+```
 
 ---
 
 # Instalação
 
-git clone https://github.com/el-abni/aury.git  
-cd aury  
+Clone o repositório:
 
-Execute o instalador:
+```
+git clone https://github.com/el-abni/aury.git
+```
 
-./install.sh
+Entre na pasta do projeto:
 
----
+```
+cd aury
+```
 
-# Requisitos
+Instale a função no Fish:
 
-- CachyOS ou Arch Linux
-- Fish shell
+```
+cp bin/aury.fish ~/.config/fish/functions/aury.fish
+```
 
----
+Recarregue a função:
 
-# Estrutura do projeto
+```
+source ~/.config/fish/functions/aury.fish
+```
 
-aury  
-├── bin/  
-│   └── aury.fish  
-├── install.sh  
-├── uninstall.sh  
-├── README.md  
-├── CHANGELOG.md  
-└── VERSION  
+Agora a Aury já pode ser usada no terminal.
 
 ---
 
 # Filosofia do projeto
 
-A evolução da Aury segue esta ideia:
+Aury busca tornar o terminal mais natural sem depender de inteligência artificial.
 
-1.x → fortalecer o núcleo interno  
-2.0 → adicionar IA para conversação e fallback inteligente
+A evolução do projeto segue duas fases:
 
-Antes da IA, A Aury busca ser o mais natural e poderosa possível usando regras bem estruturadas.
+## Série 1.x
+
+Fortalecer o parser interno e interpretação de comandos usando regras.
+
+## Série 2.x
+
+Adicionar suporte opcional a IA local para interpretar comandos mais complexos.
+
+---
+
+# Roadmap
+
+### v1.3
+Parser mais natural e expansão de sinônimos.
+
+### v1.4
+Melhorias de interpretação.
+
+### v1.5
+Melhor suporte a argumentos e caminhos complexos.
+
+### v1.6
+Melhorias de rede.
+
+### v1.7
+Melhorias de pacotes.
+
+### v1.8
+Fallback inteligente.
+
+### v1.9
+Refinamento geral.
+
+### v2.0
+Integração com IA local.
 
 ---
 
 # Licença
 
-MIT License
-
----
-
-Projeto criado por Abni
+Projeto distribuído sob a licença MIT.
