@@ -4,6 +4,41 @@ Todas as mudanças importantes da **💜 Aury** são documentadas neste arquivo.
 
 ---
 
+## 1.4.1
+
+### Adicionado
+- refinamento global de conversacionalidade do parser
+- suporte melhor a partículas como `que`, `você`, `por favor`, `pra mim` e similares
+- suporte a formas conversacionais como:
+  - `pinga`
+  - `pingar`
+  - `pingue`
+  - `recarrega`
+  - `verifica o código`
+  - `valida o código`
+  - `confere o código`
+
+### Melhorado
+- preservação de intenções intermediárias em frases longas
+- interpretação de frases polidas e mais naturais
+- estabilidade dos comandos internos em modo conversacional
+- estabilidade dos comandos de pacote em modo conversacional
+- estabilidade dos comandos de sistema em modo conversacional
+- estabilidade dos comandos de rede em modo conversacional
+
+### Corrigido
+- `Aury, pode instalar o firefox?`
+- `Aury, por favor, me mostra o status do sistema.`
+- `Aury, pinga o google.com.`
+- `Aury, quero que você atualize, otimize o sistema e baixe o firefox.`
+- `Aury, me ajuda a copiar base/origem.txt para backup3.txt.`
+- `Aury, me ajuda a mover base/origem.txt para final.txt.`
+
+### Resultado
+A versão **1.4.1** da Aury fecha a fase de refinamento conversacional da série 1.4, mantendo compatibilidade com a base da **1.4.0** e preparando o terreno para a **1.5.0**.
+
+---
+
 ## 1.4.0
 
 ### Adicionado

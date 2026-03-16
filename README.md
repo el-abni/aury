@@ -1,6 +1,6 @@
 # 💜 Aury
 
-![version](https://img.shields.io/badge/version-1.4.0-purple)
+![version](https://img.shields.io/badge/version-1.4.1-purple)
 ![shell](https://img.shields.io/badge/shell-fish-blue)
 ![platform](https://img.shields.io/badge/platform-CachyOS-orange)
 ![license](https://img.shields.io/badge/license-MIT-green)
@@ -23,6 +23,8 @@ aury ver cpu e memória
 aury atualiza, otimiza e baixa o firefox
 aury mover arquivo teste.txt para pasta/teste.txt
 ```
+
+A ideia não é substituir o terminal, mas tornar o uso dele mais confortável, direto e acessível.
 
 ---
 
@@ -87,6 +89,7 @@ A versão atual da **💜 Aury** já oferece:
 - conectores como `e`, `para`, `pra` e `em`
 - suporte a vocativo como `Aury,`
 - suporte a pontuação estilo chat
+- refinamento global de conversacionalidade na linha 1.4.1
 
 ---
 
@@ -132,7 +135,7 @@ No código, a identidade visual da assistente é:
 No comando de ajuda, a versão deve aparecer no formato:
 
 ```text
-💜 Aury v1.4.0
+💜 Aury v1.4.1
 ```
 
 A Aury entende tanto comandos diretos quanto frases mais naturais, como:
@@ -192,6 +195,22 @@ Ela existe para:
 - tornar o terminal mais acessível para quem está começando no CachyOS
 
 O terminal continua poderoso. Aury apenas adiciona uma camada de conforto e interpretação.
+
+---
+
+## Documentação
+
+A documentação complementar do projeto fica em:
+
+```text
+docs/
+```
+
+Arquivos esperados:
+
+- `docs/architecture.md`
+- `docs/commands.md` *(futuro)*
+- `docs/roadmap.md` *(futuro)*
 
 ---
 
