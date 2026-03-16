@@ -1,14 +1,19 @@
 # 💜Aury
 
-![Version](https://img.shields.io/badge/version-1.3.0-blue)
+![Version](https://img.shields.io/badge/version-1.3.1-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 ![Shell](https://img.shields.io/badge/shell-fish-4DB6AC)
 ![Platform](https://img.shields.io/badge/platform-Linux-orange)
-![Status](https://img.shields.io/badge/status-active-success)
 
 Assistente de terminal para Linux com suporte a comandos em linguagem natural.
 
-Aury permite executar tarefas do sistema de forma simples e intuitiva usando frases diretamente no terminal.
+---
+
+## Sobre
+
+Aury é uma assistente de terminal criada para facilitar o uso do sistema através de comandos mais naturais.
+
+Você pode executar tarefas comuns usando frases simples.
 
 Exemplos:
 
@@ -18,39 +23,30 @@ aury ver cpu
 aury criar arquivo teste.txt
 ```
 
-A ideia é tornar o terminal mais natural, rápido e acessível sem perder o poder das ferramentas do sistema.
-
 ---
 
-# Exemplo de uso
+## Exemplos de uso
 
-## Pacotes
+### Pacotes
 
 ```
 aury instalar firefox
+aury instala firefox
 aury remover vlc
 aury procurar steam
 ```
 
-## Sistema
+### Sistema
 
 ```
 aury atualizar sistema
 aury otimizar sistema
 aury status
+aury mostrar cpu
+aury checar memória
 ```
 
-## Informações
-
-```
-aury ver cpu
-aury ver memória
-aury ver disco
-aury ver gpu
-aury ver processos
-```
-
-## Rede
+### Rede
 
 ```
 aury ver ip
@@ -58,114 +54,83 @@ aury testar internet
 aury ping google.com
 ```
 
-## Arquivos
+### Arquivos
 
 ```
 aury criar arquivo teste.txt
+aury criar teste.txt
 aury criar pasta projetos
 aury copiar arquivo teste.txt backup.txt
 aury mover arquivo teste.txt pasta/teste.txt
 aury renomear arquivo teste.txt novo.txt
-aury remover arquivo teste.txt
 ```
 
-## Extras
+---
+
+## Exemplos mais naturais (1.3.1)
+
+A versão 1.3.1 melhora o suporte a frases mais naturais.
 
 ```
+Aury instala o firefox.
+Aury checar memória.
+aury Aury, instala o obs studio.
+```
+
+---
+
+## Comandos internos
+
+```
+aury ajuda
 aury reload
 aury dev
 ```
 
 ---
 
-# Exemplos com linguagem mais natural
-
-A partir da versão **1.3.0**, a Aury aceita variações mais naturais de linguagem:
-
-```
-aury instala firefox
-aury mostrar cpu
-aury checar memória
-aury criar teste.txt
-aury ver cpu e mostrar memória
-```
-
----
-
-# Instalação
+## Instalação
 
 Clone o repositório:
 
 ```
 git clone https://github.com/el-abni/aury.git
-```
-
-Entre na pasta do projeto:
-
-```
 cd aury
 ```
 
-Instale a função no Fish:
+Instale:
 
 ```
-cp bin/aury.fish ~/.config/fish/functions/aury.fish
+./install.sh
 ```
-
-Recarregue a função:
-
-```
-source ~/.config/fish/functions/aury.fish
-```
-
-Agora a Aury já pode ser usada no terminal.
 
 ---
 
-# Filosofia do projeto
+## Desinstalação
 
-Aury busca tornar o terminal mais natural sem depender de inteligência artificial.
-
-A evolução do projeto segue duas fases:
-
-## Série 1.x
-
-Fortalecer o parser interno e interpretação de comandos usando regras.
-
-## Série 2.x
-
-Adicionar suporte opcional a IA local para interpretar comandos mais complexos.
+```
+./uninstall.sh
+```
 
 ---
 
-# Roadmap
+## Estrutura do projeto
 
-### v1.3
-Parser mais natural e expansão de sinônimos.
-
-### v1.4
-Melhorias de interpretação.
-
-### v1.5
-Melhor suporte a argumentos e caminhos complexos.
-
-### v1.6
-Melhorias de rede.
-
-### v1.7
-Melhorias de pacotes.
-
-### v1.8
-Fallback inteligente.
-
-### v1.9
-Refinamento geral.
-
-### v2.0
-Integração com IA local.
+```
+aury/
+│
+├─ bin/
+│   └─ aury.fish
+│
+├─ README.md
+├─ CHANGELOG.md
+├─ VERSION
+├─ install.sh
+└─ uninstall.sh
+```
 
 ---
 
-# Licença
+## Licença
 
-Projeto distribuído sob a licença MIT.
+MIT
