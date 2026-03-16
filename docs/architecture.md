@@ -296,7 +296,7 @@ No futuro, essa área pode crescer para incluir:
 
 ## Interpretação de linguagem natural
 
-A linha 1.4 ampliou significativamente a capacidade de interpretação da Aury.
+A versão 1.4 da Aury ampliou significativamente a capacidade de interpretação da Aury.
 
 Ela agora entende melhor:
 
