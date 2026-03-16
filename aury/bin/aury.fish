@@ -1,6 +1,6 @@
 # ==========================================================
 # 💜 Aury
-# Terminal Assistant for CachyOS
+# Assistente de Terminal para CachyOS
 # Shell: fish
 # ==========================================================
 
