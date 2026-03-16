@@ -1,5 +1,5 @@
 # ==========================================================
-# 💜 Aury 1.3.1-dev2
+# 💜 Aury
 # Terminal Assistant for CachyOS
 # Shell: fish
 # ==========================================================
@@ -58,11 +58,14 @@ end
 
 function __aury_show_help
     echo "
-💜 Aury 1.3.1-dev2
+💜 Aury v1.4.0
 
 PACOTES
 aury instalar firefox
 aury instala firefox
+aury baixa o firefox
+aury pode instalar firefox
+aury quero instalar obs studio
 aury Aury, instala o obs studio.
 aury remover vlc
 aury procurar steam
@@ -70,9 +73,12 @@ aury procurar steam
 SISTEMA
 aury atualizar sistema
 aury otimizar sistema
+aury atualiza, otimiza e baixa o firefox
 aury status
 aury mostrar cpu
+aury mostrar o status do sistema
 aury checar memória
+aury ver cpu e memória
 
 REDE
 aury ver ip
@@ -86,6 +92,11 @@ aury criar pasta projetos
 aury copiar arquivo teste.txt backup.txt
 aury mover arquivo teste.txt pasta/teste.txt
 aury renomear arquivo teste.txt novo.txt
+aury cria um arquivo teste.txt
+aury cria a pasta projetos
+aury apaga o arquivo teste.txt
+aury deleta backup.txt
+aury remove o arquivo teste.txt
 
 EXTRAS
 aury reload
@@ -105,11 +116,20 @@ function __aury_normalize_token --argument-names tok
         case ''
             echo __IGNORE__
 
-        case o a os as um uma uns umas de do da dos das no na nos nas em com sobre ao aos à às pra para por pro me mim ai aí favor porfavor gentileza pode poderia poderiame poderia-me porgentileza pfvr porfa comigo aury
+        case o a os as um uma uns umas de dos das com sobre ao aos à às por pro porgentileza pfvr porfa gentileza favor porfavor me mim comigo ai aí aury
             echo __IGNORE__
 
         case e
             echo e
+
+        case quero queria preciso gostaria pode poderia poderiame poderia-me conseguimos consegue tenta tentar tente
+            echo $t
+
+        case para pra
+            echo para
+
+        case em no na nos nas do da pro pra
+            echo $t
 
         case ajuda help socorro manual comandos comando
             echo ajuda
@@ -120,13 +140,13 @@ function __aury_normalize_token --argument-names tok
         case dev developer desenvolvedor diagnostico diagnóstico validar verificar debug
             echo dev
 
-        case instalar instala instale instalaram adicionar adiciona adicione add instalr isntalar instal botar colocar
+        case instalar instala instale instalaram adicionar adiciona adicione add instalr isntalar instal botar colocar baixa baixar baixe baixarame download baixarpra
             echo instalar
 
-        case remover remove remov deletar delete excluir apagar apague desinstalar desinstala desinstale uninstall removr remvoe tirar
+        case remover remove remov deletar deleta delete excluir apagar apaga apague desinstalar desinstala desinstale uninstall removr remvoe tirar
             echo remover
 
-        case procurar procura buscar busca pesquise pesquisar acha achar encontrar localizar procra procuar pesquisr consultar pesquisa
+        case procurar procura procure buscar busca busque pesquise pesquisar acha achar encontrar localizar procra procuar pesquisr consultar pesquisa
             echo procurar
 
         case criar cria crie gerar fazer monte montar
@@ -147,10 +167,10 @@ function __aury_normalize_token --argument-names tok
         case ver veja mostra mostrar exibir listar checar checa consulte consultar visualizar olhar olhe monitorar
             echo ver
 
-        case atualizar atualiza update upgrade sincronizar atualizara
+        case atualizar atualiza atualize update upgrade sincronizar atualizara
             echo atualizar
 
-        case otimizar otimiza limpar limpa melhorar acelerar
+        case otimizar otimiza otimize limpar limpa melhorar acelerar
             echo otimizar
 
         case abrir abre open
@@ -206,6 +226,39 @@ function __aury_is_command_token --argument-names tok
 
     return 1
 end
+
+function __aury_is_aux_token --argument-names tok
+    if contains -- $tok quero queria preciso gostaria pode poderia poderiame poderia-me conseguimos consegue
+        return 0
+    end
+
+    return 1
+end
+
+function __aury_is_filler_token --argument-names tok
+    if contains -- $tok __IGNORE__
+        return 0
+    end
+
+    return 1
+end
+
+function __aury_is_connector_token --argument-names tok
+    if contains -- $tok para em no na nos nas do da
+        return 0
+    end
+
+    return 1
+end
+
+function __aury_can_expand_shared_intent --argument-names intent
+    if contains -- $intent ver instalar remover procurar
+        return 0
+    end
+
+    return 1
+end
+
 
 function __aury_has_any --argument-names haystack_varname
     set -l haystack $$haystack_varname
@@ -279,6 +332,29 @@ function __aury_find_token_index --argument-names needle
     return 1
 end
 
+function __aury_find_first_intent_index
+    set -l words $argv
+    set -l i 1
+
+    while test $i -le (count $words)
+        set -l tok $words[$i]
+
+        if __aury_is_aux_token $tok
+            set i (math $i + 1)
+            continue
+        end
+
+        if contains -- $tok (__aury_intents)
+            echo $i
+            return 0
+        end
+
+        set i (math $i + 1)
+    end
+
+    return 1
+end
+
 function __aury_tokens_after --argument-names index
     set -e argv[1]
     set -l words $argv
@@ -290,15 +366,378 @@ function __aury_tokens_after --argument-names index
     printf '%s\n' $words[(math $index + 1)..-1]
 end
 
+function __aury_filter_interpretable_words
+    set -l norm_words $argv
+    set -l i 1
+
+    while test $i -le (count $norm_words)
+        set -l tok $norm_words[$i]
+
+        if __aury_is_filler_token $tok
+            set i (math $i + 1)
+            continue
+        end
+
+        if test "$tok" = "e"
+            echo $tok
+            set i (math $i + 1)
+            continue
+        end
+
+        echo $tok
+        set i (math $i + 1)
+    end
+end
+
+function __aury_collect_intent_indexes
+    set -l words $argv
+    set -l indexes
+    set -l i 1
+
+    while test $i -le (count $words)
+        if contains -- $words[$i] (__aury_intents)
+            set indexes $indexes $i
+        end
+
+        set i (math $i + 1)
+    end
+
+    printf '%s\n' $indexes
+end
+
+function __aury_clean_segment_edges
+    set -l words $argv
+
+    while test (count $words) -gt 0
+        set -l first $words[1]
+        if test "$first" = "e"; or __aury_is_connector_token $first
+            set words $words[2..-1]
+            continue
+        end
+        break
+    end
+
+    while test (count $words) -gt 0
+        set -l last $words[-1]
+        if test "$last" = "e"; or __aury_is_connector_token $last
+            set words $words[1..-2]
+            continue
+        end
+        break
+    end
+
+    printf '%s\n' $words
+end
+
+function __aury_emit_expanded_action
+    set -l norm_words $argv[1]
+    set -l orig_words $argv[2]
+
+    if test -z "$norm_words"
+        return 1
+    end
+
+    echo "NORM:$norm_words"
+    if test -n "$orig_words"
+        echo "ORIG:$orig_words"
+    else
+        echo "ORIG:"
+    end
+    echo "__AURY_EXPANDED_ACTION_BREAK__"
+end
+
+
+function __aury_collect_system_targets_from_words
+    set -l words $argv
+    set -l valid cpu memória disco gpu processos status sistema
+    set -l collected
+
+    for tok in $words
+        if test "$tok" = "ver"
+            continue
+        end
+
+        if test "$tok" = "e"
+            continue
+        end
+
+        if __aury_is_connector_token $tok
+            continue
+        end
+
+        if contains -- $tok $valid
+            if not contains -- $tok $collected
+                set collected $collected $tok
+            end
+            continue
+        end
+
+        return 1
+    end
+
+    if test (count $collected) -le 1
+        return 1
+    end
+
+    printf '%s\n' $collected
+end
+
+function __aury_expand_system_targets --argument-names intent
+    set -e argv[1]
+    set -l words $argv
+    set -l targets (__aury_collect_system_targets_from_words $words)
+
+    if test (count $targets) -le 1
+        return 1
+    end
+
+    for tok in $targets
+        __aury_emit_expanded_action (string join 	 -- $intent $tok) (string join 	 -- $intent $tok)
+    end
+
+    return 0
+end
+
+
+function __aury_expand_interpreted_actions
+    set -l norm_words $norm_words_global
+    set -l orig_words $orig_words_global
+    set -l intent_indexes (__aury_collect_intent_indexes $norm_words)
+
+    # Caso 1: múltiplas intenções explícitas na mesma frase
+    if test (count $intent_indexes) -gt 1
+        set -l idx 1
+
+        while test $idx -le (count $intent_indexes)
+            set -l start $intent_indexes[$idx]
+            set -l finish (count $norm_words)
+
+            if test $idx -lt (count $intent_indexes)
+                set finish (math $intent_indexes[(math $idx + 1)] - 1)
+            end
+
+            set -l segment_norm (__aury_clean_segment_edges $norm_words[$start..$finish])
+            set -l segment_orig (__aury_clean_segment_edges $orig_words[$start..$finish])
+
+            if test (count $segment_norm) -eq 1
+                if test "$segment_norm[1]" = "atualizar"
+                    set segment_norm atualizar sistema
+                else if test "$segment_norm[1]" = "otimizar"
+                    set segment_norm otimizar sistema
+                else if test "$segment_norm[1]" = "status"
+                    set segment_norm ver status sistema
+                end
+            end
+
+            if test (count $segment_norm) -gt 0
+                __aury_emit_expanded_action (string join \t -- $segment_norm) (string join \t -- $segment_orig)
+            end
+
+            set idx (math $idx + 1)
+        end
+
+        return 0
+    end
+
+    # Caso 2A: uma intenção "ver" compartilhada por múltiplos alvos de sistema
+    set -l intent (__aury_detect_intent $norm_words)
+
+    if test "$intent" = "ver"
+        if __aury_expand_system_targets $intent $norm_words
+            return 0
+        end
+    end
+
+    # Caso 2B: uma intenção compartilhada por vários alvos separados por "e"
+    if not __aury_can_expand_shared_intent $intent
+        return 1
+    end
+
+    set -l intent_idx (__aury_find_first_intent_index $norm_words)
+
+    if test -z "$intent_idx"
+        return 1
+    end
+
+    set -l target_norm $norm_words[(math $intent_idx + 1)..-1]
+    set -l target_orig $orig_words[(math $intent_idx + 1)..-1]
+
+    if not contains -- e $target_norm
+        return 1
+    end
+
+    set -l groups_norm
+    set -l groups_orig
+    set -l current_norm
+    set -l current_orig
+    set -l i 1
+
+    while test $i -le (count $target_norm)
+        set -l tok $target_norm[$i]
+        set -l orig_tok ''
+        if test $i -le (count $target_orig)
+            set orig_tok $target_orig[$i]
+        end
+
+        if test "$tok" = "e"
+            if test (count $current_norm) -gt 0
+                set -l cleaned_norm (__aury_clean_segment_edges $current_norm)
+                set -l cleaned_orig (__aury_clean_segment_edges $current_orig)
+
+                if test (count $cleaned_norm) -gt 0
+                    set groups_norm $groups_norm (string join 	 -- $cleaned_norm)
+                    if test (count $cleaned_orig) -gt 0
+                        set groups_orig $groups_orig (string join 	 -- $cleaned_orig)
+                    else
+                        set groups_orig $groups_orig ''
+                    end
+                end
+            end
+
+            set current_norm
+            set current_orig
+            set i (math $i + 1)
+            continue
+        end
+
+        if contains -- $tok (__aury_intents)
+            return 1
+        end
+
+        set current_norm $current_norm $tok
+        if test -n "$orig_tok"
+            set current_orig $current_orig $orig_tok
+        end
+
+        set i (math $i + 1)
+    end
+
+    if test (count $current_norm) -gt 0
+        set -l cleaned_norm (__aury_clean_segment_edges $current_norm)
+        set -l cleaned_orig (__aury_clean_segment_edges $current_orig)
+
+        if test (count $cleaned_norm) -gt 0
+            set groups_norm $groups_norm (string join 	 -- $cleaned_norm)
+            if test (count $cleaned_orig) -gt 0
+                set groups_orig $groups_orig (string join 	 -- $cleaned_orig)
+            else
+                set groups_orig $groups_orig ''
+            end
+        end
+    end
+
+    if test (count $groups_norm) -le 1
+        return 1
+    end
+
+    set -l g 1
+    while test $g -le (count $groups_norm)
+        set -l group_norm
+        set -l group_orig
+
+        if test -n "$groups_norm[$g]"
+            set group_norm (string split 	 -- $groups_norm[$g])
+        end
+
+        if test $g -le (count $groups_orig); and test -n "$groups_orig[$g]"
+            set group_orig (string split 	 -- $groups_orig[$g])
+        end
+
+        if test (count $group_norm) -gt 0
+            set -l emitted_norm $intent $group_norm
+            set -l emitted_orig
+
+            if test (count $group_orig) -gt 0
+                set emitted_orig $orig_words[$intent_idx] $group_orig
+            else
+                set emitted_orig $orig_words[$intent_idx]
+            end
+
+            __aury_emit_expanded_action (string join 	 -- $emitted_norm) (string join 	 -- $emitted_orig)
+        end
+
+        set g (math $g + 1)
+    end
+
+    return 0
+end
+
 function __aury_interpret_action
     set -l norm_words $norm_words_global
     set -l orig_words $orig_words_global
 
-    set -l intent (__aury_detect_intent $norm_words)
-    set -l domain (__aury_detect_domain $intent $norm_words)
+    set -l filtered_norm (__aury_filter_interpretable_words $norm_words)
+    set -l filtered_orig
+    set -l has_connector 0
+    set -l i 1
+
+    while test $i -le (count $filtered_norm)
+        set -l tok $filtered_norm[$i]
+
+        if __aury_is_connector_token $tok
+            set has_connector 1
+        end
+
+        if test $i -le (count $orig_words)
+            set filtered_orig $filtered_orig $orig_words[$i]
+        end
+
+        set i (math $i + 1)
+    end
+
+    set -l interpreted_norm
+    set -l interpreted_orig
+    set -l j 1
+
+    while test $j -le (count $filtered_norm)
+        set -l tok $filtered_norm[$j]
+
+        if __aury_is_aux_token $tok
+            set j (math $j + 1)
+            continue
+        end
+
+        set interpreted_norm $interpreted_norm $tok
+
+        if test $j -le (count $filtered_orig)
+            set interpreted_orig $interpreted_orig $filtered_orig[$j]
+        end
+
+        set j (math $j + 1)
+    end
+
+    if test (count $interpreted_norm) -eq 0
+        set interpreted_norm $filtered_norm
+        set interpreted_orig $filtered_orig
+    end
+
+    set -l intent_idx (__aury_find_first_intent_index $interpreted_norm)
+    set -l intent unknown
+
+    if test -n "$intent_idx"
+        set intent $interpreted_norm[$intent_idx]
+    else
+        set intent (__aury_detect_intent $interpreted_norm)
+    end
+
+    set -l domain_hint geral
+    if contains -- $intent instalar procurar remover
+        set domain_hint pacote
+    else if contains -- $intent criar copiar mover renomear
+        set domain_hint arquivo
+    else if contains -- $intent ver atualizar otimizar status
+        set domain_hint sistema
+    else if contains -- $intent ping internet
+        set domain_hint rede
+    else if contains -- $intent ajuda reload dev
+        set domain_hint interno
+    end
 
     echo "INTENT:$intent"
-    echo "DOMAIN:$domain"
+    echo "DOMAIN_HINT:$domain_hint"
+    echo "HAS_CONNECTOR:$has_connector"
+    echo "NORM:"(string join 	 -- $interpreted_norm)
+    echo "ORIG:"(string join 	 -- $interpreted_orig)
 end
 
 # -------------------------------------------------
@@ -404,10 +843,6 @@ function __aury_prepare_action
             continue
         end
 
-        if test "$norm" = "e"
-            continue
-        end
-
         set -l clean_orig (string replace -ra '^[[:punct:]]+|[[:punct:]]+$' '' -- $tok)
 
         if test -z "$clean_orig"
@@ -423,6 +858,11 @@ function __aury_prepare_action
 end
 
 function __aury_detect_intent
+    if set -q __aury_interp_intent; and test -n "$__aury_interp_intent"; and test "$__aury_interp_intent" != "unknown"
+        echo $__aury_interp_intent
+        return 0
+    end
+
     set -l norm_words $argv
 
     for candidate in ajuda reload dev atualizar otimizar procurar instalar remover criar copiar mover renomear ping internet ver status abrir
@@ -452,6 +892,11 @@ function __aury_detect_domain --argument-names intent
 
     if contains -- pasta $norm_words
         echo pasta
+        return 0
+    end
+
+    if test "$intent" = "atualizar"; or test "$intent" = "otimizar"; or test "$intent" = "status"
+        echo sistema
         return 0
     end
 
@@ -571,6 +1016,22 @@ function __aury_after_normalized_keyword --argument-names keyword
     string join " " -- $orig_words_global[(math $idx + 1)..-1]
 end
 
+function __aury_find_first_connector_index
+    set -l words $argv
+    set -l i 1
+
+    while test $i -le (count $words)
+        if contains -- $words[$i] para pra em no na
+            echo $i
+            return 0
+        end
+
+        set i (math $i + 1)
+    end
+
+    return 1
+end
+
 function __aury_extract_file_args
     set -l intent $argv[1]
     set -e argv[1]
@@ -609,6 +1070,19 @@ function __aury_extract_file_args
             end
         end
 
+        if test (count $norm_words) -ge $start
+            set -l rel_connector (__aury_find_first_connector_index $norm_words[$start..-1])
+
+            if test -n "$rel_connector"
+                set -l conn_idx (math $start + $rel_connector - 1)
+
+                if test "$norm_words[$conn_idx]" = "em"; and test (count $orig_words) -gt $conn_idx
+                    set -g __aury_arg_target (string join " " -- $orig_words[(math $conn_idx + 1)..-1])
+                    return 0
+                end
+            end
+        end
+
         if test (count $orig_words) -ge $start
             set -g __aury_arg_target (string join " " -- $orig_words[$start..-1])
         end
@@ -621,6 +1095,25 @@ function __aury_extract_file_args
         if test (count $norm_words) -ge $start
             if test "$norm_words[$start]" = "arquivo"; or test "$norm_words[$start]" = "pasta"
                 set start (math $start + 1)
+            end
+        end
+
+        if test (count $norm_words) -ge $start
+            set -l rel_connector (__aury_find_first_connector_index $norm_words[$start..-1])
+
+            if test -n "$rel_connector"
+                set -l conn_idx (math $start + $rel_connector - 1)
+
+                if test (math $conn_idx - 1) -ge $start
+                    set -g __aury_arg_source (string join " " -- $orig_words[$start..(math $conn_idx - 1)])
+                end
+
+                if test (count $orig_words) -gt $conn_idx
+                    set -g __aury_arg_dest (string join " " -- $orig_words[(math $conn_idx + 1)..-1])
+                    set -g __aury_arg_newname $__aury_arg_dest
+                end
+
+                return 0
             end
         end
 
@@ -1066,6 +1559,52 @@ function __aury_exec_files
     return 1
 end
 
+function __aury_dispatch_current_action
+    set -l intent (__aury_detect_intent $norm_words_global)
+    set -l domain (__aury_detect_domain $intent $norm_words_global)
+
+    if contains -- $intent (__aury_internal_intents)
+        __aury_exec_internal $intent
+        return 0
+    end
+
+    if test "$intent" = "ver"
+        set -l shared_system_targets (__aury_collect_system_targets_from_words $norm_words_global)
+        if test (count $shared_system_targets) -gt 1
+            for target in $shared_system_targets
+                if not __aury_exec_system $intent $intent $target
+                    return 1
+                end
+            end
+            return 0
+        end
+    end
+
+    switch $domain
+        case sistema
+            if __aury_exec_system $intent $norm_words_global
+                return 0
+            end
+
+        case rede
+            if __aury_exec_network $intent $norm_words_global
+                return 0
+            end
+
+        case arquivo pasta
+            if __aury_exec_files $intent $norm_words_global
+                return 0
+            end
+
+        case pacote
+            if __aury_exec_packages $intent $norm_words_global
+                return 0
+            end
+    end
+
+    return 1
+end
+
 # -------------------------------------------------
 # fallback
 # -------------------------------------------------
@@ -1137,48 +1676,93 @@ function aury
                 continue
             end
 
+            set -e __aury_interp_intent
+            set -e __aury_interp_domain_hint
+            set -e __aury_interp_has_connector
+
             set -l interpreted (__aury_interpret_action)
-            set -l intent unknown
-            set -l domain geral
+            set -l interpreted_norm_words
+            set -l interpreted_orig_words
 
             for line in $interpreted
                 if string match -q 'INTENT:*' -- $line
-                    set intent (string replace 'INTENT:' '' -- $line)
-                else if string match -q 'DOMAIN:*' -- $line
-                    set domain (string replace 'DOMAIN:' '' -- $line)
+                    set -g __aury_interp_intent (string replace 'INTENT:' '' -- $line)
+                else if string match -q 'DOMAIN_HINT:*' -- $line
+                    set -g __aury_interp_domain_hint (string replace 'DOMAIN_HINT:' '' -- $line)
+                else if string match -q 'HAS_CONNECTOR:*' -- $line
+                    set -g __aury_interp_has_connector (string replace 'HAS_CONNECTOR:' '' -- $line)
+                else if string match -q 'NORM:*' -- $line
+                    set -l payload (string replace 'NORM:' '' -- $line)
+
+                    if test -n "$payload"
+                        set interpreted_norm_words (string split 	 -- $payload)
+                    else
+                        set interpreted_norm_words
+                    end
+                else if string match -q 'ORIG:*' -- $line
+                    set -l payload (string replace 'ORIG:' '' -- $line)
+
+                    if test -n "$payload"
+                        set interpreted_orig_words (string split 	 -- $payload)
+                    else
+                        set interpreted_orig_words
+                    end
                 end
             end
 
-            if contains -- $intent (__aury_internal_intents)
-                __aury_exec_internal $intent
+            if test (count $interpreted_norm_words) -gt 0
+                set -g norm_words_global $interpreted_norm_words
+            end
+
+            if test (count $interpreted_orig_words) -gt 0
+                set -g orig_words_global $interpreted_orig_words
+            end
+
+            set -l expanded (__aury_expand_interpreted_actions)
+            set -l ran_expanded 0
+            set -l expanded_norm_words
+            set -l expanded_orig_words
+
+            for line in $expanded
+                if string match -q 'NORM:*' -- $line
+                    set -l payload (string replace 'NORM:' '' -- $line)
+                    if test -n "$payload"
+                        set expanded_norm_words (string split 	 -- $payload)
+                    else
+                        set expanded_norm_words
+                    end
+                else if string match -q 'ORIG:*' -- $line
+                    set -l payload (string replace 'ORIG:' '' -- $line)
+                    if test -n "$payload"
+                        set expanded_orig_words (string split 	 -- $payload)
+                    else
+                        set expanded_orig_words
+                    end
+                else if test "$line" = "__AURY_EXPANDED_ACTION_BREAK__"
+                    if test (count $expanded_norm_words) -gt 0
+                        set -g norm_words_global $expanded_norm_words
+                        set -g orig_words_global $expanded_orig_words
+
+                        if __aury_dispatch_current_action
+                            set ran_expanded 1
+                        else
+                            __aury_fallback $current_action
+                        end
+                    end
+
+                    set expanded_norm_words
+                    set expanded_orig_words
+                end
+            end
+
+            if test $ran_expanded -eq 1
                 set current_action
                 continue
             end
 
-            switch $domain
-                case sistema
-                    if __aury_exec_system $intent $norm_words_global
-                        set current_action
-                        continue
-                    end
-
-                case rede
-                    if __aury_exec_network $intent $norm_words_global
-                        set current_action
-                        continue
-                    end
-
-                case arquivo pasta
-                    if __aury_exec_files $intent $norm_words_global
-                        set current_action
-                        continue
-                    end
-
-                case pacote
-                    if __aury_exec_packages $intent $norm_words_global
-                        set current_action
-                        continue
-                    end
+            if __aury_dispatch_current_action
+                set current_action
+                continue
             end
 
             __aury_fallback $current_action
@@ -1190,6 +1774,9 @@ function aury
 
     set -e norm_words_global
     set -e orig_words_global
+    set -e __aury_interp_intent
+    set -e __aury_interp_domain_hint
+    set -e __aury_interp_has_connector
     set -e __aury_arg_type
     set -e __aury_arg_target
     set -e __aury_arg_source
