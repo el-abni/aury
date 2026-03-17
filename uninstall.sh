@@ -5,6 +5,7 @@ echo "🗑 Removendo a Aury..."
 echo ""
 
 rm -f ~/.config/fish/functions/aury.fish
+rm -f ~/.config/fish/functions/ay.fish
 
 echo ""
 echo "✅A Aury foi removida do sistema."
