@@ -129,15 +129,88 @@ end
 # 2.1 Normalização base
 # ==========================================================
 
-function __aury_normalize_token --argument-names tok
+# -------------------------------------------------
+# 2.1.1 Corretor conservador inicial
+# -------------------------------------------------
+
+function __aury_apply_conservative_correction --argument-names tok
+    if test -z "$tok"
+        echo $tok
+        return 0
+    end
+
+    __aury_token_sensitive_type $tok >/dev/null 2>&1
+    if test $status -eq 0
+        echo $tok
+        return 0
+    end
+
     set -l t (string lower -- $tok)
+
+    switch $t
+        case vc vcs cê ce ocê vocee voçe
+            echo você
+
+        case q
+            echo que
+
+        case ta tá tah
+            echo está
+
+        case tb tmb tambem tbm
+            echo também
+
+        case pf pls plz pfv pfvr porfa
+            echo porfavor
+
+        case mosta mosra mostar
+            echo mostrar
+
+        case ve vê vee verr
+            echo ver
+
+        case estrai extri estrair
+            echo extrair
+
+        case descompata descompcta descompactr
+            echo descompactar
+
+        case renomea renomeei renomearr
+            echo renomear
+
+        case atuliza atualizaa atualzar atualisa
+            echo atualizar
+
+        case otmiza otimisa otimizr
+            echo otimizar
+
+        case procuar procrar pesquizar
+            echo procurar
+
+        case copiia copiaa
+            echo copiar
+
+        case moevr movaa
+            echo mover
+
+        case crar criaar crir
+            echo criar
+
+        case '*'
+            echo $tok
+    end
+end
+
+function __aury_normalize_token --argument-names tok
+    set -l corrected (__aury_apply_conservative_correction $tok)
+    set -l t (string lower -- $corrected)
     set t (string replace -ra '^[[:punct:]]+|[[:punct:]]+$' '' -- $t)
 
     switch $t
         case ''
             echo __IGNORE__
 
-        case o a os as um uma uns umas de dos das com sobre ao aos à às por porgentileza pfvr porfa gentileza favor porfavor me mim comigo ai aí aury você voce que isso isto esse essa este esta aquela aquele aquelas aqueles ali lá la aqui
+        case o a os as um uma uns umas de dos das com sobre ao aos à às por porgentileza pfvr porfa gentileza favor porfavor me mim comigo ai aí aury você voce que isso isto esse essa este esta está aquela aquele aquelas aqueles ali lá la aqui também tambem
             echo __IGNORE__
 
         case e
@@ -1031,12 +1104,20 @@ function __aury_prepare_action
     set -l action_tokens $argv
     set -l norm_words
     set -l orig_words
+    set -l idx 1
 
     for tok in $action_tokens
         set -l norm (__aury_normalize_token $tok)
 
         if test "$norm" = "__IGNORE__"
-            continue
+            set -l raw_lower (string lower -- (string replace -ra '^[[:punct:]]+|[[:punct:]]+$' '' -- $tok))
+
+            if test $idx -gt 1; and test "$raw_lower" = "aury"
+                set norm $raw_lower
+            else
+                set idx (math $idx + 1)
+                continue
+            end
         end
 
         set -l clean_orig
@@ -1053,6 +1134,7 @@ function __aury_prepare_action
 
         set norm_words $norm_words $norm
         set orig_words $orig_words $clean_orig
+        set idx (math $idx + 1)
     end
 
     echo "NORM:"(string join \t -- $norm_words)
@@ -1241,6 +1323,79 @@ function __aury_find_first_connector_index
     end
 
     return 1
+end
+
+function __aury_find_locational_connector_index
+    set -l words $argv
+    set -l i 2
+
+    while test $i -le (count $words)
+        if contains -- $words[$i] em no na nos nas
+            echo $i
+            return 0
+        end
+
+        set i (math $i + 1)
+    end
+
+    return 1
+end
+
+function __aury_find_destination_connector_index
+    set -l words $argv
+    set -l i 1
+
+    while test $i -le (count $words)
+        if test "$words[$i]" = "para"
+            echo $i
+            return 0
+        end
+
+        set i (math $i + 1)
+    end
+
+    set i 1
+
+    while test $i -le (count $words)
+        if contains -- $words[$i] em no na nos nas
+            if test $i -gt 1
+                if contains -- $words[(math $i - 1)] está fica
+                    set i (math $i + 1)
+                    continue
+                end
+            end
+
+            echo $i
+            return 0
+        end
+
+        set i (math $i + 1)
+    end
+
+    return 1
+end
+
+function __aury_join_base_and_name --argument-names base name
+    if test -z "$base"
+        echo $name
+        return 0
+    end
+
+    if test -z "$name"
+        echo $base
+        return 0
+    end
+
+    if __aury_token_is_probably_path $name
+        echo $name
+        return 0
+    end
+
+    if string match -rq '/$' -- $base
+        echo "$base$name"
+    else
+        echo "$base/$name"
+    end
 end
 
 function __aury_strip_leading_destination_noise
@@ -1545,6 +1700,7 @@ function __aury_extract_file_args
 
     if test "$intent" = "copiar"; or test "$intent" = "mover"; or test "$intent" = "renomear"
         set -l start (math $idx + 1)
+        set -l base_source ''
 
         if test (count $norm_words) -ge $start
             if test "$norm_words[$start]" = "arquivo"; or test "$norm_words[$start]" = "pasta"
@@ -1553,18 +1709,45 @@ function __aury_extract_file_args
         end
 
         if test (count $norm_words) -ge $start
-            set -l rel_connector (__aury_find_first_connector_index $norm_words[$start..-1])
+            set -l rel_connector (__aury_find_destination_connector_index $norm_words[$start..-1])
 
             if test -n "$rel_connector"
                 set -l conn_idx (math $start + $rel_connector - 1)
 
                 if test (math $conn_idx - 1) -ge $start
-                    set -g __aury_arg_source (string join " " -- $orig_words[$start..(math $conn_idx - 1)])
+                    set -l source_norm_slice $norm_words[$start..(math $conn_idx - 1)]
+                    set -l source_orig_slice $orig_words[$start..(math $conn_idx - 1)]
+                    set -l rel_location (__aury_find_locational_connector_index $source_norm_slice)
+
+                    if test -n "$rel_location"
+                        set -l source_name_end (math $rel_location - 1)
+
+                        if test $rel_location -gt 1
+                            if contains -- $source_norm_slice[(math $rel_location - 1)] está fica
+                                set source_name_end (math $rel_location - 2)
+                            end
+                        end
+
+                        if test $source_name_end -ge 1
+                            set -l source_name (string join " " -- $source_orig_slice[1..$source_name_end])
+                            set base_source (string join " " -- $source_orig_slice[(math $rel_location + 1)..-1])
+                            set -g __aury_arg_source (__aury_join_base_and_name "$base_source" "$source_name")
+                        end
+                    end
+
+                    if test -z "$__aury_arg_source"
+                        set -g __aury_arg_source (string join " " -- $source_orig_slice)
+                    end
                 end
 
                 if test (count $orig_words) -gt $conn_idx
                     set -g __aury_arg_dest (string join " " -- $orig_words[(math $conn_idx + 1)..-1])
-                    set -g __aury_arg_newname $__aury_arg_dest
+
+                    if test "$intent" = "renomear"; and test -n "$base_source"
+                        set -g __aury_arg_newname (__aury_join_base_and_name "$base_source" "$__aury_arg_dest")
+                    else
+                        set -g __aury_arg_newname $__aury_arg_dest
+                    end
                 end
 
                 return 0
