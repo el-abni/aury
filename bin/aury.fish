@@ -663,6 +663,13 @@ function __aury_restore_sensitive_tokens
 end
 
 function __aury_dev_source_file
+    set -l current_function_file (functions --details aury 2>/dev/null)
+
+    if test -n "$current_function_file"; and test -f "$current_function_file"
+        echo $current_function_file
+        return 0
+    end
+
     if test -n "$__aury_loaded_from"; and test -f "$__aury_loaded_from"
         echo $__aury_loaded_from
         return 0
