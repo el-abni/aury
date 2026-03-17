@@ -564,6 +564,7 @@ function __aury_token_is_probably_filename --argument-names tok
 
     __aury_token_is_probably_path $tok; and return 0
     __aury_token_is_probably_compound_archive $tok; and return 0
+    string match -rq '^\.[^/]+$' -- $tok; and return 0
     string match -rq '^[^[:space:]/]+\.[A-Za-z0-9][A-Za-z0-9._-]*$' -- $tok; and return 0
     return 1
 end
@@ -1686,6 +1687,15 @@ function __aury_detect_domain --argument-names intent
 
         if test (count $orig_words) -gt 0
             set -l last_token $orig_words[-1]
+
+            if test -e "$last_token"
+                if test -d "$last_token"
+                    echo pasta
+                else
+                    echo arquivo
+                end
+                return 0
+            end
 
             if string match -rq '/' -- $last_token; or string match -rq '\.' -- $last_token
                 echo arquivo
