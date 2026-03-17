@@ -2861,7 +2861,7 @@ function __aury_exec_files
             if test $status -eq 0
                 set -l effective_copy_target (__aury_effective_target_path $__aury_arg_source $__aury_arg_dest)
                 __aury_update_local_reference $effective_copy_target $copy_type
-                __aury_msg_file_success "Pronto" copiar $copy_type $__aury_arg_source $__aury_arg_dest
+                __aury_msg_file_success "Pronto" copiar $copy_type $__aury_arg_source $effective_copy_target
             else
                 __aury_reset_local_reference_state
                 __aury_msg_file_failure copiar $copy_type $__aury_arg_source
@@ -2902,7 +2902,7 @@ function __aury_exec_files
             if test $status -eq 0
                 set -l effective_move_target (__aury_effective_target_path $__aury_arg_source $__aury_arg_dest)
                 __aury_update_local_reference $effective_move_target $move_type
-                __aury_msg_file_success "Feito" mover $move_type $__aury_arg_source $__aury_arg_dest
+                __aury_msg_file_success "Feito" mover $move_type $__aury_arg_source $effective_move_target
             else
                 __aury_reset_local_reference_state
                 __aury_msg_file_failure mover $move_type $__aury_arg_source
