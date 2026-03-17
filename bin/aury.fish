@@ -180,7 +180,7 @@ end
 
 function __aury_show_help
     echo "
-💜 Aury v1.4.3
+💜 Aury v1.5.0
 
 PACOTES
 aury instalar firefox
