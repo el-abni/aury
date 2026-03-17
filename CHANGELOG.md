@@ -4,6 +4,26 @@ Todas as mudanças importantes da **💜 Aury** são documentadas neste arquivo.
 
 ---
 
+## v1.4.2
+
+### Adicionado
+- suporte inicial e seguro para extração/descompactação de arquivos `.zip`, `.7z`, `.tar`, `.tar.gz` e `.tgz`
+- destino padrão previsível para arquivos compactados sem pasta explícita
+- validação prévia de conteúdo para bloquear caminhos absolutos e tentativas de path traversal
+- mensagens dedicadas para formato não suportado, arquivo ausente, dependência ausente e destino já existente
+
+### Melhorado
+- expansão conversacional incremental também aplicada aos comandos já existentes
+- suporte melhor a partículas como `que` e `você` em frases naturais
+- interpretação de destinos mais conversacionais em comandos de arquivo, como `para a pasta que fica em /usr/steam`
+- integração da nova intenção `extrair` ao parser existente sem quebrar o fluxo da v1.4.1
+
+### Compatibilidade
+- mantida compatibilidade com a base funcional da v1.4.1
+- mantido o modelo incremental de evolução do parser e dos executores
+
+---
+
 ## v1.4.1
 
 ### Adicionado
@@ -35,7 +55,7 @@ Todas as mudanças importantes da **💜 Aury** são documentadas neste arquivo.
 - `Aury, me ajuda a mover base/origem.txt para final.txt.`
 
 ### Resultado
-A versão **1.4.1** da Aury fecha a fase de refinamento conversacional da série 1.4, mantendo compatibilidade com a base da **1.4.0** e preparando o terreno para a **1.5.0**.
+A versão **v1.4.1** da Aury fecha a fase de refinamento conversacional da série v1.4, mantendo compatibilidade com a base da **v1.4.0** e preparando o terreno para a **v1.5.0**.
 
 ---
 
