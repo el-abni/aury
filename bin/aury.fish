@@ -4,6 +4,8 @@
 # Shell: fish
 # ==========================================================
 
+set -g __aury_loaded_from (status filename)
+
 # -------------------------------------------------
 # mensagens
 # -------------------------------------------------
@@ -542,6 +544,7 @@ function __aury_token_is_probably_path --argument-names tok
     end
 
     string match -rq '^(~/|/|\./|\.\./)' -- $tok; and return 0
+    string match -rq '.+/$' -- $tok; and return 0
     string match -rq '.+/.+' -- $tok; and return 0
     return 1
 end
@@ -633,6 +636,327 @@ function __aury_restore_sensitive_tokens
     printf "%s
 " $out
     return 0
+end
+
+function __aury_dev_source_file
+    if test -n "$__aury_loaded_from"; and test -f "$__aury_loaded_from"
+        echo $__aury_loaded_from
+        return 0
+    end
+
+    set -l installed ~/.config/fish/functions/aury.fish
+    if test -f $installed
+        echo $installed
+        return 0
+    end
+
+    return 1
+end
+
+function __aury_dev_print_field --argument-names label value
+    if test -z "$value"
+        set value "-"
+    end
+
+    printf '%-30s %s\n' "$label:" "$value"
+end
+
+function __aury_dev_sensitive_maps
+    set -l tokens $argv
+    set -l protected (__aury_protect_sensitive_tokens $tokens)
+    set -l protected_pairs
+    set -l restored_pairs
+    set -l total (count $__aury_sensitive_values)
+
+    if test $total -eq 0
+        echo "PROTECTED:nenhum"
+        echo "RESTORED:nenhum"
+        return 0
+    end
+
+    for i in (seq $total)
+        set -l typ $__aury_sensitive_types[$i]
+        set -l value $__aury_sensitive_values[$i]
+        set -l placeholder "__AURY_"(string upper -- $typ)"_"$i"__"
+        set -a protected_pairs "$value -> $placeholder"
+        set -a restored_pairs "$placeholder -> $value"
+    end
+
+    echo "PROTECTED:"(string join '; ' -- $protected_pairs)
+    echo "RESTORED:"(string join '; ' -- $restored_pairs)
+end
+
+function __aury_dev_show_syntax_status
+    set -l file (__aury_dev_source_file)
+
+    if test -z "$file"
+        __aury_msg_error "não encontrei o arquivo-fonte da Aury para validar"
+        return 1
+    end
+
+    set -l result (fish --no-execute $file 2>&1)
+
+    echo "🛠 modo dev da Aury"
+    __aury_dev_print_field "arquivo" $file
+
+    if test $status -eq 0
+        __aury_dev_print_field "sintaxe" "válida"
+        return 0
+    end
+
+    __aury_dev_print_field "sintaxe" "com erro"
+    set -l line (string match -r 'line [0-9]+|linha [0-9]+' -- $result)
+
+    if test -n "$line"
+        __aury_dev_print_field "local do erro" $line
+    end
+
+    echo ""
+    echo $result
+    return 1
+end
+
+function __aury_dev_report_current_action --argument-names index
+    set -e __aury_interp_intent
+    set -e __aury_interp_domain_hint
+    set -e __aury_interp_has_connector
+    set -e __aury_arg_type
+    set -e __aury_arg_target
+    set -e __aury_arg_source
+    set -e __aury_arg_dest
+    set -e __aury_arg_newname
+    set -e __aury_arg_archive_type
+    set -e __aury_arg_location_name
+    set -e __aury_arg_location_base
+    set -e __aury_arg_location_connector
+
+    set -l intent (__aury_detect_intent $norm_words_global)
+    set -l domain (__aury_detect_domain $intent $norm_words_global)
+    set -l normalized_action (string join " " -- $norm_words_global)
+    set -l type_detected ''
+    set -l source ''
+    set -l dest ''
+    set -l newname ''
+    set -l location_info ''
+
+    if test "$intent" = "extrair"
+        __aury_extract_archive_args $norm_words_global
+        set type_detected $__aury_arg_archive_type
+        set source $__aury_arg_source
+        set dest $__aury_arg_dest
+    else if test "$domain" = "arquivo"; or test "$domain" = "pasta"
+        __aury_extract_file_args $intent $norm_words_global
+        set type_detected $__aury_arg_type
+        set source $__aury_arg_source
+        set dest $__aury_arg_dest
+        set newname $__aury_arg_newname
+
+        if test -z "$source"; and test -n "$__aury_arg_target"
+            set source $__aury_arg_target
+        end
+
+        if test -n "$__aury_arg_location_name"; or test -n "$__aury_arg_location_base"
+            set location_info "nome: $__aury_arg_location_name | base: $__aury_arg_location_base | conector: $__aury_arg_location_connector"
+        end
+    else
+        switch $domain
+            case pacote
+                set type_detected pacote
+            case sistema
+                set type_detected sistema
+            case rede
+                set type_detected rede
+            case interno
+                set type_detected interno
+        end
+    end
+
+    echo ""
+    echo "Ação $index"
+    __aury_dev_print_field "frase normalizada" $normalized_action
+    __aury_dev_print_field "intenção detectada" $intent
+    __aury_dev_print_field "domínio sugerido" $domain
+    __aury_dev_print_field "tipo detectado" $type_detected
+    __aury_dev_print_field "origem" $source
+    __aury_dev_print_field "destino" $dest
+    __aury_dev_print_field "novo nome" $newname
+    __aury_dev_print_field "localização conversacional" $location_info
+end
+
+function __aury_dev_inspect_phrase
+    set -l dev_tokens (__aury_preprocess_input $argv)
+
+    if test (count $dev_tokens) -eq 0
+        __aury_msg_error "frase de depuração vazia"
+        return 1
+    end
+
+    set -l original_text (string trim -- (string join " " -- $dev_tokens))
+    set -l corrected_tokens
+    set -l normalized_tokens
+
+    for tok in $dev_tokens
+        set -a corrected_tokens (__aury_apply_conservative_correction $tok)
+        set -l normalized (__aury_normalize_token $tok)
+
+        if test "$normalized" != "__IGNORE__"
+            set -a normalized_tokens $normalized
+        end
+    end
+
+    set -l corrected_text (string join " " -- $corrected_tokens)
+    set -l normalized_text (string join " " -- $normalized_tokens)
+    set -l sensitive_maps (__aury_dev_sensitive_maps $dev_tokens)
+    set -l protected_map nenhum
+    set -l restored_map nenhum
+
+    for line in $sensitive_maps
+        if string match -q 'PROTECTED:*' -- $line
+            set protected_map (string replace 'PROTECTED:' '' -- $line)
+        else if string match -q 'RESTORED:*' -- $line
+            set restored_map (string replace 'RESTORED:' '' -- $line)
+        end
+    end
+
+    __aury_dev_show_syntax_status
+    set -l syntax_status $status
+
+    echo ""
+    __aury_dev_print_field "frase original" $original_text
+    __aury_dev_print_field "frase corrigida" $corrected_text
+    __aury_dev_print_field "frase normalizada" $normalized_text
+    __aury_dev_print_field "tokens sensíveis protegidos" $protected_map
+    __aury_dev_print_field "tokens restauráveis" $restored_map
+
+    set -l split_stream (__aury_split_actions $dev_tokens)
+    set -l current_action
+    set -l action_index 1
+
+    for item in $split_stream
+        if test "$item" = "__AURY_ACTION_BREAK__"
+            if test (count $current_action) -eq 0
+                continue
+            end
+
+            set -l prepared (__aury_prepare_action $current_action)
+            set -g norm_words_global
+            set -g orig_words_global
+
+            for line in $prepared
+                if string match -q 'NORM:*' -- $line
+                    set -l payload (string replace 'NORM:' '' -- $line)
+
+                    if test -n "$payload"
+                        set -g norm_words_global (string split \t -- $payload)
+                    else
+                        set -g norm_words_global
+                    end
+                else if string match -q 'ORIG:*' -- $line
+                    set -l payload (string replace 'ORIG:' '' -- $line)
+
+                    if test -n "$payload"
+                        set -g orig_words_global (string split \t -- $payload)
+                    else
+                        set -g orig_words_global
+                    end
+                end
+            end
+
+            if test (count $norm_words_global) -eq 0
+                set current_action
+                continue
+            end
+
+            set -e __aury_interp_intent
+            set -e __aury_interp_domain_hint
+            set -e __aury_interp_has_connector
+
+            set -l interpreted (__aury_interpret_action)
+            set -l interpreted_norm_words
+            set -l interpreted_orig_words
+
+            for line in $interpreted
+                if string match -q 'INTENT:*' -- $line
+                    set -g __aury_interp_intent (string replace 'INTENT:' '' -- $line)
+                else if string match -q 'DOMAIN_HINT:*' -- $line
+                    set -g __aury_interp_domain_hint (string replace 'DOMAIN_HINT:' '' -- $line)
+                else if string match -q 'HAS_CONNECTOR:*' -- $line
+                    set -g __aury_interp_has_connector (string replace 'HAS_CONNECTOR:' '' -- $line)
+                else if string match -q 'NORM:*' -- $line
+                    set -l payload (string replace 'NORM:' '' -- $line)
+
+                    if test -n "$payload"
+                        set interpreted_norm_words (string split \t -- $payload)
+                    else
+                        set interpreted_norm_words
+                    end
+                else if string match -q 'ORIG:*' -- $line
+                    set -l payload (string replace 'ORIG:' '' -- $line)
+
+                    if test -n "$payload"
+                        set interpreted_orig_words (string split \t -- $payload)
+                    else
+                        set interpreted_orig_words
+                    end
+                end
+            end
+
+            if test (count $interpreted_norm_words) -gt 0
+                set -g norm_words_global $interpreted_norm_words
+            end
+
+            if test (count $interpreted_orig_words) -gt 0
+                set -g orig_words_global $interpreted_orig_words
+            end
+
+            set -l expanded (__aury_expand_interpreted_actions)
+            set -l expanded_norm_words
+            set -l expanded_orig_words
+            set -l expanded_count 0
+
+            for line in $expanded
+                if string match -q 'NORM:*' -- $line
+                    set -l payload (string replace 'NORM:' '' -- $line)
+
+                    if test -n "$payload"
+                        set expanded_norm_words (string split \t -- $payload)
+                    else
+                        set expanded_norm_words
+                    end
+                else if string match -q 'ORIG:*' -- $line
+                    set -l payload (string replace 'ORIG:' '' -- $line)
+
+                    if test -n "$payload"
+                        set expanded_orig_words (string split \t -- $payload)
+                    else
+                        set expanded_orig_words
+                    end
+                else if test "$line" = "__AURY_EXPANDED_ACTION_BREAK__"
+                    if test (count $expanded_norm_words) -gt 0
+                        set -g norm_words_global $expanded_norm_words
+                        set -g orig_words_global $expanded_orig_words
+                        __aury_dev_report_current_action $action_index
+                        set action_index (math $action_index + 1)
+                        set expanded_count (math $expanded_count + 1)
+                    end
+
+                    set expanded_norm_words
+                    set expanded_orig_words
+                end
+            end
+
+            if test $expanded_count -eq 0
+                __aury_dev_report_current_action $action_index
+                set action_index (math $action_index + 1)
+            end
+
+            set current_action
+        else
+            set current_action $current_action $item
+        end
+    end
+
+    return $syntax_status
 end
 
 # ==========================================================
@@ -1733,6 +2057,9 @@ function __aury_extract_file_args
     set -g __aury_arg_source ''
     set -g __aury_arg_dest ''
     set -g __aury_arg_newname ''
+    set -g __aury_arg_location_name ''
+    set -g __aury_arg_location_base ''
+    set -g __aury_arg_location_connector ''
 
     set -l idx
 
@@ -1813,6 +2140,16 @@ function __aury_extract_file_args
                             set -l source_name (string join " " -- $source_orig_slice[1..$source_name_end])
                             set base_source (string join " " -- $source_orig_slice[(math $rel_location + 1)..-1])
                             set -g __aury_arg_source (__aury_join_base_and_name "$base_source" "$source_name")
+                            set -g __aury_arg_location_name $source_name
+                            set -g __aury_arg_location_base $base_source
+
+                            if test $rel_location -gt 1; and contains -- $source_norm_slice[(math $rel_location - 1)] está fica
+                                set -l location_verb $source_norm_slice[(math $rel_location - 1)]
+                                set -l location_prep $source_norm_slice[$rel_location]
+                                set -g __aury_arg_location_connector "$location_verb $location_prep"
+                            else
+                                set -g __aury_arg_location_connector $source_norm_slice[$rel_location]
+                            end
                         end
                     end
 
@@ -1878,30 +2215,10 @@ function __aury_exec_internal --argument-names intent
             return 0
 
         case dev
-            set -l file ~/.config/fish/functions/aury.fish
-
-            if not test -f $file
-                __aury_msg_error "arquivo da Aury não encontrado"
-                return 1
-            end
-
-            echo "🛠 verificando código da Aury..."
-            set -l result (fish --no-execute $file 2>&1)
-
-            if test $status -eq 0
-                __aury_msg_ok "código válido"
-            else
-                __aury_msg_error "erro detectado"
-                set -l line (string match -r 'line [0-9]+|linha [0-9]+' -- $result)
-
-                if test -n "$line"
-                    echo "📍 erro encontrado em: $line"
-                end
-
-                echo ""
-                echo $result
-            end
-            return 0
+            __aury_dev_show_syntax_status
+            echo ""
+            echo "Use: aury dev <frase>"
+            return $status
     end
 
     return 1
@@ -2460,6 +2777,12 @@ function aury
         return 1
     end
 
+    set -l first_norm (__aury_normalize_token $raw_tokens[1])
+    if test "$first_norm" = "dev"; and test (count $raw_tokens) -gt 1
+        __aury_dev_inspect_phrase $raw_tokens[2..-1]
+        return $status
+    end
+
     set -l split_stream (__aury_split_actions $raw_tokens)
     set -l current_action
 
@@ -2608,6 +2931,9 @@ function aury
     set -e __aury_arg_dest
     set -e __aury_arg_newname
     set -e __aury_arg_archive_type
+    set -e __aury_arg_location_name
+    set -e __aury_arg_location_base
+    set -e __aury_arg_location_connector
 
     return 0
 end
