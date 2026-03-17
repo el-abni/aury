@@ -4,6 +4,18 @@ Todas as mudanças importantes da **💜 Aury** são documentadas neste arquivo.
 
 ---
 
+## v1.4.3
+
+### Corrigido
+- corrigido o encadeamento de ações de sistema e pacote em frases como `aury atualiza, otimiza e baixa o firefox`
+- corrigido o tratamento de intenções únicas de sistema sem alvo explícito durante a expansão interna de ações
+- mantida a execução correta de sequências como `aury atualiza e otimiza` e `aury otimiza e atualiza`
+
+### Compatibilidade
+- mantida compatibilidade com a base funcional da v1.4.2
+
+---
+
 ## v1.4.2
 
 ### Adicionado
