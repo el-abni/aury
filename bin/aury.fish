@@ -2677,7 +2677,7 @@ function __aury_exec_files
                 end
             else
                 __aury_reset_local_reference_state
-                echo "❌ cancelado"
+                __aury_msg_warn "Tudo bem, eu cancelei essa ação."
             end
 
             return 0
