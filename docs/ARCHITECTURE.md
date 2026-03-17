@@ -4,6 +4,8 @@ Este documento descreve a arquitetura atual da **💜 Aury**, seu fluxo interno 
 
 Aury é uma assistente de terminal feita especificamente para **CachyOS**, com foco em transformar frases naturais em ações reais no sistema.
 
+Na v1.5.0, a entrada pública pode acontecer tanto por `aury` quanto pelo atalho `ay`, ambos apontando para o mesmo fluxo interno.
+
 ---
 
 ## Objetivo da arquitetura
@@ -78,6 +80,7 @@ Exemplos:
 
 ```text
 aury instalar firefox
+ay instalar firefox
 aury ver cpu e memória
 aury atualiza, otimiza e baixa o firefox
 aury extraia teste.tar para a pasta que fica em /usr/steam
@@ -105,7 +108,7 @@ Essa etapa prepara a frase para o parser.
 
 Exemplos do que pode acontecer aqui:
 
-- remoção do vocativo `Aury,`
+- remoção do vocativo de prefixo `Aury,`
 - tolerância a pontuação estilo chat
 - ajuste inicial dos tokens de entrada
 
@@ -123,6 +126,8 @@ aury Aury, instala o obs studio.
 
 A normalização converte diferentes formas de escrever a mesma ideia em uma forma interna consistente.
 
+Na v1.5.0, essa etapa foi reforçada por um corretor conservador e por proteção explícita de tokens sensíveis antes de corrigir ou simplificar a frase.
+
 Exemplos:
 
 ```text
@@ -135,6 +140,15 @@ deletar   → remover
 ```
 
 Também pode tratar palavras auxiliares e conectores.
+
+Tokens sensíveis preservados nessa fase incluem principalmente:
+
+- caminhos
+- hosts e domínios
+- nomes de arquivo
+- extensões compostas como `tar.gz`
+
+Isso permite corrigir estruturas conversacionais sem deformar argumentos reais.
 
 ---
 
@@ -160,7 +174,7 @@ Essa etapa separa ou expande a frase em ações menores, quando necessário.
 
 ### 6. Interpretação da frase
 
-Essa é uma das partes mais importantes da arquitetura da série 1.4.
+Essa é uma das partes mais importantes da arquitetura da série 1.5.
 
 Aqui a Aury tenta entender melhor a estrutura da frase antes da execução.
 
@@ -172,6 +186,8 @@ Ela já suporta:
 - múltiplas intenções
 - múltiplos alvos compartilhados
 - conectores como `para`, `pra` e `em`
+- localização conversacional em padrões como `que está em`, `que fica em` e `que tá em`
+- anáforas locais seguras com `ele`, `ela` e `isso`, quando existe referência local válida
 - destinos descritos de forma mais natural em fluxos de arquivo e extração
 
 Exemplos:
@@ -223,7 +239,7 @@ Domínios atuais:
 - pasta
 - geral
 
-A extração de arquivos compactados da linha v1.4.2 é tratada dentro do domínio de **arquivo**, reaproveitando a mesma base de parser, resolução de argumentos e execução segura.
+Desde a v1.4.2, e mantida na v1.5.0, a extração de arquivos compactados é tratada dentro do domínio de **arquivo**, reaproveitando a mesma base de parser, resolução de argumentos e execução segura.
 
 Exemplos:
 
@@ -339,11 +355,11 @@ aury criar arquivo em pasta/teste.txt
 
 ---
 
-## Refinamento conversacional na v1.4.1
+## Refinamento conversacional na v1.5.0
 
-A **💜 Aury v1.4.1** consolidou a camada conversacional da linha 1.4.
+A **💜 Aury v1.5.0** consolidou a camada conversacional conservadora da linha 1.x.
 
-Além da base introduzida na v1.4.0, a Aury passou a lidar melhor com partículas e construções como:
+Além da base da linha 1.4, a Aury passou a lidar melhor com partículas e construções como:
 
 - `que`
 - `você`
@@ -370,6 +386,13 @@ Aury, me ajuda a mover base/origem.txt para final.txt.
 ```
 
 Essa camada não substitui o parser principal. Ela refina a entrada para que o restante do pipeline continue trabalhando de forma previsível.
+
+Na prática, a v1.5.0 reforça quatro pontos:
+
+- correção leve e conservadora, focada em verbos e partículas
+- proteção de tokens sensíveis antes da correção
+- localização conversacional para origem e destino
+- resolução anafórica local quando a referência anterior é única e segura
 
 ---
 
@@ -402,7 +425,7 @@ A série 2.x poderá usar IA sobre uma base muito mais sólida.
 
 ---
 
-## Estado atual na v1.4.2
+## Estado atual na v1.5.0
 
 A Aury já entrega:
 
@@ -412,10 +435,13 @@ A Aury já entrega:
 - conectores de argumento
 - vocativo `Aury,`
 - pontuação estilo chat
-- partículas conversacionais mais bem tratadas
-- frases polidas com melhor interpretação
+- corretor conservador com foco em fala conversacional
+- proteção de tokens sensíveis durante correção e normalização
 - extração segura de arquivos `.zip`, `.7z`, `.tar`, `.tar.gz` e `.tgz`
-- leitura melhor de destinos em frases como `para a pasta que fica em /usr/steam`
+- localização conversacional em frases como `para a pasta que fica em /usr/steam`
+- anáforas locais seguras com `ele`, `ela` e `isso`
+- atalho público `ay` para o mesmo fluxo da `aury`
+- modo `aury dev` com inspeção de frase original, corrigida, normalizada, tokens sensíveis, intenção, domínio, argumentos e localização conversacional
 - melhor estabilidade entre comandos diretos e conversacionais
 
 Isso coloca a Aury em um estágio mais maduro dentro da série 1.x.
@@ -424,12 +450,10 @@ Isso coloca a Aury em um estágio mais maduro dentro da série 1.x.
 
 ## Próximas direções
 
-### v1.5
-- conversação antes da IA
-- expansão de sentenças naturais apontando para comandos existentes
-- argumentos mais flexíveis
-- caminhos complexos
-- mais robustez de parser, normalização e resolução
+### v1.6
+- refinamento incremental da conversação sobre a base conservadora da v1.5.0
+- melhorias pontuais de rede e mensagens públicas
+- mais robustez em parser, normalização e resolução sem romper compatibilidade
 
 ### v2.0
 - integração de IA local sobre a base estável da Aury
@@ -448,7 +472,7 @@ Ela já possui:
 - pipeline bem definido
 - interpretação natural crescente
 - separação entre parser e execução
-- refinamento conversacional consolidado da v1.4.1 até a v1.4.2
+- refinamento conversacional consolidado até a v1.5.0
 - base preparada para evoluções maiores
 
 Aury continua sendo um projeto de terminal, mas com uma proposta clara: tornar o uso do terminal no **CachyOS** mais natural, confortável e poderoso.

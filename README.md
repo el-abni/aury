@@ -1,6 +1,6 @@
 # 💜 Aury
 
-![version](https://img.shields.io/badge/version-1.4.3-purple)
+![version](https://img.shields.io/badge/version-v1.5.0-purple)
 ![shell](https://img.shields.io/badge/shell-fish-blue)
 ![platform](https://img.shields.io/badge/platform-CachyOS-orange)
 ![license](https://img.shields.io/badge/license-MIT-green)
@@ -17,7 +17,7 @@ Aury funciona como uma camada de interpretação entre o usuário e o sistema.
 
 Em vez de depender apenas de comandos tradicionais, você pode escrever o que quer fazer de um jeito mais humano, por exemplo:
 
-```bash
+```fish
 aury quero instalar obs studio
 aury ver cpu e memória
 aury atualiza, otimiza e baixa o firefox
@@ -33,7 +33,7 @@ A ideia não é substituir o terminal, mas tornar o uso dele mais confortável, 
 
 ### Pacotes
 
-```bash
+```fish
 aury instalar firefox
 aury instala firefox
 aury baixa o vlc
@@ -44,7 +44,7 @@ aury procurar steam
 
 ### Sistema
 
-```bash
+```fish
 aury atualizar sistema
 aury otimizar sistema
 aury atualiza e otimiza
@@ -56,7 +56,7 @@ aury ver cpu e memória
 
 ### Rede
 
-```bash
+```fish
 aury ver ip
 aury testar internet
 aury ping google.com
@@ -64,7 +64,7 @@ aury ping google.com
 
 ### Arquivos
 
-```bash
+```fish
 aury criar arquivo teste.txt
 aury cria um arquivo teste.txt
 aury criar pasta projetos
@@ -76,7 +76,7 @@ aury apaga o arquivo teste.txt
 
 ### Extração
 
-```bash
+```fish
 aury extrair teste.zip
 aury descompacte backup.tar.gz
 aury extraia teste.tar para a pasta que fica em /usr/steam
@@ -99,7 +99,10 @@ A versão atual da **💜 Aury** já oferece:
 - conectores como `e`, `para`, `pra` e `em`
 - suporte a vocativo como `Aury,`
 - suporte a pontuação estilo chat
-- expansão incremental de conversacionalidade na versão v1.4.2
+- corretor conservador com proteção de tokens sensíveis
+- localização conversacional em fluxos de arquivo e extração
+- anáforas locais seguras com `ele`, `ela` e `isso`
+- observabilidade expandida com `aury dev`
 
 ---
 
@@ -107,25 +110,25 @@ A versão atual da **💜 Aury** já oferece:
 
 Clone o repositório:
 
-```bash
+```fish
 git clone https://github.com/el-abni/aury.git
 cd aury
 ```
 
 Copie as funções para o Fish:
 
-```bash
+```fish
 cp bin/aury.fish ~/.config/fish/functions/aury.fish
 cp bin/ay.fish ~/.config/fish/functions/ay.fish
 ```
 
 Recarregue o shell:
 
-```bash
+```fish
 source ~/.config/fish/functions/aury.fish
 ```
 
-Agora o comando `aury` já pode ser usado no terminal. O atalho curto `ay` também fica disponível.
+Agora o comando `aury` já pode ser usado no terminal. O atalho curto `ay` também fica disponível e encaminha para a mesma função.
 
 ---
 
@@ -133,8 +136,9 @@ Agora o comando `aury` já pode ser usado no terminal. O atalho curto `ay` tamb�
 
 Para ver os exemplos e comandos disponíveis:
 
-```bash
+```fish
 aury ajuda
+ay ajuda
 ```
 
 No código, a identidade visual da assistente é:
@@ -146,13 +150,14 @@ No código, a identidade visual da assistente é:
 No comando de ajuda, a versão deve aparecer no formato:
 
 ```text
-💜 Aury v1.4.3
+💜 Aury v1.5.0
 ```
 
 A Aury entende tanto comandos diretos quanto frases mais naturais, como:
 
-```bash
+```fish
 aury instalar firefox
+ay instalar firefox
 aury pode instalar o firefox
 aury Aury, instala o obs studio.
 aury ver cpu e memória
@@ -164,11 +169,6 @@ aury atualiza, otimiza e baixa o firefox
 ## Roadmap
 
 O roadmap mostra **apenas versões futuras planejadas**.
-
-### v1.5
-
-- melhorias em argumentos
-- caminhos complexos
 
 ### v1.6
 
@@ -219,7 +219,7 @@ docs/
 
 Arquivos esperados:
 
-- `docs/architecture.md`
+- `docs/ARCHITECTURE.md`
 - `docs/commands.md` *(futuro)*
 - `docs/roadmap.md` *(futuro)*
 
