@@ -65,6 +65,32 @@ function __aury_path_label --argument-names kind
     end
 end
 
+function __aury_infer_path_kind --argument-names path fallback_kind
+    if test -n "$path"
+        if string match -rq '/$' -- $path
+            echo pasta
+            return 0
+        end
+
+        if test -d "$path"
+            echo pasta
+            return 0
+        end
+
+        if test -e "$path"
+            echo arquivo
+            return 0
+        end
+    end
+
+    if test "$fallback_kind" = "pasta"; or test "$fallback_kind" = "arquivo"
+        echo $fallback_kind
+        return 0
+    end
+
+    return 1
+end
+
 function __aury_msg_file_success --argument-names lead action kind source dest
     set -l label (__aury_path_label $kind)
 
@@ -1694,13 +1720,10 @@ function __aury_detect_domain --argument-names intent
 
         if test (count $orig_words) -gt 0
             set -l last_token $orig_words[-1]
+            set -l inferred_kind (__aury_infer_path_kind $last_token)
 
-            if test -e "$last_token"
-                if test -d "$last_token"
-                    echo pasta
-                else
-                    echo arquivo
-                end
+            if test -n "$inferred_kind"
+                echo $inferred_kind
                 return 0
             end
 
@@ -1727,6 +1750,13 @@ function __aury_detect_domain --argument-names intent
 
         if test (count $orig_words) -gt 0
             for tok in $orig_words
+                set -l inferred_kind (__aury_infer_path_kind $tok)
+
+                if test "$inferred_kind" = "pasta"
+                    echo pasta
+                    return 0
+                end
+
                 if string match -rq '/' -- $tok; or string match -rq '\.' -- $tok
                     echo arquivo
                     return 0
@@ -2249,6 +2279,11 @@ function __aury_extract_file_args
 
         if test (count $orig_words) -ge $start
             set -g __aury_arg_target (string join " " -- $orig_words[$start..-1])
+
+            set -l inferred_kind (__aury_infer_path_kind $__aury_arg_target $__aury_arg_type)
+            if test -n "$inferred_kind"
+                set -g __aury_arg_type $inferred_kind
+            end
 
             if test "$intent" = "remover"
                 set -l target_norm_slice $norm_words[$start..-1]
