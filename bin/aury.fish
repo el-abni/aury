@@ -807,7 +807,14 @@ function __aury_dev_report_current_action --argument-names index
         set type_detected $__aury_arg_type
         set source $__aury_arg_source
         set dest $__aury_arg_dest
-        set newname $__aury_arg_newname
+
+        if test "$intent" = "copiar"; or test "$intent" = "mover"
+            if test -n "$source"; and test -n "$dest"
+                set dest (__aury_effective_target_path "$source" "$dest")
+            end
+        else if test "$intent" = "renomear"
+            set newname $__aury_arg_newname
+        end
 
         if test -z "$source"; and test -n "$__aury_arg_target"
             set source $__aury_arg_target
