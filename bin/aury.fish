@@ -1987,6 +1987,33 @@ function __aury_join_base_and_name --argument-names base name
     end
 end
 
+function __aury_strip_leading_location_base_noise
+    set -l words $argv
+
+    while test (count $words) -gt 0
+        __aury_token_sensitive_type $words[1] >/dev/null 2>&1
+        if test $status -eq 0
+            break
+        end
+
+        set -l norm (__aury_normalize_token $words[1])
+
+        if test "$norm" = "__IGNORE__"
+            set words $words[2..-1]
+            continue
+        end
+
+        if contains -- $norm pasta arquivo caminho local diretório diretorio lugar destino
+            set words $words[2..-1]
+            continue
+        end
+
+        break
+    end
+
+    printf '%s\n' $words
+end
+
 function __aury_strip_leading_destination_noise
     set -l words $argv
 
@@ -2247,15 +2274,22 @@ function __aury_extract_file_args
 
     set -l idx
 
-    if contains -- pasta $norm_words
-        set -g __aury_arg_type pasta
-        set idx (contains -i -- pasta $norm_words)
-    else if contains -- arquivo $norm_words
+    set -l intent_idx (contains -i -- $intent $norm_words)
+
+    if test -n "$intent_idx"
+        set -l explicit_type_idx (math $intent_idx + 1)
+
+        if test $explicit_type_idx -le (count $norm_words)
+            if test "$norm_words[$explicit_type_idx]" = "pasta"; or test "$norm_words[$explicit_type_idx]" = "arquivo"
+                set -g __aury_arg_type $norm_words[$explicit_type_idx]
+                set idx $explicit_type_idx
+            end
+        end
+    end
+
+    if test -z "$idx"
         set -g __aury_arg_type arquivo
-        set idx (contains -i -- arquivo $norm_words)
-    else
-        set -g __aury_arg_type arquivo
-        set idx (contains -i -- $intent $norm_words)
+        set idx $intent_idx
     end
 
     if test -z "$idx"
@@ -2349,7 +2383,8 @@ function __aury_extract_file_args
 
                         if test $source_name_end -ge 1
                             set -l source_name (string join " " -- $source_orig_slice[1..$source_name_end])
-                            set base_source (string join " " -- $source_orig_slice[(math $rel_location + 1)..-1])
+                            set -l base_source_tokens (__aury_strip_leading_location_base_noise $source_orig_slice[(math $rel_location + 1)..-1])
+                            set base_source (string join " " -- $base_source_tokens)
                             set -g __aury_arg_source (__aury_join_base_and_name "$base_source" "$source_name")
                             set -g __aury_arg_location_name $source_name
                             set -g __aury_arg_location_base $base_source
