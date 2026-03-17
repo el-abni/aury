@@ -349,7 +349,7 @@ function __aury_normalize_token --argument-names tok
         case instalar instala instale instalaram adicionar adiciona adicione add instalr isntalar instal botar colocar baixa baixar baixe baixarame download baixarpra
             echo instalar
 
-        case remover remove remov deletar deleta delete excluir apagar apaga apague desinstalar desinstala desinstale uninstall removr remvoe tirar
+        case remover remove remov remova deletar deleta delete excluir apagar apaga apague desinstalar desinstala desinstale uninstall removr remvoe tirar
             echo remover
 
         case procurar procura procure buscar busca busque pesquise pesquisar acha achar encontrar localizar procra procuar pesquisr consultar pesquisa
@@ -358,10 +358,10 @@ function __aury_normalize_token --argument-names tok
         case criar cria crie gerar fazer monte montar
             echo criar
 
-        case copiar copia cp duplicar copar copiarr clone clonar
+        case copiar copia copie cp duplicar copar copiarr clone clonar
             echo copiar
 
-        case mover move mv movr moevr enviar deslocar
+        case mover move mova mv movr moevr enviar deslocar
             echo mover
 
         case renomear renomeia renomeie rename renomar renoemar renomea nomear
