@@ -8,6 +8,11 @@
 # mensagens
 # -------------------------------------------------
 
+# ==========================================================
+# Seção 1 — Metadados, mensagens e ajuda
+# 1.1 Mensagens
+# ==========================================================
+
 function __aury_msg_error --argument-names text
     echo "❌ $text"
 end
@@ -26,6 +31,10 @@ end
 
 # -------------------------------------------------
 # dicionários
+# -------------------------------------------------
+
+# -------------------------------------------------
+# 1.2 Dicionários-base da v1.4.x
 # -------------------------------------------------
 
 function __aury_intents
@@ -54,6 +63,10 @@ end
 
 # -------------------------------------------------
 # ajuda
+# -------------------------------------------------
+
+# -------------------------------------------------
+# 1.3 Help
 # -------------------------------------------------
 
 function __aury_show_help
@@ -110,6 +123,11 @@ end
 # -------------------------------------------------
 # normalização de linguagem
 # -------------------------------------------------
+
+# ==========================================================
+# Seção 2 — Normalização, conectores e preparação de fala
+# 2.1 Normalização base
+# ==========================================================
 
 function __aury_normalize_token --argument-names tok
     set -l t (string lower -- $tok)
@@ -226,6 +244,10 @@ function __aury_normalize_token --argument-names tok
     end
 end
 
+# -------------------------------------------------
+# 2.2 Classificadores rápidos de token
+# -------------------------------------------------
+
 function __aury_is_command_token --argument-names tok
     set -l normalized (__aury_normalize_token $tok)
 
@@ -309,6 +331,10 @@ function __aury_is_vocative_token --argument-names tok
     return 1
 end
 
+# -------------------------------------------------
+# 2.3 Pré-processamento bruto
+# -------------------------------------------------
+
 function __aury_preprocess_input
     set -l tokens $argv
 
@@ -323,6 +349,11 @@ function __aury_preprocess_input
 
     printf '%s\n' $tokens
 end
+
+# ==========================================================
+# Seção 3 — Split de ações, expansão e interpretação
+# 3.1 Busca e filtragem de tokens
+# ==========================================================
 
 function __aury_find_token_index --argument-names needle
     set -e argv[1]
@@ -437,6 +468,10 @@ function __aury_clean_segment_edges
 
     printf '%s\n' $words
 end
+
+# -------------------------------------------------
+# 3.2 Expansão de ações e alvos compartilhados
+# -------------------------------------------------
 
 function __aury_emit_expanded_action
     set -l norm_words $argv[1]
@@ -684,6 +719,10 @@ function __aury_expand_interpreted_actions
     return 0
 end
 
+# -------------------------------------------------
+# 3.3 Interpretação de ações individuais
+# -------------------------------------------------
+
 function __aury_interpret_action
     set -l norm_words $norm_words_global
     set -l orig_words $orig_words_global
@@ -764,6 +803,10 @@ end
 
 # -------------------------------------------------
 # entrada
+# -------------------------------------------------
+
+# -------------------------------------------------
+# 3.4 Validação, split e preparação final
 # -------------------------------------------------
 
 function __aury_validate_input --argument-names raw_text
@@ -885,6 +928,11 @@ function __aury_prepare_action
     echo "ORIG:"(string join \t -- $orig_words)
 end
 
+# ==========================================================
+# Seção 4 — Detecção de intenção, domínio e argumentos
+# 4.1 Intenção e domínio
+# ==========================================================
+
 function __aury_detect_intent
     if set -q __aury_interp_intent; and test -n "$__aury_interp_intent"; and test "$__aury_interp_intent" != "unknown"
         echo $__aury_interp_intent
@@ -997,6 +1045,10 @@ end
 # resolução de argumentos
 # -------------------------------------------------
 
+# -------------------------------------------------
+# 4.2 Extração de argumentos e conectores
+# -------------------------------------------------
+
 function __aury_after_keyword
     set -l keyword $argv[1]
     set -e argv[1]
@@ -1081,6 +1133,10 @@ function __aury_strip_leading_destination_noise
 
     printf '%s\n' $words
 end
+
+# -------------------------------------------------
+# 4.3 Arquivos compactados e preparação de extração
+# -------------------------------------------------
 
 function __aury_detect_archive_type --argument-names path
     set -l lower (string lower -- $path)
@@ -1397,6 +1453,11 @@ end
 # executores
 # -------------------------------------------------
 
+# ==========================================================
+# Seção 5 — Executores por domínio
+# 5.1 Internos
+# ==========================================================
+
 function __aury_exec_internal --argument-names intent
     switch $intent
         case ajuda
@@ -1450,6 +1511,10 @@ function __aury_exec_internal --argument-names intent
 
     return 1
 end
+
+# -------------------------------------------------
+# 5.2 Sistema
+# -------------------------------------------------
 
 function __aury_exec_system
     set -l intent $argv[1]
@@ -1535,6 +1600,10 @@ function __aury_exec_system
     return 1
 end
 
+# -------------------------------------------------
+# 5.3 Rede
+# -------------------------------------------------
+
 function __aury_exec_network
     set -l intent $argv[1]
     set -e argv[1]
@@ -1564,6 +1633,10 @@ function __aury_exec_network
 
     return 1
 end
+
+# -------------------------------------------------
+# 5.4 Pacotes
+# -------------------------------------------------
 
 function __aury_exec_packages
     set -l intent $argv[1]
@@ -1647,6 +1720,10 @@ function __aury_exec_packages
 
     return 1
 end
+
+# -------------------------------------------------
+# 5.5 Arquivos e extração
+# -------------------------------------------------
 
 function __aury_exec_files
     set -l intent $argv[1]
@@ -1897,6 +1974,11 @@ function __aury_exec_files
     return 1
 end
 
+# ==========================================================
+# Seção 6 — Dispatch, fallback e função principal
+# 6.1 Dispatch e fallback
+# ==========================================================
+
 function __aury_dispatch_current_action
     set -l intent (__aury_detect_intent $norm_words_global)
     set -l domain (__aury_detect_domain $intent $norm_words_global)
@@ -1955,6 +2037,10 @@ end
 
 # -------------------------------------------------
 # função principal
+# -------------------------------------------------
+
+# -------------------------------------------------
+# 6.2 Função principal
 # -------------------------------------------------
 
 function aury
@@ -2127,6 +2213,10 @@ function aury
 
     return 0
 end
+
+# -------------------------------------------------
+# 6.3 Alias principal
+# -------------------------------------------------
 
 function Aury
     aury $argv
