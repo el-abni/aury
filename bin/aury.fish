@@ -58,7 +58,7 @@ end
 
 function __aury_show_help
     echo "
-💜 Aury v1.4.2
+💜 Aury v1.4.3
 
 PACOTES
 aury instalar firefox
@@ -501,7 +501,7 @@ function __aury_expand_system_targets --argument-names intent
     end
 
     for tok in $targets
-        __aury_emit_expanded_action (string join 	 -- $intent $tok) (string join 	 -- $intent $tok)
+        __aury_emit_expanded_action (string join \t -- $intent $tok) (string join \t -- $intent $tok)
     end
 
     return 0
@@ -512,6 +512,21 @@ function __aury_expand_interpreted_actions
     set -l norm_words $norm_words_global
     set -l orig_words $orig_words_global
     set -l intent_indexes (__aury_collect_intent_indexes $norm_words)
+    set -l intent (__aury_detect_intent $norm_words)
+
+    # Caso 0: intenção única de sistema sem alvo explícito
+    if test (count $norm_words) -eq 1
+        if test "$intent" = "atualizar"
+            __aury_emit_expanded_action (string join \t -- atualizar sistema) (string join \t -- $orig_words)
+            return 0
+        else if test "$intent" = "otimizar"
+            __aury_emit_expanded_action (string join \t -- otimizar sistema) (string join \t -- $orig_words)
+            return 0
+        else if test "$intent" = "status"
+            __aury_emit_expanded_action (string join \t -- ver status sistema) (string join \t -- $orig_words)
+            return 0
+        end
+    end
 
     # Caso 1: múltiplas intenções explícitas na mesma frase
     if test (count $intent_indexes) -gt 1
@@ -549,8 +564,6 @@ function __aury_expand_interpreted_actions
     end
 
     # Caso 2A: uma intenção "ver" compartilhada por múltiplos alvos de sistema
-    set -l intent (__aury_detect_intent $norm_words)
-
     if test "$intent" = "ver"
         if __aury_expand_system_targets $intent $norm_words
             return 0
@@ -594,9 +607,9 @@ function __aury_expand_interpreted_actions
                 set -l cleaned_orig (__aury_clean_segment_edges $current_orig)
 
                 if test (count $cleaned_norm) -gt 0
-                    set groups_norm $groups_norm (string join 	 -- $cleaned_norm)
+                    set groups_norm $groups_norm (string join \t -- $cleaned_norm)
                     if test (count $cleaned_orig) -gt 0
-                        set groups_orig $groups_orig (string join 	 -- $cleaned_orig)
+                        set groups_orig $groups_orig (string join \t -- $cleaned_orig)
                     else
                         set groups_orig $groups_orig ''
                     end
@@ -626,9 +639,9 @@ function __aury_expand_interpreted_actions
         set -l cleaned_orig (__aury_clean_segment_edges $current_orig)
 
         if test (count $cleaned_norm) -gt 0
-            set groups_norm $groups_norm (string join 	 -- $cleaned_norm)
+            set groups_norm $groups_norm (string join \t -- $cleaned_norm)
             if test (count $cleaned_orig) -gt 0
-                set groups_orig $groups_orig (string join 	 -- $cleaned_orig)
+                set groups_orig $groups_orig (string join \t -- $cleaned_orig)
             else
                 set groups_orig $groups_orig ''
             end
@@ -645,11 +658,11 @@ function __aury_expand_interpreted_actions
         set -l group_orig
 
         if test -n "$groups_norm[$g]"
-            set group_norm (string split 	 -- $groups_norm[$g])
+            set group_norm (string split \t -- $groups_norm[$g])
         end
 
         if test $g -le (count $groups_orig); and test -n "$groups_orig[$g]"
-            set group_orig (string split 	 -- $groups_orig[$g])
+            set group_orig (string split \t -- $groups_orig[$g])
         end
 
         if test (count $group_norm) -gt 0
@@ -662,7 +675,7 @@ function __aury_expand_interpreted_actions
                 set emitted_orig $orig_words[$intent_idx]
             end
 
-            __aury_emit_expanded_action (string join 	 -- $emitted_norm) (string join 	 -- $emitted_orig)
+            __aury_emit_expanded_action (string join \t -- $emitted_norm) (string join \t -- $emitted_orig)
         end
 
         set g (math $g + 1)
@@ -745,8 +758,8 @@ function __aury_interpret_action
     echo "INTENT:$intent"
     echo "DOMAIN_HINT:$domain_hint"
     echo "HAS_CONNECTOR:$has_connector"
-    echo "NORM:"(string join 	 -- $interpreted_norm)
-    echo "ORIG:"(string join 	 -- $interpreted_orig)
+    echo "NORM:"(string join \t -- $interpreted_norm)
+    echo "ORIG:"(string join \t -- $interpreted_orig)
 end
 
 # -------------------------------------------------
@@ -2020,7 +2033,7 @@ function aury
                     set -l payload (string replace 'NORM:' '' -- $line)
 
                     if test -n "$payload"
-                        set interpreted_norm_words (string split 	 -- $payload)
+                        set interpreted_norm_words (string split \t -- $payload)
                     else
                         set interpreted_norm_words
                     end
@@ -2028,7 +2041,7 @@ function aury
                     set -l payload (string replace 'ORIG:' '' -- $line)
 
                     if test -n "$payload"
-                        set interpreted_orig_words (string split 	 -- $payload)
+                        set interpreted_orig_words (string split \t -- $payload)
                     else
                         set interpreted_orig_words
                     end
@@ -2052,14 +2065,14 @@ function aury
                 if string match -q 'NORM:*' -- $line
                     set -l payload (string replace 'NORM:' '' -- $line)
                     if test -n "$payload"
-                        set expanded_norm_words (string split 	 -- $payload)
+                        set expanded_norm_words (string split \t -- $payload)
                     else
                         set expanded_norm_words
                     end
                 else if string match -q 'ORIG:*' -- $line
                     set -l payload (string replace 'ORIG:' '' -- $line)
                     if test -n "$payload"
-                        set expanded_orig_words (string split 	 -- $payload)
+                        set expanded_orig_words (string split \t -- $payload)
                     else
                         set expanded_orig_words
                     end
@@ -2067,6 +2080,9 @@ function aury
                     if test (count $expanded_norm_words) -gt 0
                         set -g norm_words_global $expanded_norm_words
                         set -g orig_words_global $expanded_orig_words
+                        set -e __aury_interp_intent
+                        set -e __aury_interp_domain_hint
+                        set -e __aury_interp_has_connector
 
                         if __aury_dispatch_current_action
                             set ran_expanded 1
