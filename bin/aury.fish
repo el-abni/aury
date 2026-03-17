@@ -503,7 +503,7 @@ function __aury_is_vocative_token --argument-names tok
     set -l t (string lower -- $tok)
     set t (string replace -ra '^[[:punct:]]+|[[:punct:]]+$' '' -- $t)
 
-    if test "$t" = "aury"
+    if test "$t" = "aury" -o "$t" = "ay"
         return 0
     end
 
