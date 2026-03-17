@@ -717,6 +717,33 @@ function __aury_dev_sensitive_maps
     echo "RESTORED:"(string join '; ' -- $restored_pairs)
 end
 
+function __aury_dev_display_normalized_words --argument-names norm_varname orig_varname
+    set -l norm_words $$norm_varname
+    set -l orig_words $$orig_varname
+    set -l display_words
+
+    for idx in (seq (count $norm_words))
+        set -l norm_word $norm_words[$idx]
+        set -l orig_word ''
+
+        if test $idx -le (count $orig_words)
+            set orig_word $orig_words[$idx]
+        end
+
+        if test -n "$orig_word"
+            __aury_token_sensitive_type $orig_word >/dev/null 2>&1
+            if test $status -eq 0
+                set -a display_words $orig_word
+                continue
+            end
+        end
+
+        set -a display_words $norm_word
+    end
+
+    string join " " -- $display_words
+end
+
 function __aury_dev_show_syntax_status
     set -l file (__aury_dev_source_file)
 
@@ -763,7 +790,7 @@ function __aury_dev_report_current_action --argument-names index
 
     set -l intent (__aury_detect_intent $norm_words_global)
     set -l domain (__aury_detect_domain $intent $norm_words_global)
-    set -l normalized_action (string join " " -- $norm_words_global)
+    set -l normalized_action (__aury_dev_display_normalized_words norm_words_global orig_words_global)
     set -l type_detected ''
     set -l source ''
     set -l dest ''
@@ -870,6 +897,7 @@ function __aury_dev_inspect_phrase
     set -l original_text (string trim -- (string join " " -- $dev_tokens))
     set -l corrected_tokens
     set -l normalized_tokens
+    set -l normalized_display_tokens
 
     for tok in $dev_tokens
         set -a corrected_tokens (__aury_apply_conservative_correction $tok)
@@ -877,11 +905,18 @@ function __aury_dev_inspect_phrase
 
         if test "$normalized" != "__IGNORE__"
             set -a normalized_tokens $normalized
+
+            __aury_token_sensitive_type $tok >/dev/null 2>&1
+            if test $status -eq 0
+                set -a normalized_display_tokens $tok
+            else
+                set -a normalized_display_tokens $normalized
+            end
         end
     end
 
     set -l corrected_text (string join " " -- $corrected_tokens)
-    set -l normalized_text (string join " " -- $normalized_tokens)
+    set -l normalized_text (string join " " -- $normalized_display_tokens)
     set -l sensitive_maps (__aury_dev_sensitive_maps $dev_tokens)
     set -l protected_map nenhum
     set -l restored_map nenhum
@@ -2268,6 +2303,7 @@ function __aury_extract_file_args
     set -g __aury_arg_source ''
     set -g __aury_arg_dest ''
     set -g __aury_arg_newname ''
+    set -g __aury_arg_target_from_local_anaphor ''
     set -g __aury_arg_location_name ''
     set -g __aury_arg_location_base ''
     set -g __aury_arg_location_connector ''
@@ -2335,6 +2371,7 @@ function __aury_extract_file_args
                     if test -n "$resolved_target"
                         set -g __aury_arg_target $resolved_target
                         set -g __aury_arg_type $__aury_local_ref_kind
+                        set -g __aury_arg_target_from_local_anaphor 1
                     end
                 end
             end
@@ -2750,8 +2787,23 @@ function __aury_exec_files
                 return 0
             end
 
-            echo "⚠ confirmar exclusão de '$__aury_arg_target' (s/n)"
-            read -l confirm
+            set -l confirm s
+            set -l skip_confirmation 0
+
+            # Só pulamos a confirmação quando a remoção veio de anáfora local
+            # e aponta exatamente para a referência criada/atualizada na ação anterior.
+            if test "$__aury_arg_target_from_local_anaphor" = "1"
+                if test "$__aury_arg_target" = "$__aury_local_ref_path"
+                    if test "$__aury_arg_type" = "$__aury_local_ref_kind"
+                        set skip_confirmation 1
+                    end
+                end
+            end
+
+            if test $skip_confirmation -ne 1
+                echo "⚠ confirmar exclusão de '$__aury_arg_target' (s/n)"
+                read -l confirm
+            end
 
             if test "$confirm" = "s" -o "$confirm" = "S"
                 set -l target_kind (__aury_path_kind $__aury_arg_target $__aury_arg_type)
@@ -3215,6 +3267,7 @@ function aury
     set -e __aury_arg_source
     set -e __aury_arg_dest
     set -e __aury_arg_newname
+    set -e __aury_arg_target_from_local_anaphor
     set -e __aury_arg_archive_type
     set -e __aury_arg_location_name
     set -e __aury_arg_location_base
