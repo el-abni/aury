@@ -350,6 +350,137 @@ function __aury_preprocess_input
     printf '%s\n' $tokens
 end
 
+# -------------------------------------------------
+# 2.4 Proteção tipada de tokens sensíveis
+# -------------------------------------------------
+
+function __aury_reset_sensitive_state
+    set -g __aury_sensitive_types
+    set -g __aury_sensitive_values
+    return 0
+end
+
+function __aury_sensitive_add --argument-names typ value
+    if test -z "$typ" -o -z "$value"
+        return 1
+    end
+
+    if not set -q __aury_sensitive_types
+        set -g __aury_sensitive_types
+    end
+
+    if not set -q __aury_sensitive_values
+        set -g __aury_sensitive_values
+    end
+
+    set -l idx (math (count $__aury_sensitive_types) + 1)
+    set -g -a __aury_sensitive_types $typ
+    set -g -a __aury_sensitive_values $value
+
+    printf "__AURY_%s_%s__
+" (string upper -- $typ) $idx
+    return 0
+end
+
+function __aury_token_is_probably_path --argument-names tok
+    if test -z "$tok"
+        return 1
+    end
+
+    string match -rq '^(~/|/|\./|\.\./)' -- $tok; and return 0
+    string match -rq '.+/.+' -- $tok; and return 0
+    return 1
+end
+
+function __aury_token_is_probably_compound_archive --argument-names tok
+    if test -z "$tok"
+        return 1
+    end
+
+    string match -rq '\.(tar\.gz|tgz|tar\.bz2|tar\.xz)$' -- $tok
+end
+
+function __aury_token_is_probably_filename --argument-names tok
+    if test -z "$tok"
+        return 1
+    end
+
+    __aury_token_is_probably_path $tok; and return 0
+    __aury_token_is_probably_compound_archive $tok; and return 0
+    string match -rq '^[^[:space:]/]+\.[A-Za-z0-9][A-Za-z0-9._-]*$' -- $tok; and return 0
+    return 1
+end
+
+function __aury_token_is_probably_host --argument-names tok
+    if test -z "$tok"
+        return 1
+    end
+
+    __aury_token_is_probably_path $tok; and return 1
+
+    string match -rq '\.(tar\.gz|tgz|tar\.bz2|tar\.xz|zip|7z|tar|gz|bz2|xz|txt|log|md|markdown|fish|sh|bash|zsh|json|yaml|yml|toml|ini|conf|cfg|service|desktop|pdf|docx?|xlsx?|csv|tsv|xml|html?|css|js|ts|jsx|tsx|py|rs|c|cpp|h|hpp|java|kt|swift|go|rb|php|lua|pl)$' -- $tok; and return 1
+
+    string match -rq '^[A-Za-z0-9][A-Za-z0-9.-]*\.[A-Za-z]{2,}$' -- $tok; and return 0
+    return 1
+end
+
+function __aury_token_sensitive_type --argument-names tok
+    __aury_token_is_probably_path $tok; and begin
+        echo path
+        return 0
+    end
+
+    __aury_token_is_probably_host $tok; and begin
+        echo host
+        return 0
+    end
+
+    __aury_token_is_probably_filename $tok; and begin
+        echo file
+        return 0
+    end
+
+    return 1
+end
+
+function __aury_protect_sensitive_tokens
+    __aury_reset_sensitive_state
+    set -l out
+
+    for tok in $argv
+        set -l typ (__aury_token_sensitive_type $tok)
+        if test $status -eq 0
+            set -a out (__aury_sensitive_add $typ $tok)
+        else
+            set -a out $tok
+        end
+    end
+
+    printf "%s
+" $out
+    return 0
+end
+
+function __aury_restore_sensitive_tokens
+    set -l out
+
+    for tok in $argv
+        if string match -rq '^__AURY_[A-Z]+_[0-9]+__$' -- $tok
+            set -l idx (string replace -r '^__AURY_[A-Z]+_([0-9]+)__$' '$1' -- $tok)
+            if test -n "$idx"; and test $idx -ge 1; and test $idx -le (count $__aury_sensitive_values)
+                set -a out $__aury_sensitive_values[$idx]
+                continue
+            end
+        end
+
+        set -a out $tok
+    end
+
+    printf "%s
+" $out
+    return 0
+end
+
 # ==========================================================
 # Seção 3 — Split de ações, expansão e interpretação
 # 3.1 Busca e filtragem de tokens
