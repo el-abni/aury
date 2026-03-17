@@ -80,6 +80,7 @@ Exemplos:
 aury instalar firefox
 aury ver cpu e memória
 aury atualiza, otimiza e baixa o firefox
+aury extraia teste.tar para a pasta que fica em /usr/steam
 ```
 
 ---
@@ -167,9 +168,11 @@ Ela já suporta:
 
 - intenção no meio da frase
 - palavras auxiliares como `quero`, `pode`
+- partículas conversacionais como `que` e `você`
 - múltiplas intenções
 - múltiplos alvos compartilhados
 - conectores como `para`, `pra` e `em`
+- destinos descritos de forma mais natural em fluxos de arquivo e extração
 
 Exemplos:
 
@@ -177,6 +180,7 @@ Exemplos:
 aury quero instalar obs studio
 aury ver cpu e memória
 aury mover teste.txt para pasta/teste.txt
+aury extraia teste.tar para a pasta que fica em /usr/steam
 ```
 
 ---
@@ -218,6 +222,8 @@ Domínios atuais:
 - arquivo
 - pasta
 - geral
+
+A extração de arquivos compactados da linha v1.4.2 é tratada dentro do domínio de **arquivo**, reaproveitando a mesma base de parser, resolução de argumentos e execução segura.
 
 Exemplos:
 
@@ -296,7 +302,7 @@ No futuro, essa área pode crescer para incluir:
 
 ## Interpretação de linguagem natural
 
-A linha 1.4 ampliou significativamente a capacidade de interpretação da Aury.
+A linha v1.4 ampliou significativamente a capacidade de interpretação da Aury.
 
 Ela entende melhor:
 
@@ -335,7 +341,7 @@ aury criar arquivo em pasta/teste.txt
 
 ## Refinamento conversacional na v1.4.1
 
-A versão **💜 Aury v1.4.1** consolidou a camada conversacional da linha 1.4.
+A **💜 Aury v1.4.1** consolidou a camada conversacional da linha 1.4.
 
 Além da base introduzida na v1.4.0, a Aury passou a lidar melhor com partículas e construções como:
 
@@ -396,9 +402,9 @@ A série 2.x poderá usar IA sobre uma base muito mais sólida.
 
 ---
 
-## Estado atual na v1.4.1
+## Estado atual na v1.4.2
 
-Na versão **💜 Aury v1.4.1**, a Aury já entrega:
+A Aury já entrega:
 
 - comandos mais naturais
 - múltiplas intenções
@@ -408,6 +414,8 @@ Na versão **💜 Aury v1.4.1**, a Aury já entrega:
 - pontuação estilo chat
 - partículas conversacionais mais bem tratadas
 - frases polidas com melhor interpretação
+- extração segura de arquivos `.zip`, `.7z`, `.tar`, `.tar.gz` e `.tgz`
+- leitura melhor de destinos em frases como `para a pasta que fica em /usr/steam`
 - melhor estabilidade entre comandos diretos e conversacionais
 
 Isso coloca a Aury em um estágio mais maduro dentro da série 1.x.
@@ -416,26 +424,18 @@ Isso coloca a Aury em um estágio mais maduro dentro da série 1.x.
 
 ## Próximas direções
 
-### 1.5
-- melhorias em argumentos
+### v1.5
+- conversação antes da IA
+- expansão de sentenças naturais apontando para comandos existentes
+- argumentos mais flexíveis
 - caminhos complexos
+- mais robustez de parser, normalização e resolução
 
-### 1.6
-- melhorias de rede
-
-### 1.7
-- melhorias de pacotes
-
-### 1.8
-- fallback inteligente
-
-### 1.9
-- refinamento geral
-
-### 2.0
-- IA local
-- conversação natural
-- fallback de comandos complexos
+### v2.0
+- integração de IA local sobre a base estável da Aury
+- conversação natural mais ampla
+- fallback para casos complexos
+- possibilidade de separação entre a base local da Aury e uma camada com IA
 
 ---
 
@@ -448,7 +448,7 @@ Ela já possui:
 - pipeline bem definido
 - interpretação natural crescente
 - separação entre parser e execução
-- refinamento conversacional consolidado na v1.4.1
+- refinamento conversacional consolidado da v1.4.1 até a v1.4.2
 - base preparada para evoluções maiores
 
 Aury continua sendo um projeto de terminal, mas com uma proposta clara: tornar o uso do terminal no **CachyOS** mais natural, confortável e poderoso.
