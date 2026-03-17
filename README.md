@@ -1,6 +1,6 @@
 # 💜 Aury
 
-![version](https://img.shields.io/badge/version-1.4.1-purple)
+![version](https://img.shields.io/badge/version-v1.4.2-purple)
 ![shell](https://img.shields.io/badge/shell-fish-blue)
 ![platform](https://img.shields.io/badge/platform-CachyOS-orange)
 ![license](https://img.shields.io/badge/license-MIT-green)
@@ -22,6 +22,7 @@ aury quero instalar obs studio
 aury ver cpu e memória
 aury atualiza, otimiza e baixa o firefox
 aury mover arquivo teste.txt para pasta/teste.txt
+aury extraia teste.tar para a pasta que fica em /usr/steam
 ```
 
 A ideia não é substituir o terminal, mas tornar o uso dele mais confortável, direto e acessível.
@@ -73,6 +74,14 @@ aury renomear teste.txt para novo.txt
 aury apaga o arquivo teste.txt
 ```
 
+### Extração
+
+```bash
+aury extrair teste.zip
+aury descompacte backup.tar.gz
+aury extraia teste.tar para a pasta que fica em /usr/steam
+```
+
 ---
 
 ## Funcionalidades
@@ -86,10 +95,11 @@ A versão atual da **💜 Aury** já oferece:
 - comandos de sistema
 - comandos de rede
 - comandos de arquivo
+- extração segura de arquivos `.zip`, `.7z`, `.tar`, `.tar.gz` e `.tgz`
 - conectores como `e`, `para`, `pra` e `em`
 - suporte a vocativo como `Aury,`
 - suporte a pontuação estilo chat
-- refinamento global de conversacionalidade na versão 1.4.1
+- expansão incremental de conversacionalidade na versão v1.4.2
 
 ---
 
@@ -135,7 +145,7 @@ No código, a identidade visual da assistente é:
 No comando de ajuda, a versão deve aparecer no formato:
 
 ```text
-💜 Aury v1.4.1
+💜 Aury v1.4.2
 ```
 
 A Aury entende tanto comandos diretos quanto frases mais naturais, como:
