@@ -29,6 +29,87 @@ function __aury_msg_warn --argument-names text
     echo "⚠️ $text"
 end
 
+function __aury_path_kind --argument-names path fallback_kind
+    if test -n "$path"
+        if test -d "$path"
+            echo pasta
+            return 0
+        end
+
+        if test -e "$path"
+            echo arquivo
+            return 0
+        end
+    end
+
+    if test "$fallback_kind" = "pasta"; or test "$fallback_kind" = "arquivo"
+        echo $fallback_kind
+        return 0
+    end
+
+    echo alvo
+end
+
+function __aury_path_label --argument-names kind
+    switch $kind
+        case pasta
+            echo "a pasta"
+
+        case arquivo
+            echo "o arquivo"
+
+        case '*'
+            echo "o item"
+    end
+end
+
+function __aury_msg_file_success --argument-names lead action kind source dest
+    set -l label (__aury_path_label $kind)
+
+    switch $action
+        case criar
+            __aury_msg_ok "$lead, eu criei $label '$source'."
+
+        case remover
+            __aury_msg_ok "$lead, eu removi $label '$source'."
+
+        case copiar
+            __aury_msg_ok "$lead, eu copiei $label '$source' para '$dest'."
+
+        case mover
+            __aury_msg_ok "$lead, eu movi $label '$source' para '$dest'."
+
+        case renomear
+            __aury_msg_ok "$lead, eu renomeei $label '$source' para '$dest'."
+    end
+end
+
+function __aury_msg_file_missing --argument-names path kind
+    set -l label (__aury_path_label $kind)
+    __aury_msg_error "não encontrei $label '$path'"
+end
+
+function __aury_msg_file_failure --argument-names action kind path
+    set -l label (__aury_path_label $kind)
+
+    switch $action
+        case criar
+            __aury_msg_error "não consegui criar $label '$path'"
+
+        case remover
+            __aury_msg_error "não consegui remover $label '$path'"
+
+        case copiar
+            __aury_msg_error "não consegui copiar $label '$path'"
+
+        case mover
+            __aury_msg_error "não consegui mover $label '$path'"
+
+        case renomear
+            __aury_msg_error "não consegui renomear $label '$path'"
+    end
+end
+
 # -------------------------------------------------
 # dicionários
 # -------------------------------------------------
@@ -2057,9 +2138,9 @@ function __aury_exec_files
                 mkdir -p -- $__aury_arg_target
 
                 if test $status -eq 0
-                    echo "📁 pasta criada: $__aury_arg_target"
+                    __aury_msg_file_success "Pronto" criar pasta $__aury_arg_target
                 else
-                    __aury_msg_error "erro ao criar pasta"
+                    __aury_msg_file_failure criar pasta $__aury_arg_target
                 end
 
                 return 0
@@ -2079,9 +2160,9 @@ function __aury_exec_files
             touch -- $__aury_arg_target
 
             if test $status -eq 0
-                echo "📄 arquivo criado: $__aury_arg_target"
+                __aury_msg_file_success "Pronto" criar arquivo $__aury_arg_target
             else
-                __aury_msg_error "erro ao criar arquivo"
+                __aury_msg_file_failure criar arquivo $__aury_arg_target
             end
 
             return 0
@@ -2093,7 +2174,8 @@ function __aury_exec_files
             end
 
             if not test -e $__aury_arg_target
-                __aury_msg_error "não encontrado: $__aury_arg_target"
+                set -l target_kind (__aury_path_kind $__aury_arg_target $__aury_arg_type)
+                __aury_msg_file_missing $__aury_arg_target $target_kind
                 return 0
             end
 
@@ -2101,6 +2183,8 @@ function __aury_exec_files
             read -l confirm
 
             if test "$confirm" = "s" -o "$confirm" = "S"
+                set -l target_kind (__aury_path_kind $__aury_arg_target $__aury_arg_type)
+
                 if test "$__aury_arg_type" = "pasta"
                     rm -rf -- $__aury_arg_target
                 else
@@ -2108,9 +2192,9 @@ function __aury_exec_files
                 end
 
                 if test $status -eq 0
-                    echo "🗑 removido: $__aury_arg_target"
+                    __aury_msg_file_success "Feito" remover $target_kind $__aury_arg_target
                 else
-                    __aury_msg_error "erro ao remover"
+                    __aury_msg_file_failure remover $target_kind $__aury_arg_target
                 end
             else
                 echo "❌ cancelado"
@@ -2125,7 +2209,8 @@ function __aury_exec_files
             end
 
             if not test -e $__aury_arg_source
-                __aury_msg_error "origem não encontrada: $__aury_arg_source"
+                set -l copy_type (__aury_path_kind $__aury_arg_source $__aury_arg_type)
+                __aury_msg_file_missing $__aury_arg_source $copy_type
                 return 0
             end
 
@@ -2135,22 +2220,20 @@ function __aury_exec_files
                 mkdir -p -- $dest_dir
             end
 
+            set -l copy_type
+
             if test -d $__aury_arg_source
                 cp -r -- $__aury_arg_source $__aury_arg_dest
-                set -l copy_type pasta
+                set copy_type pasta
             else
                 cp -- $__aury_arg_source $__aury_arg_dest
-                set -l copy_type arquivo
+                set copy_type arquivo
             end
 
             if test $status -eq 0
-                if test "$copy_type" = "pasta"
-                    echo "📁 pasta copiada: $__aury_arg_source → $__aury_arg_dest"
-                else
-                    echo "📄 arquivo copiado: $__aury_arg_source → $__aury_arg_dest"
-                end
+                __aury_msg_file_success "Pronto" copiar $copy_type $__aury_arg_source $__aury_arg_dest
             else
-                __aury_msg_error "erro ao copiar"
+                __aury_msg_file_failure copiar $copy_type $__aury_arg_source
             end
 
             return 0
@@ -2162,7 +2245,8 @@ function __aury_exec_files
             end
 
             if not test -e $__aury_arg_source
-                __aury_msg_error "origem não encontrada: $__aury_arg_source"
+                set -l move_type (__aury_path_kind $__aury_arg_source $__aury_arg_type)
+                __aury_msg_file_missing $__aury_arg_source $move_type
                 return 0
             end
 
@@ -2172,22 +2256,20 @@ function __aury_exec_files
                 mkdir -p -- $dest_dir
             end
 
+            set -l move_type
+
             if test -d $__aury_arg_source
-                set -l move_type pasta
+                set move_type pasta
             else
-                set -l move_type arquivo
+                set move_type arquivo
             end
 
             mv -- $__aury_arg_source $__aury_arg_dest
 
             if test $status -eq 0
-                if test "$move_type" = "pasta"
-                    echo "📁 pasta movida: $__aury_arg_source → $__aury_arg_dest"
-                else
-                    echo "📄 arquivo movido: $__aury_arg_source → $__aury_arg_dest"
-                end
+                __aury_msg_file_success "Feito" mover $move_type $__aury_arg_source $__aury_arg_dest
             else
-                __aury_msg_error "erro ao mover"
+                __aury_msg_file_failure mover $move_type $__aury_arg_source
             end
 
             return 0
@@ -2270,16 +2352,18 @@ function __aury_exec_files
             end
 
             if not test -e $__aury_arg_source
-                __aury_msg_error "arquivo ou pasta não encontrado: $__aury_arg_source"
+                set -l rename_type (__aury_path_kind $__aury_arg_source $__aury_arg_type)
+                __aury_msg_file_missing $__aury_arg_source $rename_type
                 return 0
             end
 
+            set -l rename_type (__aury_path_kind $__aury_arg_source $__aury_arg_type)
             mv -- $__aury_arg_source $__aury_arg_newname
 
             if test $status -eq 0
-                echo "✏️ renomeado: $__aury_arg_source → $__aury_arg_newname"
+                __aury_msg_file_success "Tudo certo" renomear $rename_type $__aury_arg_source $__aury_arg_newname
             else
-                __aury_msg_error "erro ao renomear"
+                __aury_msg_file_failure renomear $rename_type $__aury_arg_source
             end
 
             return 0
