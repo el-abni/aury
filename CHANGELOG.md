@@ -4,6 +4,42 @@ Todas as mudanças importantes da **💜 Aury** são documentadas neste arquivo.
 
 ---
 
+## v1.5.0
+
+### Adicionado
+- alias real de shell `ay` além do comando oficial `aury`
+- corretor conservador inicial para variações erradas seguras de comandos e estruturas conversacionais
+- proteção tipada de tokens sensíveis para caminhos, arquivos e hosts
+- suporte inicial e conservador a anáforas locais como `ele`, `ela` e `isso`
+- suporte a localização conversacional como `que está em`, `que fica em`, `que tá em`, `dentro de` e variações próximas já cobertas pela base atual
+- expansão real do `aury dev` para inspeção de frase original, corrigida, normalizada, tokens sensíveis, intenção, domínio e argumentos
+
+### Melhorado
+- parser conversacional com mais imperativos, conectores e vocativos de prefixo
+- encadeamento de ações com maior robustez em frases naturais
+- coerência entre `aury`, `ay` e `aury dev`
+- UX conversacional com respostas mais naturais e mais claras
+- exibição do destino efetivo final em operações de copiar e mover
+
+### Corrigido
+- correções de classificação entre arquivo, pasta, item, nomes ocultos e caminhos com barra final
+- correções em localização conversacional para evitar interpretar o diretório inteiro como alvo indevido
+- correções em encadeamentos com imperativos como `copie`, `mova`, `remova` e variantes relacionadas já cobertas
+- remoção de intenções fantasma e alinhamento entre observabilidade e execução real
+
+### UX
+- mensagens padronizadas no estilo `Pronto, eu...`, `Feito, eu...` e `Tudo certo, eu...`
+- cancelamento mais natural e claro
+- distinção mais consistente entre arquivo e pasta nas respostas
+
+### Compatibilidade
+- mantida compatibilidade com a base funcional da v1.4.3
+- mantida a linha 1.x com expansão conservadora e segura, preparando a base para a v2.0
+
+---
+
+---
+
 ## v1.4.3
 
 ### Corrigido
