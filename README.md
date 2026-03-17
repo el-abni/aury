@@ -112,10 +112,11 @@ git clone https://github.com/el-abni/aury.git
 cd aury
 ```
 
-Copie a função para o Fish:
+Copie as funções para o Fish:
 
 ```bash
 cp bin/aury.fish ~/.config/fish/functions/aury.fish
+cp bin/ay.fish ~/.config/fish/functions/ay.fish
 ```
 
 Recarregue o shell:
@@ -124,7 +125,7 @@ Recarregue o shell:
 source ~/.config/fish/functions/aury.fish
 ```
 
-Agora o comando `aury` já pode ser usado no terminal.
+Agora o comando `aury` já pode ser usado no terminal. O atalho curto `ay` também fica disponível.
 
 ---
 
