@@ -29,7 +29,7 @@ end
 # -------------------------------------------------
 
 function __aury_intents
-    printf '%s\n' ajuda reload dev atualizar otimizar status procurar instalar remover criar copiar mover renomear ping ver internet abrir
+    printf '%s\n' ajuda reload dev atualizar otimizar status procurar instalar remover criar copiar mover renomear extrair ping ver internet abrir
 end
 
 function __aury_internal_intents
@@ -37,7 +37,7 @@ function __aury_internal_intents
 end
 
 function __aury_file_intents
-    printf '%s\n' criar copiar mover renomear
+    printf '%s\n' criar copiar mover renomear extrair
 end
 
 function __aury_system_keywords
@@ -58,7 +58,7 @@ end
 
 function __aury_show_help
     echo "
-💜 Aury v1.4.1
+💜 Aury v1.4.2
 
 PACOTES
 aury instalar firefox
@@ -97,6 +97,9 @@ aury cria a pasta projetos
 aury apaga o arquivo teste.txt
 aury deleta backup.txt
 aury remove o arquivo teste.txt
+aury extrair teste.zip
+aury descompacte backup.tar.gz
+aury extraia teste.tar para a pasta que fica em /usr/steam
 
 EXTRAS
 aury reload
@@ -116,7 +119,7 @@ function __aury_normalize_token --argument-names tok
         case ''
             echo __IGNORE__
 
-        case o a os as um uma uns umas de dos das com sobre ao aos à às por pro porgentileza pfvr porfa gentileza favor porfavor me mim comigo ai aí aury
+        case o a os as um uma uns umas de dos das com sobre ao aos à às por porgentileza pfvr porfa gentileza favor porfavor me mim comigo ai aí aury você voce que isso isto esse essa este esta aquela aquele aquelas aqueles ali lá la aqui
             echo __IGNORE__
 
         case e
@@ -125,10 +128,13 @@ function __aury_normalize_token --argument-names tok
         case quero queria preciso gostaria pode poderia poderiame poderia-me conseguimos consegue tenta tentar tente
             echo $t
 
-        case para pra
+        case para pra pro
             echo para
 
-        case em no na nos nas do da pro pra
+        case dentro
+            echo em
+
+        case em no na nos nas do da
             echo $t
 
         case ajuda help socorro manual comandos comando
@@ -160,6 +166,9 @@ function __aury_normalize_token --argument-names tok
 
         case renomear renomeia renomeie rename renomar renoemar renomea nomear
             echo renomear
+
+        case extrair extraia extrai extraira extrairá descompactar descompacte descompacta descomprima descomprimir desarquivar
+            echo extrair
 
         case status estado info infos informação informacoes informações situacao situação
             echo status
@@ -228,7 +237,7 @@ function __aury_is_command_token --argument-names tok
 end
 
 function __aury_is_aux_token --argument-names tok
-    if contains -- $tok quero queria preciso gostaria pode poderia poderiame poderia-me conseguimos consegue
+    if contains -- $tok quero queria preciso gostaria pode poderia poderiame poderia-me conseguimos consegue quer vamos vou iria iria-me
         return 0
     end
 
@@ -723,7 +732,7 @@ function __aury_interpret_action
     set -l domain_hint geral
     if contains -- $intent instalar procurar remover
         set domain_hint pacote
-    else if contains -- $intent criar copiar mover renomear
+    else if contains -- $intent criar copiar mover renomear extrair
         set domain_hint arquivo
     else if contains -- $intent ver atualizar otimizar status
         set domain_hint sistema
@@ -843,7 +852,13 @@ function __aury_prepare_action
             continue
         end
 
-        set -l clean_orig (string replace -ra '^[[:punct:]]+|[[:punct:]]+$' '' -- $tok)
+        set -l clean_orig
+
+        if string match -rq '(^[~/]|^\./|^\.\./|/|\.[[:alnum:]_-]+$)' -- $tok
+            set clean_orig (string trim -- $tok)
+        else
+            set clean_orig (string replace -ra '^[[:punct:]]+|[[:punct:]]+$' '' -- $tok)
+        end
 
         if test -z "$clean_orig"
             continue
@@ -865,7 +880,7 @@ function __aury_detect_intent
 
     set -l norm_words $argv
 
-    for candidate in ajuda reload dev atualizar otimizar procurar instalar remover criar copiar mover renomear ping internet ver status abrir
+    for candidate in ajuda reload dev atualizar otimizar procurar instalar remover criar copiar mover renomear extrair ping internet ver status abrir
         if contains -- $candidate $norm_words
             echo $candidate
             return 0
@@ -938,7 +953,7 @@ function __aury_detect_domain --argument-names intent
         return 0
     end
 
-    if test "$intent" = "criar"; or test "$intent" = "copiar"; or test "$intent" = "mover"; or test "$intent" = "renomear"
+    if test "$intent" = "criar"; or test "$intent" = "copiar"; or test "$intent" = "mover"; or test "$intent" = "renomear"; or test "$intent" = "extrair"
         if contains -- pasta $norm_words
             echo pasta
             return 0
@@ -1021,7 +1036,7 @@ function __aury_find_first_connector_index
     set -l i 1
 
     while test $i -le (count $words)
-        if contains -- $words[$i] para pra em no na
+        if contains -- $words[$i] para em no na nos nas
             echo $i
             return 0
         end
@@ -1030,6 +1045,245 @@ function __aury_find_first_connector_index
     end
 
     return 1
+end
+
+function __aury_strip_leading_destination_noise
+    set -l words $argv
+
+    while test (count $words) -gt 0
+        set -l norm (__aury_normalize_token $words[1])
+
+        if test "$norm" = "__IGNORE__"
+            set words $words[2..-1]
+            continue
+        end
+
+        if contains -- $norm para em no na nos nas pasta caminho local destino lugar fica ficar
+            set words $words[2..-1]
+            continue
+        end
+
+        break
+    end
+
+    printf '%s\n' $words
+end
+
+function __aury_detect_archive_type --argument-names path
+    set -l lower (string lower -- $path)
+
+    if string match -rq '\.(tar\.gz|tgz)$' -- $lower
+        echo tar.gz
+        return 0
+    end
+
+    if string match -rq '\.tar$' -- $lower
+        echo tar
+        return 0
+    end
+
+    if string match -rq '\.zip$' -- $lower
+        echo zip
+        return 0
+    end
+
+    if string match -rq '\.7z$' -- $lower
+        echo 7z
+        return 0
+    end
+
+    return 1
+end
+
+function __aury_archive_default_destination --argument-names archive_path
+    set -l base (basename -- $archive_path)
+    set -l lower (string lower -- $base)
+    set -l name $base
+
+    if string match -rq '\.tar\.gz$' -- $lower
+        set name (string replace -r -i '\.tar\.gz$' '' -- $base)
+    else if string match -rq '\.tgz$' -- $lower
+        set name (string replace -r -i '\.tgz$' '' -- $base)
+    else if string match -rq '\.tar$' -- $lower
+        set name (string replace -r -i '\.tar$' '' -- $base)
+    else if string match -rq '\.zip$' -- $lower
+        set name (string replace -r -i '\.zip$' '' -- $base)
+    else if string match -rq '\.7z$' -- $lower
+        set name (string replace -r -i '\.7z$' '' -- $base)
+    end
+
+    if test -z "$name"
+        set name extracted
+    end
+
+    set -l parent (dirname -- $archive_path)
+
+    if test -z "$parent"; or test "$parent" = "."
+        echo "./$name"
+    else
+        echo "$parent/$name"
+    end
+end
+
+function __aury_require_archive_backend --argument-names archive_type
+    switch $archive_type
+        case zip
+            if type -q unzip
+                return 0
+            end
+
+            __aury_msg_error "não consegui extrair arquivos .zip porque o utilitário 'unzip' não está disponível"
+            return 1
+
+        case 7z
+            if type -q 7z
+                return 0
+            end
+
+            __aury_msg_error "não consegui extrair arquivos .7z porque o utilitário '7z' não está disponível"
+            return 1
+
+        case tar tar.gz
+            if type -q tar
+                return 0
+            end
+
+            __aury_msg_error "não consegui extrair arquivos tar porque o utilitário 'tar' não está disponível"
+            return 1
+    end
+
+    return 1
+end
+
+function __aury_list_archive_entries --argument-names archive_path archive_type
+    switch $archive_type
+        case zip
+            unzip -Z1 $archive_path 2>/dev/null
+            return $status
+
+        case 7z
+            set -l first_path 1
+
+            for line in (7z l -slt $archive_path 2>/dev/null)
+                if string match -rq '^Path = ' -- $line
+                    set -l entry (string replace 'Path = ' '' -- $line)
+
+                    if test $first_path -eq 1
+                        set first_path 0
+                        continue
+                    end
+
+                    echo $entry
+                end
+            end
+
+            return 0
+
+        case tar tar.gz
+            tar -tf $archive_path 2>/dev/null
+            return $status
+    end
+
+    return 1
+end
+
+function __aury_archive_entries_are_safe --argument-names archive_path archive_type
+    set -l entries (__aury_list_archive_entries $archive_path $archive_type)
+    set -l list_status $status
+
+    if test $list_status -ne 0
+        __aury_msg_error "não consegui inspecionar o conteúdo de '$archive_path' antes de extrair"
+        return 1
+    end
+
+    for entry in $entries
+        if test -z "$entry"; or test "$entry" = "."; or test "$entry" = "./"
+            continue
+        end
+
+        set -l normalized (string replace -a '\\' '/' -- $entry)
+
+        if string match -rq '^/' -- $normalized
+            __aury_msg_error "extração bloqueada por segurança: o arquivo compactado contém caminhos absolutos"
+            return 1
+        end
+
+        if test "$normalized" = ".."; or string match -rq '(^|/)\.\.(/|$)' -- $normalized
+            __aury_msg_error "extração bloqueada por segurança: o arquivo compactado contém caminhos inseguros"
+            return 1
+        end
+    end
+
+    return 0
+end
+
+function __aury_count_extracted_items --argument-names dest
+    set -l files 0
+    set -l dirs 0
+
+    if test -d $dest
+        set files (find $dest -type f 2>/dev/null | wc -l | string trim)
+        set dirs (find $dest -mindepth 1 -type d 2>/dev/null | wc -l | string trim)
+    end
+
+    echo "FILES:$files"
+    echo "DIRS:$dirs"
+end
+
+function __aury_extract_archive_args
+    set -l norm_words $argv
+    set -l orig_words $orig_words_global
+
+    set -g __aury_arg_source ''
+    set -g __aury_arg_dest ''
+    set -g __aury_arg_archive_type ''
+
+    set -l intent_idx (contains -i -- extrair $norm_words)
+
+    if test -z "$intent_idx"
+        set intent_idx 1
+    end
+
+    set -l start (math $intent_idx + 1)
+
+    while test (count $norm_words) -ge $start
+        if contains -- $norm_words[$start] arquivo pacote pasta
+            set start (math $start + 1)
+            continue
+        end
+
+        break
+    end
+
+    if test (count $orig_words) -lt $start
+        return 1
+    end
+
+    set -l rel_connector (__aury_find_first_connector_index $norm_words[$start..-1])
+
+    if test -n "$rel_connector"
+        set -l conn_idx (math $start + $rel_connector - 1)
+
+        if test (math $conn_idx - 1) -ge $start
+            set -g __aury_arg_source (string join " " -- $orig_words[$start..(math $conn_idx - 1)])
+        end
+
+        if test (count $orig_words) -gt $conn_idx
+            set -l cleaned_dest (__aury_strip_leading_destination_noise $orig_words[(math $conn_idx + 1)..-1])
+
+            if test (count $cleaned_dest) -gt 0
+                set -g __aury_arg_dest (string join " " -- $cleaned_dest)
+            end
+        end
+    else
+        set -g __aury_arg_source (string join " " -- $orig_words[$start..-1])
+    end
+
+    if test -n "$__aury_arg_source"
+        set -g __aury_arg_archive_type (__aury_detect_archive_type $__aury_arg_source)
+    end
+
+    return 0
 end
 
 function __aury_extract_file_args
@@ -1534,6 +1788,77 @@ function __aury_exec_files
 
             return 0
 
+        case extrair
+            __aury_extract_archive_args $norm_words
+
+            if test -z "$__aury_arg_source"
+                __aury_msg_error "arquivo compactado não especificado"
+                return 0
+            end
+
+            if not test -f $__aury_arg_source
+                __aury_msg_error "arquivo não encontrado: $__aury_arg_source"
+                return 0
+            end
+
+            if test -z "$__aury_arg_archive_type"
+                __aury_msg_error "tipo de arquivo não suportado. Nesta versão eu aceito: zip, 7z, tar, tar.gz e tgz"
+                return 0
+            end
+
+            if not __aury_require_archive_backend $__aury_arg_archive_type
+                return 0
+            end
+
+            if test -z "$__aury_arg_dest"
+                set -g __aury_arg_dest (__aury_archive_default_destination $__aury_arg_source)
+            end
+
+            if test -e $__aury_arg_dest
+                __aury_msg_error "a pasta de destino já existe: $__aury_arg_dest"
+                return 0
+            end
+
+            if not __aury_archive_entries_are_safe $__aury_arg_source $__aury_arg_archive_type
+                return 0
+            end
+
+            mkdir -p -- $__aury_arg_dest
+
+            switch $__aury_arg_archive_type
+                case zip
+                    unzip -q $__aury_arg_source -d $__aury_arg_dest >/dev/null 2>/dev/null
+
+                case 7z
+                    7z x -y -o"$__aury_arg_dest" $__aury_arg_source >/dev/null 2>/dev/null
+
+                case tar tar.gz
+                    tar -xf $__aury_arg_source -C $__aury_arg_dest >/dev/null 2>/dev/null
+            end
+
+            if test $status -ne 0
+                rm -rf -- $__aury_arg_dest
+                __aury_msg_error "não consegui extrair '$__aury_arg_source'. O arquivo pode estar corrompido ou incompatível com esta instalação."
+                return 0
+            end
+
+            set -l count_info (__aury_count_extracted_items $__aury_arg_dest)
+            set -l extracted_files 0
+            set -l extracted_dirs 0
+
+            for line in $count_info
+                if string match -q 'FILES:*' -- $line
+                    set extracted_files (string replace 'FILES:' '' -- $line)
+                else if string match -q 'DIRS:*' -- $line
+                    set extracted_dirs (string replace 'DIRS:' '' -- $line)
+                end
+            end
+
+            echo "📦 extraído: $__aury_arg_source → $__aury_arg_dest"
+            echo "📄 arquivos: $extracted_files"
+            echo "📁 pastas: $extracted_dirs"
+            return 0
+
         case renomear
             if test -z "$__aury_arg_source" -o -z "$__aury_arg_newname"
                 __aury_msg_error "argumentos insuficientes"
@@ -1782,6 +2107,9 @@ function aury
     set -e __aury_arg_source
     set -e __aury_arg_dest
     set -e __aury_arg_newname
+    set -e __aury_arg_archive_type
+
+    return 0
 end
 
 function Aury
