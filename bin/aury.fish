@@ -293,7 +293,7 @@ function __aury_normalize_token --argument-names tok
         case ''
             echo __IGNORE__
 
-        case o a os as um uma uns umas de dos das com sobre ao aos à às por porgentileza pfvr porfa gentileza favor porfavor me mim comigo ai aí aury você voce que isso isto esse essa este esta está aquela aquele aquelas aqueles ali lá la aqui também tambem
+        case o a os as um uma uns umas de dos das com sobre ao aos à às por porgentileza pfvr porfa gentileza favor porfavor me mim comigo ai aí aury você voce que isto esse essa este esta está aquela aquele aquelas aqueles ali lá la aqui também tambem
             echo __IGNORE__
 
         case e
@@ -783,6 +783,51 @@ function __aury_dev_report_current_action --argument-names index
     __aury_dev_print_field "localização conversacional" $location_info
 end
 
+function __aury_dev_sync_local_reference
+    set -l intent (__aury_detect_intent $norm_words_global)
+    set -l domain (__aury_detect_domain $intent $norm_words_global)
+
+    if test "$domain" != "arquivo"; and test "$domain" != "pasta"
+        __aury_reset_local_reference_state
+        return 0
+    end
+
+    switch $intent
+        case criar
+            if test -n "$__aury_arg_target"
+                __aury_update_local_reference $__aury_arg_target $__aury_arg_type
+                return 0
+            end
+
+        case copiar
+            if test -n "$__aury_arg_source"; and test -n "$__aury_arg_dest"
+                __aury_update_local_reference (__aury_effective_target_path $__aury_arg_source $__aury_arg_dest) $__aury_arg_type
+                return 0
+            end
+
+        case mover
+            if test -n "$__aury_arg_source"; and test -n "$__aury_arg_dest"
+                __aury_update_local_reference (__aury_effective_target_path $__aury_arg_source $__aury_arg_dest) $__aury_arg_type
+                return 0
+            end
+
+        case renomear
+            if test -n "$__aury_arg_newname"
+                __aury_update_local_reference $__aury_arg_newname $__aury_arg_type
+                return 0
+            end
+
+        case extrair
+            if test -n "$__aury_arg_dest"
+                __aury_update_local_reference $__aury_arg_dest pasta
+                return 0
+            end
+    end
+
+    __aury_reset_local_reference_state
+    return 0
+end
+
 function __aury_dev_inspect_phrase
     set -l dev_tokens (__aury_preprocess_input $argv)
 
@@ -831,6 +876,7 @@ function __aury_dev_inspect_phrase
     set -l split_stream (__aury_split_actions $dev_tokens)
     set -l current_action
     set -l action_index 1
+    __aury_reset_local_reference_state
 
     for item in $split_stream
         if test "$item" = "__AURY_ACTION_BREAK__"
@@ -936,6 +982,7 @@ function __aury_dev_inspect_phrase
                         set -g norm_words_global $expanded_norm_words
                         set -g orig_words_global $expanded_orig_words
                         __aury_dev_report_current_action $action_index
+                        __aury_dev_sync_local_reference
                         set action_index (math $action_index + 1)
                         set expanded_count (math $expanded_count + 1)
                     end
@@ -947,6 +994,7 @@ function __aury_dev_inspect_phrase
 
             if test $expanded_count -eq 0
                 __aury_dev_report_current_action $action_index
+                __aury_dev_sync_local_reference
                 set action_index (math $action_index + 1)
             end
 
@@ -955,6 +1003,8 @@ function __aury_dev_inspect_phrase
             set current_action $current_action $item
         end
     end
+
+    __aury_reset_local_reference_state
 
     return $syntax_status
 end
@@ -1619,6 +1669,21 @@ function __aury_detect_domain --argument-names intent
             return 0
         end
 
+        set -l remove_idx (contains -i -- remover $norm_words)
+
+        if test -n "$remove_idx"; and test (count $norm_words) -eq (math $remove_idx + 1)
+            set -l candidate $norm_words[-1]
+
+            if __aury_is_local_anaphor $candidate
+                set -l resolved (__aury_resolve_local_anaphor $candidate)
+
+                if test -n "$resolved"
+                    echo $__aury_local_ref_kind
+                    return 0
+                end
+            end
+        end
+
         if test (count $orig_words) -gt 0
             set -l last_token $orig_words[-1]
 
@@ -1778,6 +1843,71 @@ function __aury_find_destination_connector_index
     end
 
     return 1
+end
+
+function __aury_reset_local_reference_state
+    set -g __aury_local_ref_path ''
+    set -g __aury_local_ref_kind ''
+    return 0
+end
+
+function __aury_is_local_anaphor --argument-names tok
+    if contains -- $tok ele ela isso
+        return 0
+    end
+
+    return 1
+end
+
+function __aury_resolve_local_anaphor --argument-names tok
+    if not __aury_is_local_anaphor $tok
+        return 1
+    end
+
+    if test -z "$__aury_local_ref_path"; or test -z "$__aury_local_ref_kind"
+        return 1
+    end
+
+    switch $tok
+        case ele
+            if test "$__aury_local_ref_kind" != "arquivo"
+                return 1
+            end
+
+        case ela
+            if test "$__aury_local_ref_kind" != "pasta"
+                return 1
+            end
+    end
+
+    echo $__aury_local_ref_path
+    return 0
+end
+
+function __aury_effective_target_path --argument-names source dest
+    if test -z "$dest"
+        echo $dest
+        return 0
+    end
+
+    if test -d "$dest"
+        echo (__aury_join_base_and_name "$dest" (basename -- "$source"))
+        return 0
+    end
+
+    echo $dest
+    return 0
+end
+
+function __aury_update_local_reference --argument-names path kind
+    if test -z "$path"; or test -z "$kind"
+        __aury_reset_local_reference_state
+        return 1
+    end
+
+    set -g __aury_local_ref_path $path
+    set -g __aury_local_ref_kind $kind
+    return 0
 end
 
 function __aury_join_base_and_name --argument-names base name
@@ -2102,6 +2232,19 @@ function __aury_extract_file_args
 
         if test (count $orig_words) -ge $start
             set -g __aury_arg_target (string join " " -- $orig_words[$start..-1])
+
+            if test "$intent" = "remover"
+                set -l target_norm_slice $norm_words[$start..-1]
+
+                if test (count $target_norm_slice) -eq 1
+                    set -l resolved_target (__aury_resolve_local_anaphor $target_norm_slice[1])
+
+                    if test -n "$resolved_target"
+                        set -g __aury_arg_target $resolved_target
+                        set -g __aury_arg_type $__aury_local_ref_kind
+                    end
+                end
+            end
         end
         return 0
     end
@@ -2127,7 +2270,16 @@ function __aury_extract_file_args
                     set -l source_orig_slice $orig_words[$start..(math $conn_idx - 1)]
                     set -l rel_location (__aury_find_locational_connector_index $source_norm_slice)
 
-                    if test -n "$rel_location"
+                    if test (count $source_norm_slice) -eq 1
+                        set -l resolved_source (__aury_resolve_local_anaphor $source_norm_slice[1])
+
+                        if test -n "$resolved_source"
+                            set -g __aury_arg_source $resolved_source
+                            set -g __aury_arg_type $__aury_local_ref_kind
+                        end
+                    end
+
+                    if test -z "$__aury_arg_source"; and test -n "$rel_location"
                         set -l source_name_end (math $rel_location - 1)
 
                         if test $rel_location -gt 1
@@ -2448,6 +2600,7 @@ function __aury_exec_files
         case criar
             if test "$__aury_arg_type" = "pasta"
                 if test -z "$__aury_arg_target"
+                    __aury_reset_local_reference_state
                     __aury_msg_error "nome da pasta não especificado"
                     return 0
                 end
@@ -2455,8 +2608,10 @@ function __aury_exec_files
                 mkdir -p -- $__aury_arg_target
 
                 if test $status -eq 0
+                    __aury_update_local_reference $__aury_arg_target pasta
                     __aury_msg_file_success "Pronto" criar pasta $__aury_arg_target
                 else
+                    __aury_reset_local_reference_state
                     __aury_msg_file_failure criar pasta $__aury_arg_target
                 end
 
@@ -2464,6 +2619,7 @@ function __aury_exec_files
             end
 
             if test -z "$__aury_arg_target"
+                __aury_reset_local_reference_state
                 __aury_msg_error "nome do arquivo não especificado"
                 return 0
             end
@@ -2477,8 +2633,10 @@ function __aury_exec_files
             touch -- $__aury_arg_target
 
             if test $status -eq 0
+                __aury_update_local_reference $__aury_arg_target arquivo
                 __aury_msg_file_success "Pronto" criar arquivo $__aury_arg_target
             else
+                __aury_reset_local_reference_state
                 __aury_msg_file_failure criar arquivo $__aury_arg_target
             end
 
@@ -2486,11 +2644,13 @@ function __aury_exec_files
 
         case remover
             if test -z "$__aury_arg_target"
+                __aury_reset_local_reference_state
                 __aury_msg_error "alvo não especificado"
                 return 0
             end
 
             if not test -e $__aury_arg_target
+                __aury_reset_local_reference_state
                 set -l target_kind (__aury_path_kind $__aury_arg_target $__aury_arg_type)
                 __aury_msg_file_missing $__aury_arg_target $target_kind
                 return 0
@@ -2509,11 +2669,14 @@ function __aury_exec_files
                 end
 
                 if test $status -eq 0
+                    __aury_reset_local_reference_state
                     __aury_msg_file_success "Feito" remover $target_kind $__aury_arg_target
                 else
+                    __aury_reset_local_reference_state
                     __aury_msg_file_failure remover $target_kind $__aury_arg_target
                 end
             else
+                __aury_reset_local_reference_state
                 echo "❌ cancelado"
             end
 
@@ -2521,11 +2684,13 @@ function __aury_exec_files
 
         case copiar
             if test -z "$__aury_arg_source" -o -z "$__aury_arg_dest"
+                __aury_reset_local_reference_state
                 __aury_msg_error "argumentos insuficientes"
                 return 0
             end
 
             if not test -e $__aury_arg_source
+                __aury_reset_local_reference_state
                 set -l copy_type (__aury_path_kind $__aury_arg_source $__aury_arg_type)
                 __aury_msg_file_missing $__aury_arg_source $copy_type
                 return 0
@@ -2548,8 +2713,11 @@ function __aury_exec_files
             end
 
             if test $status -eq 0
+                set -l effective_copy_target (__aury_effective_target_path $__aury_arg_source $__aury_arg_dest)
+                __aury_update_local_reference $effective_copy_target $copy_type
                 __aury_msg_file_success "Pronto" copiar $copy_type $__aury_arg_source $__aury_arg_dest
             else
+                __aury_reset_local_reference_state
                 __aury_msg_file_failure copiar $copy_type $__aury_arg_source
             end
 
@@ -2557,11 +2725,13 @@ function __aury_exec_files
 
         case mover
             if test -z "$__aury_arg_source" -o -z "$__aury_arg_dest"
+                __aury_reset_local_reference_state
                 __aury_msg_error "argumentos insuficientes"
                 return 0
             end
 
             if not test -e $__aury_arg_source
+                __aury_reset_local_reference_state
                 set -l move_type (__aury_path_kind $__aury_arg_source $__aury_arg_type)
                 __aury_msg_file_missing $__aury_arg_source $move_type
                 return 0
@@ -2584,8 +2754,11 @@ function __aury_exec_files
             mv -- $__aury_arg_source $__aury_arg_dest
 
             if test $status -eq 0
+                set -l effective_move_target (__aury_effective_target_path $__aury_arg_source $__aury_arg_dest)
+                __aury_update_local_reference $effective_move_target $move_type
                 __aury_msg_file_success "Feito" mover $move_type $__aury_arg_source $__aury_arg_dest
             else
+                __aury_reset_local_reference_state
                 __aury_msg_file_failure mover $move_type $__aury_arg_source
             end
 
@@ -2595,21 +2768,25 @@ function __aury_exec_files
             __aury_extract_archive_args $norm_words
 
             if test -z "$__aury_arg_source"
+                __aury_reset_local_reference_state
                 __aury_msg_error "arquivo compactado não especificado"
                 return 0
             end
 
             if not test -f $__aury_arg_source
+                __aury_reset_local_reference_state
                 __aury_msg_error "arquivo não encontrado: $__aury_arg_source"
                 return 0
             end
 
             if test -z "$__aury_arg_archive_type"
+                __aury_reset_local_reference_state
                 __aury_msg_error "tipo de arquivo não suportado. Nesta versão eu aceito: zip, 7z, tar, tar.gz e tgz"
                 return 0
             end
 
             if not __aury_require_archive_backend $__aury_arg_archive_type
+                __aury_reset_local_reference_state
                 return 0
             end
 
@@ -2618,11 +2795,13 @@ function __aury_exec_files
             end
 
             if test -e $__aury_arg_dest
+                __aury_reset_local_reference_state
                 __aury_msg_error "a pasta de destino já existe: $__aury_arg_dest"
                 return 0
             end
 
             if not __aury_archive_entries_are_safe $__aury_arg_source $__aury_arg_archive_type
+                __aury_reset_local_reference_state
                 return 0
             end
 
@@ -2641,9 +2820,12 @@ function __aury_exec_files
 
             if test $status -ne 0
                 rm -rf -- $__aury_arg_dest
+                __aury_reset_local_reference_state
                 __aury_msg_error "não consegui extrair '$__aury_arg_source'. O arquivo pode estar corrompido ou incompatível com esta instalação."
                 return 0
             end
+
+            __aury_update_local_reference $__aury_arg_dest pasta
 
             set -l count_info (__aury_count_extracted_items $__aury_arg_dest)
             set -l extracted_files 0
@@ -2664,11 +2846,13 @@ function __aury_exec_files
 
         case renomear
             if test -z "$__aury_arg_source" -o -z "$__aury_arg_newname"
+                __aury_reset_local_reference_state
                 __aury_msg_error "argumentos insuficientes"
                 return 0
             end
 
             if not test -e $__aury_arg_source
+                __aury_reset_local_reference_state
                 set -l rename_type (__aury_path_kind $__aury_arg_source $__aury_arg_type)
                 __aury_msg_file_missing $__aury_arg_source $rename_type
                 return 0
@@ -2678,8 +2862,10 @@ function __aury_exec_files
             mv -- $__aury_arg_source $__aury_arg_newname
 
             if test $status -eq 0
+                __aury_update_local_reference $__aury_arg_newname $rename_type
                 __aury_msg_file_success "Tudo certo" renomear $rename_type $__aury_arg_source $__aury_arg_newname
             else
+                __aury_reset_local_reference_state
                 __aury_msg_file_failure renomear $rename_type $__aury_arg_source
             end
 
@@ -2699,6 +2885,7 @@ function __aury_dispatch_current_action
     set -l domain (__aury_detect_domain $intent $norm_words_global)
 
     if contains -- $intent (__aury_internal_intents)
+        __aury_reset_local_reference_state
         __aury_exec_internal $intent
         return 0
     end
@@ -2717,11 +2904,13 @@ function __aury_dispatch_current_action
 
     switch $domain
         case sistema
+            __aury_reset_local_reference_state
             if __aury_exec_system $intent $norm_words_global
                 return 0
             end
 
         case rede
+            __aury_reset_local_reference_state
             if __aury_exec_network $intent $norm_words_global
                 return 0
             end
@@ -2732,6 +2921,7 @@ function __aury_dispatch_current_action
             end
 
         case pacote
+            __aury_reset_local_reference_state
             if __aury_exec_packages $intent $norm_words_global
                 return 0
             end
@@ -2785,6 +2975,7 @@ function aury
 
     set -l split_stream (__aury_split_actions $raw_tokens)
     set -l current_action
+    __aury_reset_local_reference_state
 
     for item in $split_stream
         if test "$item" = "__AURY_ACTION_BREAK__"
@@ -2934,6 +3125,8 @@ function aury
     set -e __aury_arg_location_name
     set -e __aury_arg_location_base
     set -e __aury_arg_location_connector
+    set -e __aury_local_ref_path
+    set -e __aury_local_ref_kind
 
     return 0
 end
