@@ -1,6 +1,6 @@
 # 💜 Aury
 
-![version](https://img.shields.io/badge/version-v1.4.2-purple)
+![version](https://img.shields.io/badge/version-v1.4.3-purple)
 ![shell](https://img.shields.io/badge/shell-fish-blue)
 ![platform](https://img.shields.io/badge/platform-CachyOS-orange)
 ![license](https://img.shields.io/badge/license-MIT-green)
@@ -145,7 +145,7 @@ No código, a identidade visual da assistente é:
 No comando de ajuda, a versão deve aparecer no formato:
 
 ```text
-💜 Aury v1.4.2
+💜 Aury v1.4.3
 ```
 
 A Aury entende tanto comandos diretos quanto frases mais naturais, como:
