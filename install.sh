@@ -7,6 +7,7 @@ echo ""
 mkdir -p ~/.config/fish/functions
 
 cp bin/aury.fish ~/.config/fish/functions/
+cp bin/ay.fish ~/.config/fish/functions/
 
 echo ""
 echo "✅A Aury foi instalada com sucesso!"
