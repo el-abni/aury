@@ -121,7 +121,7 @@ end
 # -------------------------------------------------
 
 function __aury_intents
-    printf '%s\n' ajuda reload dev atualizar otimizar status procurar instalar remover criar copiar mover renomear extrair ping ver internet abrir
+    printf '%s\n' ajuda reload dev atualizar otimizar status procurar instalar remover criar copiar mover renomear extrair ping ver internet
 end
 
 function __aury_internal_intents
@@ -355,9 +355,6 @@ function __aury_normalize_token --argument-names tok
 
         case otimizar otimiza otimize limpar limpa melhorar acelerar
             echo otimizar
-
-        case abrir abre open
-            echo abrir
 
         case testar teste internet rede conexão conexao conectar online
             echo internet
@@ -1610,7 +1607,7 @@ function __aury_detect_intent
 
     set -l norm_words $argv
 
-    for candidate in ajuda reload dev atualizar otimizar procurar instalar remover criar copiar mover renomear extrair ping internet ver status abrir
+    for candidate in ajuda reload dev atualizar otimizar procurar instalar remover criar copiar mover renomear extrair ping internet ver status
         if contains -- $candidate $norm_words
             echo $candidate
             return 0
@@ -1631,11 +1628,21 @@ function __aury_detect_domain --argument-names intent
     end
 
     if contains -- arquivo $norm_words
+        if not contains -- $intent criar copiar mover renomear extrair remover
+            echo geral
+            return 0
+        end
+
         echo arquivo
         return 0
     end
 
     if contains -- pasta $norm_words
+        if not contains -- $intent criar copiar mover renomear extrair remover
+            echo geral
+            return 0
+        end
+
         echo pasta
         return 0
     end
