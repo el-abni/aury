@@ -18,7 +18,7 @@ Os objetivos principais são:
 - manter separação clara de responsabilidades
 - evitar lógica excessiva dentro dos executores
 - facilitar a expansão das versões 1.x
-- preparar a base para a futura integração com IA na série 2.x
+- fortalecer o núcleo da linha 1.x até o fechamento planejado em v1.9
 
 ---
 
@@ -312,7 +312,7 @@ No futuro, essa área pode crescer para incluir:
 
 - sugestões automáticas
 - fallback mais inteligente
-- integração com IA
+- tratamento mais rico de casos ambíguos
 
 ---
 
@@ -418,10 +418,10 @@ Os executores devem permanecer simples.
 
 Cada versão adiciona capacidades novas sem quebrar o que já funciona.
 
-### Preparação para o futuro
+### Continuidade da linha 1.x
 
-A série 1.x fortalece o núcleo sem IA.
-A série 2.x poderá usar IA sobre uma base muito mais sólida.
+A série 1.x fortalece o núcleo local da Aury de forma incremental, previsível e auditável.
+O fechamento planejado desta linha principal neste repositório acontece na v1.9.
 
 ---
 
@@ -451,15 +451,21 @@ Isso coloca a Aury em um estágio mais maduro dentro da série 1.x.
 ## Próximas direções
 
 ### v1.6
-- refinamento incremental da conversação sobre a base conservadora da v1.5.0
+- consolidação do pipeline interno sobre a base da v1.5.0
+- fortalecimento do `aury dev` como ferramenta de engenharia
 - melhorias pontuais de rede e mensagens públicas
 - mais robustez em parser, normalização e resolução sem romper compatibilidade
 
-### v2.0
-- integração de IA local sobre a base estável da Aury
-- conversação natural mais ampla
-- fallback para casos complexos
-- possibilidade de separação entre a base local da Aury e uma camada com IA
+### v1.7
+- ampliação incremental da capacidade operacional local
+- continuidade do refinamento seguro dos fluxos práticos da Aury
+
+### v1.8
+- refinamentos intermediários da linha 1.x com foco em robustez, previsibilidade e experiência
+
+### v1.9
+- refinamento geral
+- fechamento planejado da linha principal da Aury neste repositório
 
 ---
 
@@ -473,6 +479,6 @@ Ela já possui:
 - interpretação natural crescente
 - separação entre parser e execução
 - refinamento conversacional consolidado até a v1.5.0
-- base preparada para evoluções maiores
+- base preparada para o fechamento sólido da linha 1.x
 
 Aury continua sendo um projeto de terminal, mas com uma proposta clara: tornar o uso do terminal no **CachyOS** mais natural, confortável e poderoso.

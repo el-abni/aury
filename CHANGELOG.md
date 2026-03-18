@@ -2,6 +2,8 @@
 
 Todas as mudanças importantes da **💜 Aury** são documentadas neste arquivo.
 
+A linha principal pública da **💜 Aury** está planejada até a **v1.9**. Este changelog continua registrando apenas versões lançadas.
+
 ---
 
 ## v1.5.0
@@ -34,7 +36,7 @@ Todas as mudanças importantes da **💜 Aury** são documentadas neste arquivo.
 
 ### Compatibilidade
 - mantida compatibilidade com a base funcional da v1.4.3
-- mantida a linha 1.x com expansão conservadora e segura, preparando a base para a v2.0
+- mantida a linha 1.x com expansão conservadora e segura
 
 ---
 
