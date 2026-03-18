@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 echo ""
-echo "💜 Instalando a Aury..."
+echo "💜 Instalando a Aury v1.5.0..."
 echo ""
 
 mkdir -p ~/.config/fish/functions
