@@ -168,29 +168,27 @@ aury atualiza, otimiza e baixa o firefox
 
 ## Roadmap
 
-O roadmap mostra **apenas versões futuras planejadas**.
+O roadmap mostra **apenas versões futuras planejadas para o fechamento da linha principal 1.x da Aury neste repositório**.
 
 ### v1.6
 
-- melhorias de rede
+- consolidação do pipeline interno
+- fortalecimento do `aury dev`
+- melhorias pontuais de rede e mensagens públicas
 
 ### v1.7
 
-- melhorias de pacotes
+- ampliação incremental da capacidade operacional local
+- continuidade do refinamento seguro dos fluxos práticos da Aury
 
 ### v1.8
 
-- fallback inteligente
+- refinamentos intermediários da linha 1.x com foco em robustez, previsibilidade e experiência
 
 ### v1.9
 
 - refinamento geral
-
-### v2.0
-
-- IA local
-- conversação natural
-- fallback de comandos complexos
+- fechamento planejado da linha principal da Aury neste repositório
 
 ---
 
