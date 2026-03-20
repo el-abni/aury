@@ -16,6 +16,7 @@ set -g __aury_loaded_from (status filename)
 # ==========================================================
 
 function __aury_msg_error --argument-names text
+    set -g __aury_action_had_error 1
     echo "❌ $text"
 end
 
@@ -29,6 +30,44 @@ end
 
 function __aury_msg_warn --argument-names text
     echo "⚠️ $text"
+end
+
+function __aury_clear_action_error_state
+    set -g __aury_action_had_error 0
+    return 0
+end
+
+function __aury_msg_help_hint
+    __aury_msg_info "se quiser, use 'aury ajuda' para ver exemplos que eu aceito."
+end
+
+function __aury_msg_ambiguous --argument-names role value
+    __aury_msg_error "ficou ambíguo definir $role: '$value'. Me diga um único $role."
+end
+
+function __aury_msg_blocked --argument-names text
+    __aury_msg_error $text
+end
+
+function __aury_confirm_prompt --argument-names action target
+    echo "⚠️ vou $action '$target'. Confirma? [s/N]"
+end
+
+function __aury_read_confirmation --argument-names action target
+    set -l answer ''
+    __aury_confirm_prompt "$action" "$target"
+
+    if not read -l answer
+        return 1
+    end
+
+    set answer (string lower -- (string trim -- $answer))
+
+    if test "$answer" = "s"; or test "$answer" = "sim"
+        return 0
+    end
+
+    return 1
 end
 
 function __aury_path_kind --argument-names path fallback_kind
@@ -180,7 +219,7 @@ end
 
 function __aury_show_help
     echo "
-💜 Aury v1.5.0
+💜 Aury v1.6.0
 
 PACOTES
 aury instalar firefox
@@ -205,15 +244,16 @@ aury ver cpu e memória
 REDE
 aury ver ip
 aury testar internet
+aury velocidade da internet
 aury ping google.com
 
 ARQUIVOS
 aury criar arquivo teste.txt
 aury criar teste.txt
 aury criar pasta projetos
-aury copiar arquivo teste.txt backup.txt
-aury mover arquivo teste.txt pasta/teste.txt
-aury renomear arquivo teste.txt novo.txt
+aury copiar arquivo teste.txt para backup.txt
+aury mover arquivo teste.txt para pasta/teste.txt
+aury renomear arquivo teste.txt para novo.txt
 aury cria um arquivo teste.txt
 aury cria a pasta projetos
 aury apaga o arquivo teste.txt
@@ -226,6 +266,7 @@ aury extraia teste.tar para a pasta que fica em /usr/steam
 EXTRAS
 aury reload
 aury dev
+aury dev <frase>
 "
 end
 
@@ -692,6 +733,373 @@ function __aury_dev_print_field --argument-names label value
     printf '%-30s %s\n' "$label:" "$value"
 end
 
+function __aury_dev_public_intent_label --argument-names intent
+    if test "$intent" = "unknown"
+        echo "não identificada"
+        return 0
+    end
+
+    echo $intent
+end
+
+function __aury_dev_has_local_anaphor
+    __aury_has_local_anaphor $argv
+    return $status
+end
+
+function __aury_dev_has_competing_coordination --argument-names value
+    __aury_has_competing_coordination "$value"
+    return $status
+end
+
+function __aury_dev_detect_diagnostic_state --argument-names intent domain source dest newname target primary_target
+    if test "$intent" = "unknown"
+        echo "NAO_ENQUADRADA"
+        return 0
+    end
+
+    if test "$intent" = "remover"; and test "$domain" = "geral"
+        if __aury_dev_has_local_anaphor $norm_words_global
+            echo "BLOQUEADA"
+        else
+            echo "NAO_ENQUADRADA"
+        end
+        return 0
+    end
+
+    if test "$domain" = "geral"
+        echo "NAO_ENQUADRADA"
+        return 0
+    end
+
+    if __aury_dev_has_competing_coordination "$dest"
+        echo "AMBIGUA"
+        return 0
+    end
+
+    if __aury_dev_has_competing_coordination "$target"
+        echo "AMBIGUA"
+        return 0
+    end
+
+    switch $intent
+        case copiar mover
+            if test -z "$source"; or test -z "$dest"
+                echo "PARCIAL"
+            else
+                echo "CONSISTENTE"
+            end
+            return 0
+
+        case renomear
+            if test -z "$source"; or test -z "$newname"
+                echo "PARCIAL"
+            else
+                echo "CONSISTENTE"
+            end
+            return 0
+
+        case criar remover
+            if test -z "$target"
+                echo "PARCIAL"
+            else
+                echo "CONSISTENTE"
+            end
+            return 0
+
+        case extrair
+            if test -z "$source"; or test -z "$dest"; or test -z "$__aury_arg_archive_type"
+                echo "PARCIAL"
+            else
+                echo "CONSISTENTE"
+            end
+            return 0
+
+        case ver ping instalar procurar
+            if test -z "$primary_target"
+                echo "PARCIAL"
+            else
+                echo "CONSISTENTE"
+            end
+            return 0
+
+        case atualizar otimizar status ajuda reload dev
+            echo "CONSISTENTE"
+            return 0
+    end
+
+    if test -n "$primary_target"
+        echo "CONSISTENTE"
+    else
+        echo "PARCIAL"
+    end
+end
+
+function __aury_dev_collect_lacunas --argument-names state intent source dest newname target primary_target
+    set -l gaps
+
+    switch $state
+        case CONSISTENTE
+            echo "nenhuma"
+            return 0
+
+        case AMBIGUA
+            if __aury_dev_has_competing_coordination "$dest"
+                echo "escolha única de destino"
+            else if __aury_dev_has_competing_coordination "$target"
+                echo "escolha única de alvo"
+            else
+                echo "escolha única"
+            end
+            return 0
+
+        case NAO_ENQUADRADA
+            echo "enquadramento suportado"
+            return 0
+
+        case BLOQUEADA
+            echo "alvo seguro"
+            return 0
+    end
+
+    switch $intent
+        case copiar mover
+            if test -z "$source"
+                set -a gaps "origem"
+            end
+
+            if test -z "$dest"
+                set -a gaps "destino"
+            end
+
+        case renomear
+            if test -z "$source"
+                set -a gaps "alvo principal"
+            end
+
+            if test -z "$newname"
+                set -a gaps "novo nome"
+            end
+
+        case criar remover
+            if test -z "$target"
+                set -a gaps "alvo principal"
+            end
+
+        case extrair
+            if test -z "$source"
+                set -a gaps "arquivo compactado"
+            end
+
+            if test -z "$dest"
+                set -a gaps "destino"
+            end
+
+            if test -z "$__aury_arg_archive_type"
+                set -a gaps "tipo de arquivo"
+            end
+
+        case ver ping instalar procurar
+            if test -z "$primary_target"
+                set -a gaps "alvo principal"
+            end
+    end
+
+    if test (count $gaps) -eq 0
+        echo "nenhuma"
+        return 0
+    end
+
+    echo (string join ", " -- $gaps)
+end
+
+function __aury_dev_diagnostic_reason --argument-names state intent
+    switch $state
+        case CONSISTENTE
+            echo "intenção, domínio e entidades mínimas convergem para uma leitura única."
+            return 0
+
+        case PARCIAL
+            echo "a intenção foi lida, mas ainda faltam elementos para fechar a ação."
+            return 0
+
+        case AMBIGUA
+            echo "há mais de uma leitura plausível para o mesmo papel argumental."
+            return 0
+
+        case BLOQUEADA
+            echo "a leitura foi interrompida por uma regra de segurança ou fronteira deliberada."
+            return 0
+    end
+
+    if test "$intent" = "unknown"
+        echo "a frase não fechou uma ação suportada com segurança."
+    else
+        echo "o enquadramento ficou fora do recorte suportado nesta fase."
+    end
+end
+
+function __aury_dev_predicted_action --argument-names state intent source dest newname target primary_target
+    switch $state
+        case AMBIGUA
+            echo "Nenhuma ação única prevista."
+            return 0
+
+        case NAO_ENQUADRADA
+            echo "Nenhuma ação suportada prevista."
+            return 0
+
+        case BLOQUEADA
+            if test "$intent" = "remover"
+                echo "Remoção sem alvo seguro; leitura bloqueada."
+            else
+                echo "Leitura bloqueada."
+            end
+            return 0
+    end
+
+    switch $intent
+        case copiar
+            if test -n "$source"; and test -n "$dest"
+                echo "Copiar '$source' para '$dest'."
+            else if test -n "$source"
+                echo "Copiar '$source', se houver um destino válido."
+            else
+                echo "Copiar, se houver origem e destino válidos."
+            end
+            return 0
+
+        case mover
+            if test -n "$source"; and test -n "$dest"
+                echo "Mover '$source' para '$dest'."
+            else if test -n "$source"
+                echo "Mover '$source', se houver um destino válido."
+            else
+                echo "Mover, se houver origem e destino válidos."
+            end
+            return 0
+
+        case renomear
+            if test -n "$source"; and test -n "$newname"
+                echo "Renomear '$source' para '$newname'."
+            else if test -n "$source"
+                echo "Renomear '$source', se houver um novo nome válido."
+            else
+                echo "Renomear, se houver alvo e novo nome válidos."
+            end
+            return 0
+
+        case criar
+            if test -n "$target"
+                echo "Criar '$target'."
+            else
+                echo "Criar, se houver um alvo válido."
+            end
+            return 0
+
+        case remover
+            if test -n "$target"
+                echo "Remover '$target'."
+            else
+                echo "Remover, se houver um alvo seguro."
+            end
+            return 0
+
+        case extrair
+            if test -n "$source"; and test -n "$dest"
+                echo "Extrair '$source' para '$dest'."
+            else if test -n "$source"
+                echo "Extrair '$source', se houver um destino válido."
+            else
+                echo "Extrair, se houver arquivo e destino válidos."
+            end
+            return 0
+
+        case ver
+            if test -n "$primary_target"
+                echo "Ver '$primary_target'."
+            else
+                echo "Ver, se houver um alvo válido."
+            end
+            return 0
+
+        case ping
+            if test -n "$primary_target"
+                echo "Pingar '$primary_target'."
+            else
+                echo "Pingar, se houver um host válido."
+            end
+            return 0
+
+        case instalar
+            if test -n "$primary_target"
+                echo "Instalar '$primary_target'."
+            else
+                echo "Instalar, se houver um pacote válido."
+            end
+            return 0
+
+        case procurar
+            if test -n "$primary_target"
+                echo "Procurar '$primary_target'."
+            else
+                echo "Procurar, se houver um termo válido."
+            end
+            return 0
+
+        case atualizar
+            echo "Atualizar o sistema."
+            return 0
+
+        case otimizar
+            echo "Otimizar o sistema."
+            return 0
+
+        case status
+            echo "Ver o status do sistema."
+            return 0
+    end
+
+    if test -n "$primary_target"
+        echo (string join "" -- (string sub -s 1 -l 1 -- $intent | string upper) (string sub -s 2 -- $intent) " '" $primary_target "'.")
+    else
+        echo "Nenhuma ação única prevista."
+    end
+end
+
+function __aury_dev_collect_observations --argument-names state location_info
+    set -l items
+
+    if test -n "$location_info"
+        set -a items "localização conversacional usada para fechar a leitura"
+    end
+
+    if test -n "$__aury_arg_target_from_local_anaphor"
+        set -a items "referência local considerada na leitura"
+    else if __aury_dev_has_local_anaphor $norm_words_global
+        if test "$state" = "BLOQUEADA"
+            set -a items "referência local destrutiva sem antecedente seguro"
+        else
+            set -a items "referência local considerada na leitura"
+        end
+    end
+
+    if test "$state" = "AMBIGUA"
+        if __aury_dev_has_competing_coordination "$__aury_arg_dest"
+            set -a items "o destino permaneceu com coordenação explícita"
+        else if __aury_dev_has_competing_coordination "$__aury_arg_target"
+            set -a items "o alvo permaneceu com coordenação explícita"
+        end
+    end
+
+    if test (count $items) -eq 0
+        echo "-"
+        return 0
+    end
+
+    echo (string join "; " -- $items)
+end
+
 function __aury_dev_sensitive_maps
     set -l tokens $argv
     set -l protected (__aury_protect_sensitive_tokens $tokens)
@@ -774,7 +1182,7 @@ function __aury_dev_show_syntax_status
     return 1
 end
 
-function __aury_dev_report_current_action --argument-names index
+function __aury_dev_report_current_action --argument-names index original_action
     set -e __aury_interp_intent
     set -e __aury_interp_domain_hint
     set -e __aury_interp_has_connector
@@ -796,21 +1204,32 @@ function __aury_dev_report_current_action --argument-names index
     set -l dest ''
     set -l newname ''
     set -l location_info ''
+    set -l target ''
+    set -l semantic_target ''
+    set -l primary_target ''
 
     if test "$intent" = "extrair"
         __aury_extract_archive_args $norm_words_global
         set type_detected $__aury_arg_archive_type
         set source $__aury_arg_source
         set dest $__aury_arg_dest
+        set semantic_target (__aury_file_semantic_target $intent "$source" '')
     else if test "$domain" = "arquivo"; or test "$domain" = "pasta"
         __aury_extract_file_args $intent $norm_words_global
         set type_detected $__aury_arg_type
         set source $__aury_arg_source
         set dest $__aury_arg_dest
+        set target $__aury_arg_target
+        set semantic_target (__aury_file_semantic_target $intent "$source" "$target")
+
+        if test -n "$type_detected"; and test "$type_detected" != "$domain"
+            set domain $type_detected
+        end
 
         if test "$intent" = "copiar"; or test "$intent" = "mover"
-            if test -n "$source"; and test -n "$dest"
-                set dest (__aury_effective_target_path "$source" "$dest")
+            set -l effective_target (__aury_file_result_target $intent "$source" "$dest" '' '')
+            if test -n "$effective_target"
+                set dest $effective_target
             end
         else if test "$intent" = "renomear"
             set newname $__aury_arg_newname
@@ -836,21 +1255,73 @@ function __aury_dev_report_current_action --argument-names index
         end
     end
 
+    if test -z "$original_action"; and test (count $orig_words_global) -gt 0
+        set original_action (string join " " -- $orig_words_global)
+    end
+
+    if test -n "$semantic_target"
+        set primary_target $semantic_target
+    else if test -n "$dest"
+        set primary_target $dest
+    else if test -n "$newname"
+        set primary_target $newname
+    else if test "$intent" != "unknown"; and test (count $orig_words_global) -gt 1
+        set primary_target (string join " " -- $orig_words_global[2..-1])
+    end
+
+    set -l display_intent (__aury_dev_public_intent_label $intent)
+    set -l diagnostic_state (__aury_dev_detect_diagnostic_state $intent $domain "$source" "$dest" "$newname" "$target" "$primary_target")
+    set -l lacunas (__aury_dev_collect_lacunas $diagnostic_state $intent "$source" "$dest" "$newname" "$target" "$primary_target")
+    set -l diagnostic_reason (__aury_dev_diagnostic_reason $diagnostic_state $intent)
+    set -l predicted_action (__aury_dev_predicted_action $diagnostic_state $intent "$source" "$dest" "$newname" "$target" "$primary_target")
+    set -l observations (__aury_dev_collect_observations $diagnostic_state "$location_info")
+
     echo ""
     echo "Ação $index"
-    __aury_dev_print_field "frase normalizada" $normalized_action
-    __aury_dev_print_field "intenção detectada" $intent
-    __aury_dev_print_field "domínio sugerido" $domain
-    __aury_dev_print_field "tipo detectado" $type_detected
-    __aury_dev_print_field "origem" $source
-    __aury_dev_print_field "destino" $dest
-    __aury_dev_print_field "novo nome" $newname
-    __aury_dev_print_field "localização conversacional" $location_info
+    echo "Entrada"
+    __aury_dev_print_field "trecho original" $original_action
+    __aury_dev_print_field "trecho normalizado" $normalized_action
+
+    echo "Enquadramento"
+    __aury_dev_print_field "intenção" $display_intent
+    __aury_dev_print_field "domínio" $domain
+
+    echo "Entidades"
+    __aury_dev_print_field "tipo" $type_detected
+    __aury_dev_print_field "alvo principal" $primary_target
+
+    if test -n "$source"
+        __aury_dev_print_field "origem" $source
+    end
+
+    if test -n "$dest"
+        __aury_dev_print_field "destino" $dest
+    end
+
+    if test -n "$newname"
+        __aury_dev_print_field "novo nome" $newname
+    end
+
+    if test -n "$location_info"
+        __aury_dev_print_field "localização conversacional" $location_info
+    end
+
+    echo "Diagnostico"
+    __aury_dev_print_field "estado" $diagnostic_state
+    __aury_dev_print_field "motivo" $diagnostic_reason
+    __aury_dev_print_field "lacunas" $lacunas
+
+    echo "Acao prevista"
+    __aury_dev_print_field "resumo" $predicted_action
+
+    echo "Observacoes"
+    __aury_dev_print_field "itens" $observations
 end
 
 function __aury_dev_sync_local_reference
     set -l intent (__aury_detect_intent $norm_words_global)
     set -l domain (__aury_detect_domain $intent $norm_words_global)
+    set -l ref_kind ''
 
     if test "$domain" != "arquivo"; and test "$domain" != "pasta"
         __aury_reset_local_reference_state
@@ -858,38 +1329,39 @@ function __aury_dev_sync_local_reference
     end
 
     switch $intent
-        case criar
-            if test -n "$__aury_arg_target"
-                __aury_update_local_reference $__aury_arg_target $__aury_arg_type
-                return 0
-            end
-
-        case copiar
-            if test -n "$__aury_arg_source"; and test -n "$__aury_arg_dest"
-                __aury_update_local_reference (__aury_effective_target_path $__aury_arg_source $__aury_arg_dest) $__aury_arg_type
-                return 0
-            end
-
-        case mover
-            if test -n "$__aury_arg_source"; and test -n "$__aury_arg_dest"
-                __aury_update_local_reference (__aury_effective_target_path $__aury_arg_source $__aury_arg_dest) $__aury_arg_type
-                return 0
-            end
-
-        case renomear
-            if test -n "$__aury_arg_newname"
-                __aury_update_local_reference $__aury_arg_newname $__aury_arg_type
-                return 0
-            end
-
+        case criar copiar mover renomear
+            set ref_kind $__aury_arg_type
         case extrair
-            if test -n "$__aury_arg_dest"
-                __aury_update_local_reference $__aury_arg_dest pasta
-                return 0
-            end
+            set ref_kind pasta
+    end
+
+    set -l ref_path (__aury_file_result_target $intent "$__aury_arg_source" "$__aury_arg_dest" "$__aury_arg_newname" "$__aury_arg_target")
+
+    if test -n "$ref_path"; and test -n "$ref_kind"
+        __aury_update_local_reference $ref_path $ref_kind
+        return 0
     end
 
     __aury_reset_local_reference_state
+    return 0
+end
+
+function __aury_dev_consume_pipeline_action
+    set -l original_action ''
+
+    if set -q __aury_emitted_action_is_expanded; and test "$__aury_emitted_action_is_expanded" = "1"
+        if test (count $orig_words_global) -gt 0
+            set original_action (string join " " -- $orig_words_global)
+        end
+    else if test (count $argv) -gt 0
+        set original_action (string join " " -- $argv)
+    else if test (count $orig_words_global) -gt 0
+        set original_action (string join " " -- $orig_words_global)
+    end
+
+    __aury_dev_report_current_action $__aury_dev_walk_action_index "$original_action"
+    __aury_dev_sync_local_reference
+    set -g __aury_dev_walk_action_index (math $__aury_dev_walk_action_index + 1)
     return 0
 end
 
@@ -926,160 +1398,27 @@ function __aury_dev_inspect_phrase
     set -l normalized_text (string join " " -- $normalized_display_tokens)
     set -l sensitive_maps (__aury_dev_sensitive_maps $dev_tokens)
     set -l protected_map nenhum
-    set -l restored_map nenhum
 
     for line in $sensitive_maps
         if string match -q 'PROTECTED:*' -- $line
             set protected_map (string replace 'PROTECTED:' '' -- $line)
-        else if string match -q 'RESTORED:*' -- $line
-            set restored_map (string replace 'RESTORED:' '' -- $line)
         end
     end
 
-    __aury_dev_show_syntax_status
-    set -l syntax_status $status
-
-    echo ""
+    echo "Entrada global"
     __aury_dev_print_field "frase original" $original_text
     __aury_dev_print_field "frase corrigida" $corrected_text
     __aury_dev_print_field "frase normalizada" $normalized_text
-    __aury_dev_print_field "tokens sensíveis protegidos" $protected_map
-    __aury_dev_print_field "tokens restauráveis" $restored_map
+    __aury_dev_print_field "tokens sensíveis" $protected_map
 
-    set -l split_stream (__aury_split_actions $dev_tokens)
-    set -l current_action
-    set -l action_index 1
+    set -g __aury_dev_walk_action_index 1
+    __aury_reset_local_reference_state
+    __aury_walk_pipeline_actions __aury_dev_consume_pipeline_action $dev_tokens
+    set -e __aury_dev_walk_action_index
+    set -e __aury_emitted_action_is_expanded
     __aury_reset_local_reference_state
 
-    for item in $split_stream
-        if test "$item" = "__AURY_ACTION_BREAK__"
-            if test (count $current_action) -eq 0
-                continue
-            end
-
-            set -l prepared (__aury_prepare_action $current_action)
-            set -g norm_words_global
-            set -g orig_words_global
-
-            for line in $prepared
-                if string match -q 'NORM:*' -- $line
-                    set -l payload (string replace 'NORM:' '' -- $line)
-
-                    if test -n "$payload"
-                        set -g norm_words_global (string split \t -- $payload)
-                    else
-                        set -g norm_words_global
-                    end
-                else if string match -q 'ORIG:*' -- $line
-                    set -l payload (string replace 'ORIG:' '' -- $line)
-
-                    if test -n "$payload"
-                        set -g orig_words_global (string split \t -- $payload)
-                    else
-                        set -g orig_words_global
-                    end
-                end
-            end
-
-            if test (count $norm_words_global) -eq 0
-                set current_action
-                continue
-            end
-
-            set -e __aury_interp_intent
-            set -e __aury_interp_domain_hint
-            set -e __aury_interp_has_connector
-
-            set -l interpreted (__aury_interpret_action)
-            set -l interpreted_norm_words
-            set -l interpreted_orig_words
-
-            for line in $interpreted
-                if string match -q 'INTENT:*' -- $line
-                    set -g __aury_interp_intent (string replace 'INTENT:' '' -- $line)
-                else if string match -q 'DOMAIN_HINT:*' -- $line
-                    set -g __aury_interp_domain_hint (string replace 'DOMAIN_HINT:' '' -- $line)
-                else if string match -q 'HAS_CONNECTOR:*' -- $line
-                    set -g __aury_interp_has_connector (string replace 'HAS_CONNECTOR:' '' -- $line)
-                else if string match -q 'NORM:*' -- $line
-                    set -l payload (string replace 'NORM:' '' -- $line)
-
-                    if test -n "$payload"
-                        set interpreted_norm_words (string split \t -- $payload)
-                    else
-                        set interpreted_norm_words
-                    end
-                else if string match -q 'ORIG:*' -- $line
-                    set -l payload (string replace 'ORIG:' '' -- $line)
-
-                    if test -n "$payload"
-                        set interpreted_orig_words (string split \t -- $payload)
-                    else
-                        set interpreted_orig_words
-                    end
-                end
-            end
-
-            if test (count $interpreted_norm_words) -gt 0
-                set -g norm_words_global $interpreted_norm_words
-            end
-
-            if test (count $interpreted_orig_words) -gt 0
-                set -g orig_words_global $interpreted_orig_words
-            end
-
-            set -l expanded (__aury_expand_interpreted_actions)
-            set -l expanded_norm_words
-            set -l expanded_orig_words
-            set -l expanded_count 0
-
-            for line in $expanded
-                if string match -q 'NORM:*' -- $line
-                    set -l payload (string replace 'NORM:' '' -- $line)
-
-                    if test -n "$payload"
-                        set expanded_norm_words (string split \t -- $payload)
-                    else
-                        set expanded_norm_words
-                    end
-                else if string match -q 'ORIG:*' -- $line
-                    set -l payload (string replace 'ORIG:' '' -- $line)
-
-                    if test -n "$payload"
-                        set expanded_orig_words (string split \t -- $payload)
-                    else
-                        set expanded_orig_words
-                    end
-                else if test "$line" = "__AURY_EXPANDED_ACTION_BREAK__"
-                    if test (count $expanded_norm_words) -gt 0
-                        set -g norm_words_global $expanded_norm_words
-                        set -g orig_words_global $expanded_orig_words
-                        __aury_dev_report_current_action $action_index
-                        __aury_dev_sync_local_reference
-                        set action_index (math $action_index + 1)
-                        set expanded_count (math $expanded_count + 1)
-                    end
-
-                    set expanded_norm_words
-                    set expanded_orig_words
-                end
-            end
-
-            if test $expanded_count -eq 0
-                __aury_dev_report_current_action $action_index
-                __aury_dev_sync_local_reference
-                set action_index (math $action_index + 1)
-            end
-
-            set current_action
-        else
-            set current_action $current_action $item
-        end
-    end
-
-    __aury_reset_local_reference_state
-
-    return $syntax_status
+    return 0
 end
 
 # ==========================================================
@@ -1281,6 +1620,10 @@ function __aury_expand_interpreted_actions
     set -l intent_indexes (__aury_collect_intent_indexes $norm_words)
     set -l intent (__aury_detect_intent $norm_words)
 
+    if __aury_is_network_speed_request $intent $norm_words
+        return 1
+    end
+
     # Caso 0: intenção única de sistema sem alvo explícito
     if test (count $norm_words) -eq 1
         if test "$intent" = "atualizar"
@@ -1297,6 +1640,12 @@ function __aury_expand_interpreted_actions
 
     # Caso 1: múltiplas intenções explícitas na mesma frase
     if test (count $intent_indexes) -gt 1
+        if test (count $norm_words) -eq 2
+            if test "$norm_words[1]" = "internet"; and test "$norm_words[2]" = "internet"
+                return 1
+            end
+        end
+
         set -l idx 1
 
         while test $idx -le (count $intent_indexes)
@@ -1577,11 +1926,24 @@ function __aury_find_next_command_index --argument-names start_index
         end
 
         set -l norm (__aury_normalize_token $argv_tokens_global[$j])
+        if test "$norm" = "depois"
+            set j (math $j + 1)
+            continue
+        end
+
         if test "$norm" != "__IGNORE__"; and test "$norm" != "e"
             break
         end
 
         set j (math $j + 1)
+    end
+
+    return 1
+end
+
+function __aury_has_sentence_break_suffix --argument-names tok
+    if string match -rq '[.!?]+$' -- $tok
+        return 0
     end
 
     return 1
@@ -1602,6 +1964,14 @@ function __aury_split_actions
 
             if test -n "$next_idx"
                 set ends $ends (math $i - 1)
+                set starts $starts $next_idx
+                set i (math $next_idx - 1)
+            end
+        else if __aury_has_sentence_break_suffix $argv_tokens_global[$i]
+            set -l next_idx (__aury_find_next_command_index (math $i + 1))
+
+            if test -n "$next_idx"
+                set ends $ends $i
                 set starts $starts $next_idx
                 set i (math $next_idx - 1)
             end
@@ -1667,6 +2037,136 @@ function __aury_prepare_action
 
     echo "NORM:"(string join \t -- $norm_words)
     echo "ORIG:"(string join \t -- $orig_words)
+end
+
+function __aury_load_words_from_stream
+    set -g norm_words_global
+    set -g orig_words_global
+
+    for line in $argv
+        if string match -q 'NORM:*' -- $line
+            set -l payload (string replace 'NORM:' '' -- $line)
+
+            if test -n "$payload"
+                set -g norm_words_global (string split \t -- $payload)
+            else
+                set -g norm_words_global
+            end
+        else if string match -q 'ORIG:*' -- $line
+            set -l payload (string replace 'ORIG:' '' -- $line)
+
+            if test -n "$payload"
+                set -g orig_words_global (string split \t -- $payload)
+            else
+                set -g orig_words_global
+            end
+        end
+    end
+
+    if test (count $norm_words_global) -gt 0
+        return 0
+    end
+
+    return 1
+end
+
+function __aury_interpret_current_action_state
+    set -l previous_norm_words $norm_words_global
+    set -l previous_orig_words $orig_words_global
+    set -l interpreted_word_stream
+
+    set -e __aury_interp_intent
+    set -e __aury_interp_domain_hint
+    set -e __aury_interp_has_connector
+
+    for line in (__aury_interpret_action)
+        if string match -q 'INTENT:*' -- $line
+            set -g __aury_interp_intent (string replace 'INTENT:' '' -- $line)
+        else if string match -q 'DOMAIN_HINT:*' -- $line
+            set -g __aury_interp_domain_hint (string replace 'DOMAIN_HINT:' '' -- $line)
+        else if string match -q 'HAS_CONNECTOR:*' -- $line
+            set -g __aury_interp_has_connector (string replace 'HAS_CONNECTOR:' '' -- $line)
+        else if string match -q 'NORM:*' -- $line
+            set interpreted_word_stream $interpreted_word_stream $line
+        else if string match -q 'ORIG:*' -- $line
+            set interpreted_word_stream $interpreted_word_stream $line
+        end
+    end
+
+    if __aury_load_words_from_stream $interpreted_word_stream
+        if test (count $orig_words_global) -eq 0; and test (count $previous_orig_words) -gt 0
+            set -g orig_words_global $previous_orig_words
+        end
+        return 0
+    end
+
+    set -g norm_words_global $previous_norm_words
+    set -g orig_words_global $previous_orig_words
+    return 1
+end
+
+function __aury_walk_pipeline_actions --argument-names consumer_fn
+    set -e argv[1]
+    set -l raw_tokens $argv
+    set -l split_stream (__aury_split_actions $raw_tokens)
+    set -l current_action
+
+    for item in $split_stream
+        if test "$item" = "__AURY_ACTION_BREAK__"
+            if test (count $current_action) -eq 0
+                continue
+            end
+
+            set -l prepared (__aury_prepare_action $current_action)
+            if not __aury_load_words_from_stream $prepared
+                set current_action
+                continue
+            end
+
+            __aury_interpret_current_action_state
+
+            set -l expanded (__aury_expand_interpreted_actions)
+            set -l expanded_word_stream
+            set -l emitted_count 0
+            set -l interpreted_norm_words $norm_words_global
+            set -l interpreted_orig_words $orig_words_global
+
+            for line in $expanded
+                if string match -q 'NORM:*' -- $line
+                    set expanded_word_stream $expanded_word_stream $line
+                else if string match -q 'ORIG:*' -- $line
+                    set expanded_word_stream $expanded_word_stream $line
+                else if test "$line" = "__AURY_EXPANDED_ACTION_BREAK__"
+                    if test (count $expanded_word_stream) -gt 0
+                        if __aury_load_words_from_stream $expanded_word_stream
+                            __aury_interpret_current_action_state
+                            set -g __aury_emitted_action_is_expanded 1
+                            $consumer_fn $current_action
+                            set emitted_count (math $emitted_count + 1)
+                        else
+                            set -g norm_words_global $interpreted_norm_words
+                            set -g orig_words_global $interpreted_orig_words
+                        end
+                    end
+
+                    set expanded_word_stream
+                end
+            end
+
+            if test $emitted_count -eq 0
+                set -g norm_words_global $interpreted_norm_words
+                set -g orig_words_global $interpreted_orig_words
+                set -g __aury_emitted_action_is_expanded 0
+                $consumer_fn $current_action
+            end
+
+            set current_action
+        else
+            set current_action $current_action $item
+        end
+    end
+
+    return 0
 end
 
 # ==========================================================
@@ -1762,8 +2262,11 @@ function __aury_detect_domain --argument-names intent
 
                 if test -n "$resolved"
                     echo $__aury_local_ref_kind
-                    return 0
+                else
+                    echo geral
                 end
+
+                return 0
             end
         end
 
@@ -1955,6 +2458,28 @@ function __aury_is_local_anaphor --argument-names tok
     return 1
 end
 
+function __aury_has_local_anaphor
+    for tok in $argv
+        if __aury_is_local_anaphor $tok
+            return 0
+        end
+    end
+
+    return 1
+end
+
+function __aury_has_competing_coordination --argument-names value
+    if test -z "$value"
+        return 1
+    end
+
+    if string match -rq '(^|.* )(e|ou) (.*)$' -- $value
+        return 0
+    end
+
+    return 1
+end
+
 function __aury_resolve_local_anaphor --argument-names tok
     if not __aury_is_local_anaphor $tok
         return 1
@@ -1980,6 +2505,22 @@ function __aury_resolve_local_anaphor --argument-names tok
     return 0
 end
 
+function __aury_resolve_local_followup_source_anaphor --argument-names tok
+    set -l resolved (__aury_resolve_local_anaphor $tok)
+
+    if test -n "$resolved"
+        echo $resolved
+        return 0
+    end
+
+    if test "$tok" = "ela"; and test "$__aury_local_ref_kind" = "arquivo"; and test -n "$__aury_local_ref_path"
+        echo $__aury_local_ref_path
+        return 0
+    end
+
+    return 1
+end
+
 function __aury_effective_target_path --argument-names source dest
     if test -z "$dest"
         echo $dest
@@ -1993,6 +2534,69 @@ function __aury_effective_target_path --argument-names source dest
 
     echo $dest
     return 0
+end
+
+function __aury_file_semantic_target --argument-names intent source target
+    switch $intent
+        case criar remover
+            if test -n "$target"
+                echo $target
+                return 0
+            end
+
+        case copiar mover renomear extrair
+            if test -n "$source"
+                echo $source
+                return 0
+            end
+    end
+
+    return 1
+end
+
+function __aury_file_result_target --argument-names intent source dest newname target
+    switch $intent
+        case criar
+            if test -n "$target"
+                echo $target
+                return 0
+            end
+
+        case copiar mover
+            if test -n "$source"; and test -n "$dest"
+                echo (__aury_effective_target_path "$source" "$dest")
+                return 0
+            end
+
+        case renomear
+            if test -n "$newname"
+                echo $newname
+                return 0
+            end
+
+        case extrair
+            if test -n "$dest"
+                echo $dest
+                return 0
+            end
+    end
+
+    return 1
+end
+
+function __aury_ensure_parent_directory --argument-names path
+    if test -z "$path"
+        return 1
+    end
+
+    set -l parent_dir (dirname -- $path)
+
+    if test -z "$parent_dir"; or test "$parent_dir" = "."
+        return 0
+    end
+
+    mkdir -p -- $parent_dir
+    return $status
 end
 
 function __aury_update_local_reference --argument-names path kind
@@ -2355,6 +2959,29 @@ function __aury_extract_file_args
                 set -l conn_idx (math $start + $rel_connector - 1)
 
                 if test "$norm_words[$conn_idx]" = "em"; and test (count $orig_words) -gt $conn_idx
+                    if test "$intent" = "criar"; or test "$intent" = "remover"
+                        if test (math $conn_idx - 1) -ge $start
+                            set -l target_name_end (math $conn_idx - 1)
+
+                            if test $conn_idx -gt $start
+                                if contains -- $norm_words[(math $conn_idx - 1)] está fica
+                                    set target_name_end (math $conn_idx - 2)
+                                end
+                            end
+
+                            if test $target_name_end -ge $start
+                                set -l target_name (string join " " -- $orig_words[$start..$target_name_end])
+                                set -l base_tokens (__aury_strip_leading_location_base_noise $orig_words[(math $conn_idx + 1)..-1])
+                                set -l target_base (string join " " -- $base_tokens)
+
+                                if test -n "$target_name"; and test -n "$target_base"
+                                    set -g __aury_arg_target (__aury_join_base_and_name "$target_base" "$target_name")
+                                    return 0
+                                end
+                            end
+                        end
+                    end
+
                     set -g __aury_arg_target (string join " " -- $orig_words[(math $conn_idx + 1)..-1])
                     return 0
                 end
@@ -2408,7 +3035,7 @@ function __aury_extract_file_args
                     set -l rel_location (__aury_find_locational_connector_index $source_norm_slice)
 
                     if test (count $source_norm_slice) -eq 1
-                        set -l resolved_source (__aury_resolve_local_anaphor $source_norm_slice[1])
+                        set -l resolved_source (__aury_resolve_local_followup_source_anaphor $source_norm_slice[1])
 
                         if test -n "$resolved_source"
                             set -g __aury_arg_source $resolved_source
@@ -2606,6 +3233,142 @@ end
 # 5.3 Rede
 # -------------------------------------------------
 
+function __aury_is_network_speed_request --argument-names intent
+    set -e argv[1]
+    set -l norm_words $argv
+
+    if test "$intent" != "internet"
+        return 1
+    end
+
+    if not contains -- velocidade $norm_words
+        return 1
+    end
+
+    for word in $orig_words_global
+        set -l lowered (string lower -- $word)
+
+        if test "$lowered" = "internet"; or test "$lowered" = "rede"
+            return 0
+        end
+    end
+
+    return 1
+end
+
+function __aury_exec_network_speedtest
+    if not command -sq librespeed-cli
+        __aury_msg_error "não consegui medir a velocidade da internet porque o backend 'librespeed-cli' não está disponível"
+        return 0
+    end
+
+    set -l backend_json (librespeed-cli --json --no-icmp 2>/dev/null)
+    set -l backend_status $status
+
+    if test $backend_status -ne 0
+        __aury_msg_error "não consegui medir a velocidade da internet porque o backend 'librespeed-cli' retornou erro operacional"
+        return 0
+    end
+
+    if not command -sq python3
+        __aury_msg_error "não consegui ler o retorno do librespeed-cli com confiança"
+        return 0
+    end
+
+    set -l parsed_metrics (printf '%s\n' $backend_json | python3 -c '
+import json
+import math
+import re
+import sys
+
+raw = sys.stdin.read()
+
+try:
+    data = json.loads(raw)
+except Exception:
+    sys.exit(2)
+
+def clean_number(key, required):
+    value = data.get(key)
+
+    if isinstance(value, bool):
+        value = None
+
+    if isinstance(value, (int, float)):
+        if math.isfinite(value):
+            text = f"{value:.2f}".rstrip("0").rstrip(".")
+            return text or "0"
+        value = None
+    elif isinstance(value, str):
+        value = value.strip()
+        if re.fullmatch(r"-?\d+(?:\.\d+)?", value):
+            return value
+        value = None
+
+    if required:
+        sys.exit(3)
+
+    return ""
+
+print("ping=" + clean_number("ping", True))
+print("download=" + clean_number("download", True))
+print("upload=" + clean_number("upload", True))
+
+jitter = clean_number("jitter", False)
+if jitter:
+    print(f"jitter={jitter}")
+')
+    set -l parse_status $status
+
+    if test $parse_status -ne 0
+        __aury_msg_error "não consegui ler o retorno do librespeed-cli com confiança"
+        return 0
+    end
+
+    set -l ping_value ''
+    set -l download_value ''
+    set -l upload_value ''
+    set -l jitter_value ''
+
+    for line in $parsed_metrics
+        set -l parts (string split -m 1 '=' -- $line)
+
+        if test (count $parts) -ne 2
+            continue
+        end
+
+        switch $parts[1]
+            case ping
+                set ping_value $parts[2]
+
+            case download
+                set download_value $parts[2]
+
+            case upload
+                set upload_value $parts[2]
+
+            case jitter
+                set jitter_value $parts[2]
+        end
+    end
+
+    if test -z "$ping_value"; or test -z "$download_value"; or test -z "$upload_value"
+        __aury_msg_error "não consegui ler o retorno do librespeed-cli com confiança"
+        return 0
+    end
+
+    echo "✅ velocidade da internet"
+    echo "ping: $ping_value ms"
+    echo "download: $download_value Mbps"
+    echo "upload: $upload_value Mbps"
+
+    if test -n "$jitter_value"
+        echo "jitter: $jitter_value ms"
+    end
+
+    return 0
+end
+
 function __aury_exec_network
     set -l intent $argv[1]
     set -e argv[1]
@@ -2613,6 +3376,11 @@ function __aury_exec_network
 
     if contains -- ip $norm_words
         ip a
+        return 0
+    end
+
+    if __aury_is_network_speed_request $intent $norm_words
+        __aury_exec_network_speedtest
         return 0
     end
 
@@ -2735,6 +3503,29 @@ function __aury_exec_files
     __aury_extract_file_args $intent $norm_words
 
     switch $intent
+        case criar remover
+            if __aury_has_competing_coordination "$__aury_arg_target"
+                __aury_reset_local_reference_state
+                __aury_msg_ambiguous alvo "$__aury_arg_target"
+                return 0
+            end
+
+        case copiar mover
+            if __aury_has_competing_coordination "$__aury_arg_dest"
+                __aury_reset_local_reference_state
+                __aury_msg_ambiguous destino "$__aury_arg_dest"
+                return 0
+            end
+
+        case renomear
+            if __aury_has_competing_coordination "$__aury_arg_dest"
+                __aury_reset_local_reference_state
+                __aury_msg_ambiguous "novo nome" "$__aury_arg_dest"
+                return 0
+            end
+    end
+
+    switch $intent
         case criar
             if test "$__aury_arg_type" = "pasta"
                 if test -z "$__aury_arg_target"
@@ -2762,17 +3553,14 @@ function __aury_exec_files
                 return 0
             end
 
-            set -l parent_dir (dirname -- $__aury_arg_target)
-
-            if test "$parent_dir" != "."
-                mkdir -p -- $parent_dir
-            end
+            __aury_ensure_parent_directory $__aury_arg_target
 
             touch -- $__aury_arg_target
 
             if test $status -eq 0
-                __aury_update_local_reference $__aury_arg_target arquivo
-                __aury_msg_file_success "Pronto" criar arquivo $__aury_arg_target
+                set -l created_target (__aury_file_result_target criar '' '' '' "$__aury_arg_target")
+                __aury_update_local_reference $created_target arquivo
+                __aury_msg_file_success "Pronto" criar arquivo $created_target
             else
                 __aury_reset_local_reference_state
                 __aury_msg_file_failure criar arquivo $__aury_arg_target
@@ -2794,7 +3582,6 @@ function __aury_exec_files
                 return 0
             end
 
-            set -l confirm s
             set -l skip_confirmation 0
 
             # Só pulamos a confirmação quando a remoção veio de anáfora local
@@ -2807,12 +3594,7 @@ function __aury_exec_files
                 end
             end
 
-            if test $skip_confirmation -ne 1
-                echo "⚠ confirmar exclusão de '$__aury_arg_target' (s/n)"
-                read -l confirm
-            end
-
-            if test "$confirm" = "s" -o "$confirm" = "S"
+            if test $skip_confirmation -eq 1; or __aury_read_confirmation remover "$__aury_arg_target"
                 set -l target_kind (__aury_path_kind $__aury_arg_target $__aury_arg_type)
 
                 if test "$__aury_arg_type" = "pasta"
@@ -2830,7 +3612,7 @@ function __aury_exec_files
                 end
             else
                 __aury_reset_local_reference_state
-                __aury_msg_warn "Tudo bem, eu cancelei essa ação."
+                __aury_msg_warn "eu não removi '$__aury_arg_target'."
             end
 
             return 0
@@ -2849,11 +3631,7 @@ function __aury_exec_files
                 return 0
             end
 
-            set -l dest_dir (dirname -- $__aury_arg_dest)
-
-            if test "$dest_dir" != "."
-                mkdir -p -- $dest_dir
-            end
+            __aury_ensure_parent_directory $__aury_arg_dest
 
             set -l copy_type
 
@@ -2866,7 +3644,7 @@ function __aury_exec_files
             end
 
             if test $status -eq 0
-                set -l effective_copy_target (__aury_effective_target_path $__aury_arg_source $__aury_arg_dest)
+                set -l effective_copy_target (__aury_file_result_target copiar "$__aury_arg_source" "$__aury_arg_dest" '' '')
                 __aury_update_local_reference $effective_copy_target $copy_type
                 __aury_msg_file_success "Pronto" copiar $copy_type $__aury_arg_source $effective_copy_target
             else
@@ -2890,11 +3668,7 @@ function __aury_exec_files
                 return 0
             end
 
-            set -l dest_dir (dirname -- $__aury_arg_dest)
-
-            if test "$dest_dir" != "."
-                mkdir -p -- $dest_dir
-            end
+            __aury_ensure_parent_directory $__aury_arg_dest
 
             set -l move_type
 
@@ -2907,7 +3681,7 @@ function __aury_exec_files
             mv -- $__aury_arg_source $__aury_arg_dest
 
             if test $status -eq 0
-                set -l effective_move_target (__aury_effective_target_path $__aury_arg_source $__aury_arg_dest)
+                set -l effective_move_target (__aury_file_result_target mover "$__aury_arg_source" "$__aury_arg_dest" '' '')
                 __aury_update_local_reference $effective_move_target $move_type
                 __aury_msg_file_success "Feito" mover $move_type $__aury_arg_source $effective_move_target
             else
@@ -2947,6 +3721,12 @@ function __aury_exec_files
                 set -g __aury_arg_dest (__aury_archive_default_destination $__aury_arg_source)
             end
 
+            if __aury_has_competing_coordination "$__aury_arg_dest"
+                __aury_reset_local_reference_state
+                __aury_msg_ambiguous destino "$__aury_arg_dest"
+                return 0
+            end
+
             if test -e $__aury_arg_dest
                 __aury_reset_local_reference_state
                 __aury_msg_error "a pasta de destino já existe: $__aury_arg_dest"
@@ -2978,7 +3758,8 @@ function __aury_exec_files
                 return 0
             end
 
-            __aury_update_local_reference $__aury_arg_dest pasta
+            set -l extracted_target (__aury_file_result_target extrair "$__aury_arg_source" "$__aury_arg_dest" '' '')
+            __aury_update_local_reference $extracted_target pasta
 
             set -l count_info (__aury_count_extracted_items $__aury_arg_dest)
             set -l extracted_files 0
@@ -2992,9 +3773,8 @@ function __aury_exec_files
                 end
             end
 
-            echo "📦 extraído: $__aury_arg_source → $__aury_arg_dest"
-            echo "📄 arquivos: $extracted_files"
-            echo "📁 pastas: $extracted_dirs"
+            __aury_msg_ok "Pronto, eu extraí o arquivo compactado '$__aury_arg_source' para a pasta '$__aury_arg_dest'."
+            __aury_msg_info "itens extraídos: $extracted_files arquivo(s) e $extracted_dirs pasta(s)"
             return 0
 
         case renomear
@@ -3015,8 +3795,9 @@ function __aury_exec_files
             mv -- $__aury_arg_source $__aury_arg_newname
 
             if test $status -eq 0
-                __aury_update_local_reference $__aury_arg_newname $rename_type
-                __aury_msg_file_success "Tudo certo" renomear $rename_type $__aury_arg_source $__aury_arg_newname
+                set -l renamed_target (__aury_file_result_target renomear "$__aury_arg_source" '' "$__aury_arg_newname" '')
+                __aury_update_local_reference $renamed_target $rename_type
+                __aury_msg_file_success "Tudo certo" renomear $rename_type $__aury_arg_source $renamed_target
             else
                 __aury_reset_local_reference_state
                 __aury_msg_file_failure renomear $rename_type $__aury_arg_source
@@ -3055,6 +3836,14 @@ function __aury_dispatch_current_action
         end
     end
 
+    if test "$intent" = "remover"; and test "$domain" = "geral"
+        if __aury_has_local_anaphor $norm_words_global
+            __aury_reset_local_reference_state
+            __aury_msg_blocked "não vou remover nada sem um alvo explícito."
+            return 0
+        end
+    end
+
     switch $domain
         case sistema
             __aury_reset_local_reference_state
@@ -3089,8 +3878,32 @@ end
 
 function __aury_fallback
     set -l action_tokens $argv
-    echo "❓ Não entendi: "(string join " " -- $action_tokens)
-    echo "Digite: aury ajuda"
+    set -l action_text (string trim -- (string join " " -- $action_tokens))
+
+    if test -n "$action_text"
+        __aury_msg_error "não consegui entender esse pedido com segurança: '$action_text'."
+    else
+        __aury_msg_error "não consegui entender esse pedido com segurança."
+    end
+
+    __aury_msg_help_hint
+    return 1
+end
+
+function __aury_runtime_consume_pipeline_action
+    set -l source_action $argv
+
+    __aury_clear_action_error_state
+    if __aury_dispatch_current_action
+        if test "$__aury_action_had_error" = "1"
+            set -g __aury_runtime_walk_status 1
+        end
+        return 0
+    end
+
+    __aury_fallback $source_action
+    set -g __aury_runtime_walk_status 1
+    return 0
 end
 
 # -------------------------------------------------
@@ -3102,6 +3915,8 @@ end
 # -------------------------------------------------
 
 function aury
+    __aury_clear_action_error_state
+
     if test (count $argv) -eq 0
         __aury_msg_error "comando inválido"
         return 1
@@ -3126,143 +3941,10 @@ function aury
         return $status
     end
 
-    set -l split_stream (__aury_split_actions $raw_tokens)
-    set -l current_action
+    set -g __aury_runtime_walk_status 0
     __aury_reset_local_reference_state
-
-    for item in $split_stream
-        if test "$item" = "__AURY_ACTION_BREAK__"
-            if test (count $current_action) -eq 0
-                continue
-            end
-
-            set -l prepared (__aury_prepare_action $current_action)
-            set -g norm_words_global
-            set -g orig_words_global
-
-            for line in $prepared
-                if string match -q 'NORM:*' -- $line
-                    set -l payload (string replace 'NORM:' '' -- $line)
-
-                    if test -n "$payload"
-                        set -g norm_words_global (string split \t -- $payload)
-                    else
-                        set -g norm_words_global
-                    end
-                else if string match -q 'ORIG:*' -- $line
-                    set -l payload (string replace 'ORIG:' '' -- $line)
-
-                    if test -n "$payload"
-                        set -g orig_words_global (string split \t -- $payload)
-                    else
-                        set -g orig_words_global
-                    end
-                end
-            end
-
-            if test (count $norm_words_global) -eq 0
-                set current_action
-                continue
-            end
-
-            set -e __aury_interp_intent
-            set -e __aury_interp_domain_hint
-            set -e __aury_interp_has_connector
-
-            set -l interpreted (__aury_interpret_action)
-            set -l interpreted_norm_words
-            set -l interpreted_orig_words
-
-            for line in $interpreted
-                if string match -q 'INTENT:*' -- $line
-                    set -g __aury_interp_intent (string replace 'INTENT:' '' -- $line)
-                else if string match -q 'DOMAIN_HINT:*' -- $line
-                    set -g __aury_interp_domain_hint (string replace 'DOMAIN_HINT:' '' -- $line)
-                else if string match -q 'HAS_CONNECTOR:*' -- $line
-                    set -g __aury_interp_has_connector (string replace 'HAS_CONNECTOR:' '' -- $line)
-                else if string match -q 'NORM:*' -- $line
-                    set -l payload (string replace 'NORM:' '' -- $line)
-
-                    if test -n "$payload"
-                        set interpreted_norm_words (string split \t -- $payload)
-                    else
-                        set interpreted_norm_words
-                    end
-                else if string match -q 'ORIG:*' -- $line
-                    set -l payload (string replace 'ORIG:' '' -- $line)
-
-                    if test -n "$payload"
-                        set interpreted_orig_words (string split \t -- $payload)
-                    else
-                        set interpreted_orig_words
-                    end
-                end
-            end
-
-            if test (count $interpreted_norm_words) -gt 0
-                set -g norm_words_global $interpreted_norm_words
-            end
-
-            if test (count $interpreted_orig_words) -gt 0
-                set -g orig_words_global $interpreted_orig_words
-            end
-
-            set -l expanded (__aury_expand_interpreted_actions)
-            set -l ran_expanded 0
-            set -l expanded_norm_words
-            set -l expanded_orig_words
-
-            for line in $expanded
-                if string match -q 'NORM:*' -- $line
-                    set -l payload (string replace 'NORM:' '' -- $line)
-                    if test -n "$payload"
-                        set expanded_norm_words (string split \t -- $payload)
-                    else
-                        set expanded_norm_words
-                    end
-                else if string match -q 'ORIG:*' -- $line
-                    set -l payload (string replace 'ORIG:' '' -- $line)
-                    if test -n "$payload"
-                        set expanded_orig_words (string split \t -- $payload)
-                    else
-                        set expanded_orig_words
-                    end
-                else if test "$line" = "__AURY_EXPANDED_ACTION_BREAK__"
-                    if test (count $expanded_norm_words) -gt 0
-                        set -g norm_words_global $expanded_norm_words
-                        set -g orig_words_global $expanded_orig_words
-                        set -e __aury_interp_intent
-                        set -e __aury_interp_domain_hint
-                        set -e __aury_interp_has_connector
-
-                        if __aury_dispatch_current_action
-                            set ran_expanded 1
-                        else
-                            __aury_fallback $current_action
-                        end
-                    end
-
-                    set expanded_norm_words
-                    set expanded_orig_words
-                end
-            end
-
-            if test $ran_expanded -eq 1
-                set current_action
-                continue
-            end
-
-            if __aury_dispatch_current_action
-                set current_action
-                continue
-            end
-
-            __aury_fallback $current_action
-            set current_action
-        else
-            set current_action $current_action $item
-        end
-    end
+    __aury_walk_pipeline_actions __aury_runtime_consume_pipeline_action $raw_tokens
+    set -l overall_status $__aury_runtime_walk_status
 
     set -e norm_words_global
     set -e orig_words_global
@@ -3281,8 +3963,11 @@ function aury
     set -e __aury_arg_location_connector
     set -e __aury_local_ref_path
     set -e __aury_local_ref_kind
+    set -e __aury_action_had_error
+    set -e __aury_runtime_walk_status
+    set -e __aury_emitted_action_is_expanded
 
-    return 0
+    return $overall_status
 end
 
 # -------------------------------------------------

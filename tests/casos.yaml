@@ -1,0 +1,234 @@
+# Contrato inicial de regressão mínima da v1.6 da 💜 Aury.
+# Esta primeira versão prioriza legibilidade e cobertura do miolo que será tocado
+# na Fase 1 e na Fase 2. Ainda não existe runner sofisticado.
+# Campos curtos por caso:
+# - id: identificador estável
+# - ordem: ordem mínima sugerida de execução
+# - essencial: true quando faz parte do piso mínimo da Fase 0
+# - categoria: grupo principal do caso
+# - modo: exec | dev
+# - frase: entrada canônica
+# - foco: o que o caso protege
+# - verificar: tipo de verificação esperada
+# - espera: resumo do comportamento esperado
+# Campos opcionais atuais para `modo: dev`:
+# - acoes_esperadas: quantas ações finais o `aury dev` deve emitir
+# - estados_esperados: estado diagnóstico esperado por ação, em ordem
+# - blocos_obrigatorios: blocos mínimos da saída auditável
+
+schema_version: 1
+nome: v1.6-regressao-minima-inicial
+descricao: >-
+  Primeira matriz mínima de regressão da v1.6. Prioriza paridade entre `aury dev`
+  e fluxo real, fallback honesto, arquivos com localização conversacional,
+  anáfora local, extração sem deformar tokens sensíveis e um recorte mínimo do
+  pipeline observável.
+
+cases:
+  - id: D01
+    ordem: 10
+    essencial: true
+    categoria: dev
+    modo: dev
+    frase: copie a pasta Aury que fica em Documentos para Downloads
+    foco: paridade entre aury dev e fluxo real em copiar com localização conversacional
+    verificar: leitura de intenção, domínio, origem, destino e ação expandida
+    acoes_esperadas: 1
+    estados_esperados: [CONSISTENTE]
+    blocos_obrigatorios: [Entrada global, Entrada, Enquadramento, Entidades, Diagnostico, Acao prevista, Observacoes]
+    espera: >-
+      aury dev deve refletir leitura compatível com o fluxo real de arquivos,
+      reconhecendo copiar, a origem localizada em Documentos e o destino Downloads.
+
+  - id: D02
+    ordem: 20
+    essencial: true
+    categoria: dev
+    modo: dev
+    frase: extraia teste.tar.gz para a pasta que fica em Downloads/token 123
+    foco: inspeção de extração sem deformar tokens sensíveis no caminho
+    verificar: preservação de tokens e leitura correta de destino em modo dev
+    acoes_esperadas: 1
+    estados_esperados: [CONSISTENTE]
+    blocos_obrigatorios: [Entrada global, Entrada, Enquadramento, Entidades, Diagnostico, Acao prevista, Observacoes]
+    espera: >-
+      aury dev deve manter o token sensível intacto e descrever extração para o
+      destino localizado sem corromper segmentos do caminho.
+
+  - id: D03
+    ordem: 25
+    essencial: true
+    categoria: dev
+    modo: dev
+    frase: copie a pasta Aury que fica em Documentos para Downloads e renomeie ela para Aury-backup
+    foco: encadeamento observado em aury dev com anáfora local entre ações
+    verificar: leitura por ação, em ordem, preservando o alvo observado na renomeação
+    acoes_esperadas: 2
+    estados_esperados: [CONSISTENTE, CONSISTENTE]
+    blocos_obrigatorios: [Entrada global, Entrada, Enquadramento, Entidades, Diagnostico, Acao prevista, Observacoes]
+    espera: >-
+      aury dev deve relatar duas ações coerentes, mantendo continuidade suficiente
+      para interpretar "ela" na segunda ação sem embaralhar origem, destino ou novo nome.
+
+  - id: F01
+    ordem: 30
+    essencial: true
+    categoria: fallback
+    modo: exec
+    frase: abra o arquivo relatorio.pdf
+    foco: fronteira honesta de suporte para casos fora do escopo atual
+    verificar: fallback claro e honesto
+    espera: >-
+      a Aury não deve fingir suporte completo; deve cair em fronteira honesta,
+      sem interpretar abrir como outra operação destrutiva ou de arquivo.
+
+  - id: F02
+    ordem: 40
+    essencial: true
+    categoria: fallback
+    modo: exec
+    frase: faz um negócio com o arquivo teste.txt
+    foco: recusa/fallback em entrada vaga sem intenção clara
+    verificar: não inventar intenção quando a frase é ambígua
+    espera: >-
+      a Aury deve responder com fallback honesto ou pedir formulação mais clara,
+      sem inferir copiar, mover, remover ou renomear arbitrariamente.
+
+  - id: A01
+    ordem: 50
+    essencial: true
+    categoria: arquivos
+    modo: exec
+    frase: copie a pasta Aury que fica em Documentos para Downloads
+    foco: copiar com localização conversacional e destino efetivo
+    verificar: origem correta, destino correto e sem trocar verbo auxiliar por origem
+    espera: >-
+      a Aury deve copiar a pasta Aury localizada em Documentos para Downloads,
+      reconhecendo "que fica em" como localização do alvo e não como ação nova.
+
+  - id: A02
+    ordem: 60
+    essencial: true
+    categoria: arquivos
+    modo: exec
+    frase: mova o arquivo teste.txt que fica em Documentos para Downloads
+    foco: mover com destino efetivo e leitura correta de origem
+    verificar: resolução correta de origem e destino em mover
+    espera: >-
+      a Aury deve mover o arquivo teste.txt localizado em Documentos para Downloads,
+      preservando diferença entre origem localizada e destino final.
+
+  - id: A03
+    ordem: 70
+    essencial: true
+    categoria: arquivos
+    modo: exec
+    frase: renomeie o arquivo teste.txt que fica em Downloads para teste-final.txt
+    foco: renomear com localização conversacional sem confundir novo nome com destino
+    verificar: alvo localizado e novo nome corretos
+    espera: >-
+      a Aury deve localizar teste.txt em Downloads e aplicar o novo nome
+      teste-final.txt sem transformar a operação em mover.
+
+  - id: N01
+    ordem: 80
+    essencial: true
+    categoria: anafora
+    modo: exec
+    frase: copie a pasta Aury que fica em Documentos para Downloads e depois mova ela para Backup
+    foco: anáfora local em ação encadeada com antecedente único
+    verificar: "ela" deve apontar com segurança para a pasta Aury copiada
+    espera: >-
+      a Aury deve resolver a referência local para a pasta Aury no mesmo encadeamento,
+      sem perder o alvo nem trocar por Downloads ou Backup.
+
+  - id: N02
+    ordem: 90
+    essencial: true
+    categoria: anafora
+    modo: exec
+    frase: remova a pasta Aury que fica em Downloads e depois apague ela
+    foco: anáfora local em remoção, com cautela extra em operação destrutiva
+    verificar: primeira remoção correta e segunda ação conservadora, sem herdar automaticamente "ela" após destrutivo
+    espera: >-
+      a Aury deve remover corretamente Downloads/Aury na primeira ação e, na
+      segunda, manter fallback/recusa honesta para "ela", sem reaproveitar
+      automaticamente um antecedente destruído nem abrir brecha destrutiva frouxa.
+
+  - id: L02
+    ordem: 95
+    essencial: true
+    categoria: anafora
+    modo: exec
+    frase: copie a pasta Aury para Downloads. Depois mova ela para Backup.
+    foco: anáfora local entre frases, com split por pontuação seguido de "Depois"
+    verificar: duas ações coerentes, com continuidade suficiente para "ela" apontar para a pasta copiada
+    espera: >-
+      a Aury deve separar a cópia e o movimento em duas ações e manter "ela"
+      ligada à pasta Aury, sem contaminar o destino da primeira ação com "Depois".
+
+  - id: E01
+    ordem: 100
+    essencial: true
+    categoria: extracao
+    modo: exec
+    frase: extraia teste.tar.gz para a pasta que fica em Downloads/token 123
+    foco: extração com tokens sensíveis preservados no destino
+    verificar: preservação do caminho e leitura correta da operação de extrair
+    espera: >-
+      a Aury deve reconhecer extração para o destino localizado e manter o token
+      "token 123" sem correção indevida ou deformação.
+
+  - id: P01
+    ordem: 110
+    essencial: true
+    categoria: pipeline
+    modo: exec
+    frase: copie a pasta Aury que fica em Documentos para Downloads e renomeie ela para Aury-backup
+    foco: split de ações + expansão + continuidade do alvo no encadeamento
+    verificar: duas ações coerentes em ordem, sem perda do alvo intermediário
+    espera: >-
+      a Aury deve separar as duas ações e manter continuidade semântica suficiente
+      para renomear o alvo esperado após a cópia.
+
+  - id: P02
+    ordem: 120
+    essencial: true
+    categoria: pipeline
+    modo: exec
+    frase: crie a pasta Relatorios em Downloads
+    foco: caminho simples e intenção direta para servir de controle do pipeline
+    verificar: fluxo básico sem ruído de fallback nem heurística excessiva
+    espera: >-
+      a Aury deve executar um caso simples e direto de criação em pasta localizada,
+      servindo como controle mínimo do pipeline observável.
+
+  - id: P03
+    ordem: 130
+    essencial: true
+    categoria: pipeline
+    modo: exec
+    frase: ver cpu e memória
+    foco: expansão real de alvo compartilhado em ação única
+    verificar: emissão de duas ações finais coerentes e em ordem
+    espera: >-
+      a Aury deve expandir a intenção compartilhada em duas ações finais,
+      preservando a ordem dos alvos e sem colapsar cpu e memória em uma leitura única.
+
+  - id: L01
+    ordem: 140
+    essencial: true
+    categoria: destrutivo
+    modo: exec
+    frase: remova a pasta Aury que fica em Downloads
+    foco: remoção com localização conversacional sem perder o nome do alvo
+    verificar: alvo final equivalente a Downloads/Aury, com confirmação sobre a pasta correta
+    espera: >-
+      a Aury deve recompor a base Downloads com o nome Aury e confirmar/remover
+      apenas Downloads/Aury, sem apagar Downloads inteiro por engano.
+
+later_cases:
+  - id: L03
+    categoria: extracao
+    frase: extraia teste.tar.gz para /usr/steam
+    motivo: caso adicional com caminho absoluto pode entrar depois da base mínima

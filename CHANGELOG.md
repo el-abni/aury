@@ -6,6 +6,32 @@ A linha principal pública da **💜 Aury** está planejada até a **v1.9**. Est
 
 ---
 
+## v1.6.0
+
+### Consolidado
+- caminhada comum de pipeline entre execução real e `aury dev`
+- `aury dev <frase>` com leitura por ação, blocos auditáveis e diagnóstico público
+- `aury dev` sem frase com validação sintática do arquivo carregado e uso básico
+
+### Melhorado
+- domínio de arquivos reaproveita melhor o alvo efetivo em `copiar`, `mover`, `renomear` e `extrair`, inclusive para referência local da ação seguinte
+- leitura de localização conversacional e continuidade local ficaram mais observáveis no modo `dev`
+- medição de velocidade de rede passou a depender de gatilho explícito com `velocidade` junto de `internet` ou `rede`
+
+### UX pública
+- fallback agora assume fronteira honesta e oferece dica de ajuda
+- ambiguidades de alvo ou destino deixam de ser executadas silenciosamente e passam a ser expostas ao usuário
+- remoção pede confirmação explícita e nega por padrão
+- remoção destrutiva sem alvo seguro deixa de reutilizar anáfora frouxa como `ela`
+- saída de velocidade da internet passou a expor métricas legíveis em vez de JSON cru
+
+### Compatibilidade e limites
+- `aury testar internet` continua sendo um teste simples de conectividade
+- pedidos fora do recorte atual, como `abrir arquivo`, continuam em fallback honesto
+- `aury dev` ficou mais auditável, mas a paridade com toda formulação conversacional da superfície runtime ainda segue incremental
+
+---
+
 ## v1.5.0
 
 ### Adicionado
