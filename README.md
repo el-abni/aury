@@ -180,7 +180,7 @@ aury dev copiar arquivo teste.txt para backup.txt
 
 - pedidos fora do recorte atual, como `abrir arquivo`, continuam em fallback honesto
 - `aury dev` já é útil para auditoria do pipeline, mas ainda não promete paridade total com toda formulação conversacional aceita no runtime
-- `aury velocidade da internet` depende do backend `librespeed-cli` disponível no ambiente
+- `aury velocidade da internet` depende de `librespeed-cli` e `python3` disponíveis no ambiente
 
 ---
 

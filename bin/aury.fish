@@ -1233,6 +1233,9 @@ function __aury_dev_report_current_action --argument-names index original_action
             end
         else if test "$intent" = "renomear"
             set newname $__aury_arg_newname
+            if test -n "$newname"
+                set dest $newname
+            end
         end
 
         if test -z "$source"; and test -n "$__aury_arg_target"
@@ -1246,6 +1249,8 @@ function __aury_dev_report_current_action --argument-names index original_action
         switch $domain
             case pacote
                 set type_detected pacote
+                set target (__aury_package_text_after_intent $intent)
+                set semantic_target $target
             case sistema
                 set type_detected sistema
             case rede
@@ -2252,6 +2257,13 @@ function __aury_detect_domain --argument-names intent
             return 0
         end
 
+        for tok in $norm_words
+            if __aury_is_package_domain_token $tok
+                echo pacote
+                return 0
+            end
+        end
+
         set -l remove_idx (contains -i -- remover $norm_words)
 
         if test -n "$remove_idx"; and test (count $norm_words) -eq (math $remove_idx + 1)
@@ -2272,15 +2284,10 @@ function __aury_detect_domain --argument-names intent
 
         if test (count $orig_words) -gt 0
             set -l last_token $orig_words[-1]
-            set -l inferred_kind (__aury_infer_path_kind $last_token)
+            set -l inferred_kind (__aury_infer_explicit_removal_target_kind $last_token)
 
             if test -n "$inferred_kind"
                 echo $inferred_kind
-                return 0
-            end
-
-            if string match -rq '/' -- $last_token; or string match -rq '\.' -- $last_token
-                echo arquivo
                 return 0
             end
         end
@@ -2376,6 +2383,59 @@ function __aury_after_normalized_keyword --argument-names keyword
     end
 
     string join " " -- $orig_words_global[(math $idx + 1)..-1]
+end
+
+function __aury_is_package_domain_token --argument-names tok
+    if contains -- $tok pacote pacotes app aplicativo aplicativos programa programas
+        return 0
+    end
+
+    return 1
+end
+
+function __aury_package_text_after_intent --argument-names intent
+    set -l idx (__aury_find_token_index $intent $norm_words_global)
+
+    if test -z "$idx"
+        echo ""
+        return 1
+    end
+
+    set -l start (math $idx + 1)
+
+    while test $start -le (count $norm_words_global)
+        if __aury_is_package_domain_token $norm_words_global[$start]
+            set start (math $start + 1)
+            continue
+        end
+
+        break
+    end
+
+    if test (count $orig_words_global) -lt $start
+        echo ""
+        return 0
+    end
+
+    string join " " -- $orig_words_global[$start..-1]
+end
+
+function __aury_infer_explicit_removal_target_kind --argument-names target
+    if test -z "$target"
+        return 1
+    end
+
+    if string match -rq '/$' -- $target
+        echo pasta
+        return 0
+    end
+
+    if __aury_token_is_probably_path $target; or __aury_token_is_probably_filename $target
+        echo arquivo
+        return 0
+    end
+
+    return 1
 end
 
 function __aury_find_first_connector_index
@@ -2631,6 +2691,34 @@ function __aury_join_base_and_name --argument-names base name
     else
         echo "$base/$name"
     end
+end
+
+function __aury_parent_directory_or_empty --argument-names path
+    if test -z "$path"
+        echo ''
+        return 0
+    end
+
+    set -l parent (dirname -- $path)
+
+    if test "$parent" = "."
+        echo ''
+        return 0
+    end
+
+    echo $parent
+    return 0
+end
+
+function __aury_resolve_rename_target --argument-names source requested_newname
+    if test -z "$requested_newname"
+        echo $requested_newname
+        return 0
+    end
+
+    set -l rename_base (__aury_parent_directory_or_empty "$source")
+    echo (__aury_join_base_and_name "$rename_base" "$requested_newname")
+    return 0
 end
 
 function __aury_strip_leading_location_base_noise
@@ -3078,8 +3166,8 @@ function __aury_extract_file_args
                 if test (count $orig_words) -gt $conn_idx
                     set -g __aury_arg_dest (string join " " -- $orig_words[(math $conn_idx + 1)..-1])
 
-                    if test "$intent" = "renomear"; and test -n "$base_source"
-                        set -g __aury_arg_newname (__aury_join_base_and_name "$base_source" "$__aury_arg_dest")
+                    if test "$intent" = "renomear"
+                        set -g __aury_arg_newname (__aury_resolve_rename_target "$__aury_arg_source" "$__aury_arg_dest")
                     else
                         set -g __aury_arg_newname $__aury_arg_dest
                     end
@@ -3092,7 +3180,12 @@ function __aury_extract_file_args
         if test (count $orig_words) -ge (math $start + 1)
             set -g __aury_arg_source $orig_words[$start]
             set -g __aury_arg_dest $orig_words[(math $start + 1)]
-            set -g __aury_arg_newname $orig_words[(math $start + 1)]
+
+            if test "$intent" = "renomear"
+                set -g __aury_arg_newname (__aury_resolve_rename_target "$__aury_arg_source" "$__aury_arg_dest")
+            else
+                set -g __aury_arg_newname $orig_words[(math $start + 1)]
+            end
         end
         return 0
     end
@@ -3288,6 +3381,14 @@ try:
 except Exception:
     sys.exit(2)
 
+if isinstance(data, list):
+    if len(data) < 1 or not isinstance(data[0], dict):
+        sys.exit(3)
+    data = data[0]
+
+if not isinstance(data, dict):
+    sys.exit(3)
+
 def clean_number(key, required):
     value = data.get(key)
 
@@ -3414,7 +3515,7 @@ function __aury_exec_packages
 
     switch $intent
         case procurar
-            set -l search (__aury_after_normalized_keyword procurar)
+            set -l search (__aury_package_text_after_intent procurar)
 
             if test -z "$search"
                 __aury_msg_error "termo não especificado"
@@ -3425,7 +3526,7 @@ function __aury_exec_packages
             return 0
 
         case instalar
-            set -l pkg_text (__aury_after_normalized_keyword instalar)
+            set -l pkg_text (__aury_package_text_after_intent instalar)
 
             if test -z "$pkg_text"
                 __aury_msg_error "pacote não especificado"
@@ -3465,7 +3566,7 @@ function __aury_exec_packages
             return 0
 
         case remover
-            set -l pkg_text (__aury_after_normalized_keyword remover)
+            set -l pkg_text (__aury_package_text_after_intent remover)
 
             if test -z "$pkg_text"
                 __aury_msg_error "pacote não especificado"
@@ -3582,19 +3683,7 @@ function __aury_exec_files
                 return 0
             end
 
-            set -l skip_confirmation 0
-
-            # Só pulamos a confirmação quando a remoção veio de anáfora local
-            # e aponta exatamente para a referência criada/atualizada na ação anterior.
-            if test "$__aury_arg_target_from_local_anaphor" = "1"
-                if test "$__aury_arg_target" = "$__aury_local_ref_path"
-                    if test "$__aury_arg_type" = "$__aury_local_ref_kind"
-                        set skip_confirmation 1
-                    end
-                end
-            end
-
-            if test $skip_confirmation -eq 1; or __aury_read_confirmation remover "$__aury_arg_target"
+            if __aury_read_confirmation remover "$__aury_arg_target"
                 set -l target_kind (__aury_path_kind $__aury_arg_target $__aury_arg_type)
 
                 if test "$__aury_arg_type" = "pasta"
