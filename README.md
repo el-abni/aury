@@ -1,6 +1,6 @@
 # 💜 Aury
 
-![version](https://img.shields.io/badge/version-v1.5.0-purple)
+![version](https://img.shields.io/badge/version-v1.6.0-purple)
 ![shell](https://img.shields.io/badge/shell-fish-blue)
 ![platform](https://img.shields.io/badge/platform-CachyOS-orange)
 ![license](https://img.shields.io/badge/license-MIT-green)
@@ -59,6 +59,7 @@ aury ver cpu e memória
 ```fish
 aury ver ip
 aury testar internet
+aury velocidade da internet
 aury ping google.com
 ```
 
@@ -102,7 +103,11 @@ A versão atual da **💜 Aury** já oferece:
 - corretor conservador com proteção de tokens sensíveis
 - localização conversacional em fluxos de arquivo e extração
 - anáforas locais seguras com `ele`, `ela` e `isso`
-- observabilidade expandida com `aury dev`
+- fallback honesto com dica de ajuda quando o pedido sai do recorte atual
+- confirmação destrutiva explícita para remoção e bloqueio de alvo anafórico inseguro
+- ambiguidade pública de alvo/destino em vez de execução silenciosa
+- observabilidade expandida com `aury dev <frase>`
+- medição explícita de velocidade da internet via `librespeed-cli`
 
 ---
 
@@ -150,7 +155,7 @@ No código, a identidade visual da assistente é:
 No comando de ajuda, a versão deve aparecer no formato:
 
 ```text
-💜 Aury v1.5.0
+💜 Aury v1.6.0
 ```
 
 A Aury entende tanto comandos diretos quanto frases mais naturais, como:
@@ -164,17 +169,24 @@ aury ver cpu e memória
 aury atualiza, otimiza e baixa o firefox
 ```
 
+Para inspecionar a leitura atual sem executar a ação:
+
+```fish
+aury dev ver cpu e memória
+aury dev copiar arquivo teste.txt para backup.txt
+```
+
+## Limites honestos
+
+- pedidos fora do recorte atual, como `abrir arquivo`, continuam em fallback honesto
+- `aury dev` já é útil para auditoria do pipeline, mas ainda não promete paridade total com toda formulação conversacional aceita no runtime
+- `aury velocidade da internet` depende de `librespeed-cli` e `python3` disponíveis no ambiente
+
 ---
 
 ## Roadmap
 
-O roadmap mostra **apenas versões futuras planejadas para o fechamento da linha principal 1.x da Aury neste repositório**.
-
-### v1.6
-
-- consolidação do pipeline interno
-- fortalecimento do `aury dev`
-- melhorias pontuais de rede e mensagens públicas
+O roadmap mostra **apenas versões futuras ainda não lançadas para o fechamento da linha principal 1.x da Aury neste repositório**.
 
 ### v1.7
 
@@ -212,14 +224,11 @@ O terminal continua poderoso. Aury apenas adiciona uma camada de conforto e inte
 A documentação complementar do projeto fica em:
 
 ```text
-docs/
+docs/ARCHITECTURE.md
 ```
+Base pública de testes:
 
-Arquivos esperados:
-
-- `docs/ARCHITECTURE.md`
-- `docs/commands.md` *(futuro)*
-- `docs/roadmap.md` *(futuro)*
+- `tests/README.md`
 
 ---
 

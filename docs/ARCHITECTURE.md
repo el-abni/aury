@@ -1,484 +1,236 @@
 # Arquitetura da 💜 Aury
 
-Este documento descreve a arquitetura atual da **💜 Aury**, seu fluxo interno de processamento e a direção de evolução do projeto.
+Este documento descreve o estado público sustentado pela **💜 Aury v1.6.0**.
 
-Aury é uma assistente de terminal feita especificamente para **CachyOS**, com foco em transformar frases naturais em ações reais no sistema.
+Aury é uma assistente de terminal para **CachyOS**. A proposta continua a mesma: receber frases humanas, fechar uma leitura segura e encaminhar a ação para executores simples por domínio.
 
-Na v1.5.0, a entrada pública pode acontecer tanto por `aury` quanto pelo atalho `ay`, ambos apontando para o mesmo fluxo interno.
-
----
-
-## Objetivo da arquitetura
-
-A arquitetura da Aury existe para permitir que o projeto cresça de forma organizada, previsível e incremental.
-
-Os objetivos principais são:
-
-- interpretar comandos em linguagem natural
-- manter separação clara de responsabilidades
-- evitar lógica excessiva dentro dos executores
-- facilitar a expansão das versões 1.x
-- fortalecer o núcleo da linha 1.x até o fechamento planejado em v1.9
+Na superfície pública atual, a entrada pode acontecer por `aury` ou pelo atalho `ay`. A ajuda pública continua em `aury ajuda`, e a observabilidade de engenharia fica em `aury dev`.
 
 ---
 
-## Visão geral
+## O que a v1.6 consolida
 
-Aury funciona como uma camada entre o usuário e o terminal.
+A v1.6 não reabre a proposta do projeto. Ela consolida a base pública e arquitetural já existente:
 
-Em vez de exigir que o usuário memorize comandos tradicionais, a Aury recebe uma frase, interpreta sua intenção e executa a ação apropriada.
+- caminhada comum de pipeline entre execução real e `aury dev`
+- `aury dev <frase>` mais auditável, com leitura por ação e estados diagnósticos explícitos
+- UX pública mais honesta em fallback, ambiguidade e remoção
+- domínio de arquivos com continuidade melhor entre ação atual e referência local seguinte
+- recorte de rede mais preciso para medir velocidade sem contaminar `aury testar internet`
 
-Exemplo:
-
-```text
-aury quero instalar obs studio
-```
-
-Aury interpreta essa frase e converte a intenção em uma ação de instalação de pacote.
+Essa consolidação fortalece a superfície pública sem prometer expansão ampla de escopo.
 
 ---
 
-## Pipeline de processamento
+## Pipeline compartilhado
 
-O fluxo interno da Aury segue este pipeline:
+O pipeline público segue esta ordem lógica:
 
 ```text
 Entrada do usuário
 ↓
-Validação
-↓
 Pré-processamento
 ↓
-Normalização
+Proteção de tokens sensíveis
 ↓
-Split de ações
+Correção conservadora e normalização
+↓
+Split e expansão de ações
 ↓
 Interpretação da frase
 ↓
-Detecção de intenção
-↓
-Detecção de domínio
+Detecção de intenção e domínio
 ↓
 Resolução de argumentos
 ↓
-Execução
+Execução real ou relatório em modo dev
 ↓
-Fallback
+Fallback ou bloqueio explícito, quando necessário
 ```
 
-Cada etapa possui um papel específico.
+O ponto mais importante da v1.6 é que **runtime** e **modo dev** passaram a caminhar o mesmo miolo de ações em vez de cada um manter um fluxo grande e separado.
+
+Na prática:
+
+- o runtime percorre as ações finais e tenta executá-las
+- o `aury dev` percorre essas mesmas ações para relatar como a leitura foi fechada
+- fallback, bloqueios e ambiguidades deixam de ficar escondidos como detalhe interno
+
+Isso não significa paridade perfeita em toda formulação possível, mas reduz divergência estrutural entre “o que a Aury tenta fazer” e “o que ela diz que entendeu”.
 
 ---
 
-## Etapas da arquitetura
+## Etapas que continuam centrais
 
-### 1. Entrada do usuário
+### Pré-processamento e normalização
 
-A Aury recebe os argumentos passados no terminal.
+A Aury continua removendo ruído conversacional previsível, tratando vocativo `Aury,`, pontuação de chat e auxiliares frequentes.
 
-Exemplos:
-
-```text
-aury instalar firefox
-ay instalar firefox
-aury ver cpu e memória
-aury atualiza, otimiza e baixa o firefox
-aury extraia teste.tar para a pasta que fica em /usr/steam
-```
-
----
-
-### 2. Validação
-
-A etapa de validação impede entradas inválidas ou vazias.
-
-Ela existe para evitar processamento desnecessário e respostas inconsistentes.
-
-Casos típicos tratados:
-
-- comando vazio
-- texto sem conteúdo útil
-- entrada inválida
-
----
-
-### 3. Pré-processamento
-
-Essa etapa prepara a frase para o parser.
-
-Exemplos do que pode acontecer aqui:
-
-- remoção do vocativo de prefixo `Aury,`
-- tolerância a pontuação estilo chat
-- ajuste inicial dos tokens de entrada
-
-Exemplo:
-
-```text
-aury Aury, instala o obs studio.
-```
-
-é preparado para interpretação sem que a pontuação atrapalhe a execução.
-
----
-
-### 4. Normalização
-
-A normalização converte diferentes formas de escrever a mesma ideia em uma forma interna consistente.
-
-Na v1.5.0, essa etapa foi reforçada por um corretor conservador e por proteção explícita de tokens sensíveis antes de corrigir ou simplificar a frase.
-
-Exemplos:
-
-```text
-instala   → instalar
-baixar    → instalar
-mostrar   → ver
-checar    → ver
-apagar    → remover
-deletar   → remover
-```
-
-Também pode tratar palavras auxiliares e conectores.
-
-Tokens sensíveis preservados nessa fase incluem principalmente:
+Antes de corrigir ou simplificar palavras, a v1.x preserva tokens sensíveis como:
 
 - caminhos
-- hosts e domínios
 - nomes de arquivo
+- hosts e domínios
 - extensões compostas como `tar.gz`
 
-Isso permite corrigir estruturas conversacionais sem deformar argumentos reais.
+Isso permite mexer na fala sem deformar o argumento real.
 
----
+### Split e expansão
 
-### 5. Split de ações
+Aury continua separando ou expandindo frases com múltiplas ações e alvos compartilhados.
 
-A Aury suporta mais de uma ação em um único comando.
-
-Exemplo:
+Exemplos sustentados pela superfície pública:
 
 ```text
-aury atualiza e otimiza
-```
-
-ou:
-
-```text
-aury instala firefox e mostra cpu
-```
-
-Essa etapa separa ou expande a frase em ações menores, quando necessário.
-
----
-
-### 6. Interpretação da frase
-
-Essa é uma das partes mais importantes da arquitetura da série 1.5.
-
-Aqui a Aury tenta entender melhor a estrutura da frase antes da execução.
-
-Ela já suporta:
-
-- intenção no meio da frase
-- palavras auxiliares como `quero`, `pode`
-- partículas conversacionais como `que` e `você`
-- múltiplas intenções
-- múltiplos alvos compartilhados
-- conectores como `para`, `pra` e `em`
-- localização conversacional em padrões como `que está em`, `que fica em` e `que tá em`
-- anáforas locais seguras com `ele`, `ela` e `isso`, quando existe referência local válida
-- destinos descritos de forma mais natural em fluxos de arquivo e extração
-
-Exemplos:
-
-```text
-aury quero instalar obs studio
-aury ver cpu e memória
-aury mover teste.txt para pasta/teste.txt
-aury extraia teste.tar para a pasta que fica em /usr/steam
-```
-
----
-
-### 7. Detecção de intenção
-
-Depois da interpretação, a Aury identifica qual ação principal deve ser executada.
-
-Exemplos de intenção:
-
-```text
-instalar
-remover
-procurar
-ver
-criar
-copiar
-mover
-renomear
-atualizar
-otimizar
-ping
-```
-
-A intenção é o verbo principal que orienta a execução.
-
----
-
-### 8. Detecção de domínio
-
-Depois da intenção, a Aury identifica o domínio da ação.
-
-Domínios atuais:
-
-- interno
-- pacote
-- sistema
-- rede
-- arquivo
-- pasta
-- geral
-
-Desde a v1.4.2, e mantida na v1.5.0, a extração de arquivos compactados é tratada dentro do domínio de **arquivo**, reaproveitando a mesma base de parser, resolução de argumentos e execução segura.
-
-Exemplos:
-
-```text
-aury instalar firefox     → pacote
-aury mostrar cpu          → sistema
-aury ping google.com      → rede
-aury copiar teste.txt     → arquivo
-```
-
----
-
-### 9. Resolução de argumentos
-
-A etapa de resolução de argumentos extrai os dados necessários para executar a ação.
-
-Exemplos:
-
-```text
-aury copiar teste.txt para backup.txt
-```
-
-Resultado esperado:
-
-- origem: `teste.txt`
-- destino: `backup.txt`
-
-Outro exemplo:
-
-```text
-aury mover arquivo teste.txt para pasta/teste.txt
-```
-
-Resultado esperado:
-
-- tipo: arquivo
-- origem: `teste.txt`
-- destino: `pasta/teste.txt`
-
----
-
-### 10. Execução
-
-A execução é feita por executores especializados por domínio.
-
-Executores atuais:
-
-- `__aury_exec_internal`
-- `__aury_exec_system`
-- `__aury_exec_network`
-- `__aury_exec_packages`
-- `__aury_exec_files`
-
-A responsabilidade dos executores é simples:
-
-- receber intenção
-- receber domínio
-- receber argumentos já resolvidos
-- executar a ação real
-
----
-
-### 11. Fallback
-
-Quando a Aury não entende o comando, ela entra em fallback.
-
-Hoje o fallback ainda é simples, mas ele já serve como base para evoluções futuras.
-
-No futuro, essa área pode crescer para incluir:
-
-- sugestões automáticas
-- fallback mais inteligente
-- tratamento mais rico de casos ambíguos
-
----
-
-## Interpretação de linguagem natural
-
-A linha v1.4 ampliou significativamente a capacidade de interpretação da Aury.
-
-Ela entende melhor:
-
-### frases mais humanas
-
-```text
-aury quero instalar obs studio
-aury pode instalar o firefox
-aury Aury, instala o obs studio.
-```
-
-### múltiplos alvos
-
-```text
-aury ver cpu e memória
-aury mostrar disco e gpu
-```
-
-### múltiplas intenções
-
-```text
-aury atualiza e otimiza
-aury instala firefox e mostra cpu
 aury atualiza, otimiza e baixa o firefox
+aury ver cpu e memória
 ```
 
-### conectores de arquivo
+### Resolução de argumentos
+
+O núcleo continua tentando fechar:
+
+- tipo de alvo
+- origem
+- destino
+- novo nome
+- localização conversacional
+
+Na v1.6, o domínio de arquivos ficou melhor em reaproveitar o **alvo efetivo final** de uma ação como referência local da ação seguinte.
+
+---
+
+## `aury dev` na v1.6
+
+O `aury dev` virou a principal janela pública de observabilidade do pipeline.
+
+Sem frase:
+
+- valida a sintaxe do arquivo carregado
+- mostra o caminho do arquivo-fonte em uso
+- imprime `Use: aury dev <frase>`
+
+Com frase:
+
+- imprime um bloco `Entrada global`
+- depois relata cada ação final emitida pelo pipeline
+
+Os blocos por ação hoje são:
+
+- `Entrada`
+- `Enquadramento`
+- `Entidades`
+- `Diagnostico`
+- `Acao prevista`
+- `Observacoes`
+
+Os estados diagnósticos públicos atuais são:
+
+- `CONSISTENTE`
+- `PARCIAL`
+- `AMBIGUA`
+- `BLOQUEADA`
+- `NAO_ENQUADRADA`
+
+Isso torna o `dev` útil para auditar:
+
+- intenção e domínio lidos
+- origem, destino e novo nome quando existirem
+- uso de localização conversacional
+- leitura anafórica local
+- casos que caem em fronteira honesta ou bloqueio deliberado
+
+Limite importante: o `aury dev` já está forte para frases canônicas e para parte da camada conversacional consolidada, mas **ainda não deve ser documentado como garantia de paridade total com toda frase conversacional aceita no runtime**.
+
+---
+
+## Domínios públicos consolidados
+
+### Interno
+
+O domínio interno segue pequeno:
+
+- `ajuda`
+- `reload`
+- `dev`
+
+### Pacotes e sistema
+
+Os domínios de pacote e sistema permanecem próximos do desenho anterior: parser resolve a intenção e os executores fazem a chamada operacional correspondente.
+
+Aqui a principal verdade arquitetural continua sendo a separação:
+
+- interpretação e resolução antes
+- executor simples depois
+
+### Rede
+
+Na v1.6, a superfície de rede fica mais explícita.
+
+`aury testar internet` continua significando teste simples de conectividade por `ping`.
+
+A medição de velocidade agora fica num recorte estreito e deliberado:
+
+- precisa haver `velocidade`
+- e também `internet` ou `rede`
+
+Exemplos:
 
 ```text
-aury copiar teste.txt para backup.txt
-aury mover teste.txt para pasta/teste.txt
-aury criar arquivo em pasta/teste.txt
+aury velocidade da internet
+aury velocidade da rede
 ```
 
----
+Esse fluxo depende de `librespeed-cli` e de `python3` para ler o retorno com confiança. Quando o backend falta, falha ou devolve JSON insuficiente, a Aury responde com erro honesto.
 
-## Refinamento conversacional na v1.5.0
+### Arquivos e extração
 
-A **💜 Aury v1.5.0** consolidou a camada conversacional conservadora da linha 1.x.
+O domínio de arquivos segue sendo o trecho mais sensível da superfície pública.
 
-Além da base da linha 1.4, a Aury passou a lidar melhor com partículas e construções como:
+Na v1.6, ele consolida:
 
-- `que`
-- `você`
-- `por favor`
-- `pra mim`
-- `me mostra`
-- `pinga`
-- `pingar`
-- `pingue`
-- `recarrega`
-- `verifica o código`
-- `valida o código`
-- `confere o código`
+- localização conversacional para fechar origem ou destino
+- extração segura de `.zip`, `.7z`, `.tar`, `.tar.gz` e `.tgz`
+- continuidade de referência local após `copiar`, `mover`, `renomear` e `extrair`
+- bloqueio público de coordenação ambígua em alvo ou destino
+- confirmação destrutiva explícita para remoção
 
-Também ficou mais estável em frases como:
-
-```text
-Aury, pode instalar o firefox?
-Aury, por favor, me mostra o status do sistema.
-Aury, pinga o google.com.
-Aury, quero que você atualize, otimize o sistema e baixe o firefox.
-Aury, me ajuda a copiar base/origem.txt para backup3.txt.
-Aury, me ajuda a mover base/origem.txt para final.txt.
-```
-
-Essa camada não substitui o parser principal. Ela refina a entrada para que o restante do pipeline continue trabalhando de forma previsível.
-
-Na prática, a v1.5.0 reforça quatro pontos:
-
-- correção leve e conservadora, focada em verbos e partículas
-- proteção de tokens sensíveis antes da correção
-- localização conversacional para origem e destino
-- resolução anafórica local quando a referência anterior é única e segura
+Essa camada não tenta “adivinhar” mais do que o necessário. Quando a leitura não fecha com segurança, a arquitetura prefere bloquear ou cair em fallback.
 
 ---
 
-## Filosofia arquitetural
+## Fronteiras públicas deliberadas
 
-A arquitetura da Aury segue alguns princípios importantes.
+Algumas fronteiras ficaram mais nítidas na v1.6 e devem permanecer documentadas como tal:
 
-### Separação de responsabilidades
+- pedidos fora do recorte atual, como `abrir o arquivo relatorio.pdf`, continuam em fallback honesto
+- remoção com anáfora destrutiva sem alvo seguro, como `remover ela`, é bloqueada explicitamente
+- coordenação que deixa mais de um destino plausível deixa de executar e passa a ser exposta como ambiguidade pública
 
-Cada etapa do pipeline deve fazer apenas o que lhe cabe.
-
-### Inteligência antes da execução
-
-A “inteligência” da Aury deve ficar em:
-
-- normalização
-- interpretação
-- resolução de argumentos
-
-Os executores devem permanecer simples.
-
-### Evolução incremental
-
-Cada versão adiciona capacidades novas sem quebrar o que já funciona.
-
-### Continuidade da linha 1.x
-
-A série 1.x fortalece o núcleo local da Aury de forma incremental, previsível e auditável.
-O fechamento planejado desta linha principal neste repositório acontece na v1.9.
+Arquiteturalmente, isso é intencional. A Aury continua preferindo uma recusa clara a uma execução arriscada.
 
 ---
 
-## Estado atual na v1.5.0
+## Tensões herdadas que continuam reais
 
-A Aury já entrega:
+Nem tudo virou problema resolvido na v1.6. As tensões públicas relevantes são:
 
-- comandos mais naturais
-- múltiplas intenções
-- múltiplos alvos compartilhados
-- conectores de argumento
-- vocativo `Aury,`
-- pontuação estilo chat
-- corretor conservador com foco em fala conversacional
-- proteção de tokens sensíveis durante correção e normalização
-- extração segura de arquivos `.zip`, `.7z`, `.tar`, `.tar.gz` e `.tgz`
-- localização conversacional em frases como `para a pasta que fica em /usr/steam`
-- anáforas locais seguras com `ele`, `ela` e `isso`
-- atalho público `ay` para o mesmo fluxo da `aury`
-- modo `aury dev` com inspeção de frase original, corrigida, normalizada, tokens sensíveis, intenção, domínio, argumentos e localização conversacional
-- melhor estabilidade entre comandos diretos e conversacionais
+- `tests/casos.yaml` continua sendo um contrato incremental de regressão, não uma prova de que toda frase listada já fecha hoje com a mesma robustez no `aury dev`
+- parte das formulações conversacionais mais livres em arquivos e extração ainda é mais estável no runtime do que no relatório do `dev`
+- a leitura prevista em alguns casos de rede no `dev` ainda é mais estrutural do que polida
+- comandos operacionais de pacote e sistema dependem das ferramentas do host e, em muitos casos, de privilégios externos ao parser
 
-Isso coloca a Aury em um estágio mais maduro dentro da série 1.x.
+Essas tensões não invalidam a v1.6. Elas apenas definem com honestidade onde a documentação pública deve parar.
 
 ---
 
-## Próximas direções
+## Resumo arquitetural
 
-### v1.6
-- consolidação do pipeline interno sobre a base da v1.5.0
-- fortalecimento do `aury dev` como ferramenta de engenharia
-- melhorias pontuais de rede e mensagens públicas
-- mais robustez em parser, normalização e resolução sem romper compatibilidade
+A **💜 Aury v1.6.0** fica arquiteturalmente mais coerente porque:
 
-### v1.7
-- ampliação incremental da capacidade operacional local
-- continuidade do refinamento seguro dos fluxos práticos da Aury
+- runtime e `dev` compartilham melhor o mesmo miolo
+- a superfície pública ficou mais honesta em erro, bloqueio e ambiguidade
+- arquivos e extração reaproveitam melhor o alvo efetivo entre ações
+- rede ganhou um recorte mais explícito para velocidade da internet
 
-### v1.8
-- refinamentos intermediários da linha 1.x com foco em robustez, previsibilidade e experiência
-
-### v1.9
-- refinamento geral
-- fechamento planejado da linha principal da Aury neste repositório
-
----
-
-## Resumo
-
-A arquitetura da **💜 Aury** foi construída para permitir crescimento contínuo sem perder clareza.
-
-Ela já possui:
-
-- pipeline bem definido
-- interpretação natural crescente
-- separação entre parser e execução
-- refinamento conversacional consolidado até a v1.5.0
-- base preparada para o fechamento sólido da linha 1.x
-
-Aury continua sendo um projeto de terminal, mas com uma proposta clara: tornar o uso do terminal no **CachyOS** mais natural, confortável e poderoso.
+O resultado não é “uma Aury nova”. É a mesma linha 1.x com uma base pública mais alinhada ao que a implementação realmente sustenta hoje.
