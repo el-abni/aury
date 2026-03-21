@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 echo ""
-echo "🗑 Removendo a Aury v1.5.0..."
+echo "🗑 Removendo a Aury v1.6.0..."
 echo ""
 
 rm -f ~/.config/fish/functions/aury.fish
