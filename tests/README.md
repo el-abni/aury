@@ -1,6 +1,6 @@
 # tests/
 
-Esta pasta guarda a base pública mínima de regressão auditável da **💜 Aury v1.6.1**.
+Esta pasta guarda a base pública mínima de regressão auditável da **💜 Aury v1.6.2**.
 
 Ela nasceu como **Fase 0** e continua pequena de propósito. O papel atual não é virar framework: é proteger o miolo público que a v1.6 consolidou e deixar o estado observável do projeto auditável.
 
@@ -108,13 +108,14 @@ O foco aqui continua sendo:
 
 ### `python_core_smoke.py`
 
-Este smoke cobre o núcleo Python inicial da v1.6.1.
+Este smoke cobre o núcleo Python rastreado da v1.6.2.
 
 Hoje ele protege:
 
 - `help`
 - `version`
 - `aury dev <frase>` no núcleo novo
+- alinhamento curto adicional de `aury dev` com fluxos já sustentados pelo modo normal
 - leituras simples de rede no runtime Python
 - busca de pacote e leitura de GPU no runtime Python
 - preparação de frase, ações e tokens sensíveis

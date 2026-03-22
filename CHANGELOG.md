@@ -6,6 +6,23 @@ A linha principal pública da **💜 Aury** está planejada até a **v1.9**. Est
 
 ---
 
+## v1.6.2
+
+### Consolidado
+- fechamento local curto de alinhamento entre `aury dev` e o que o modo normal já sustenta no adaptador Fish
+
+### Melhorado
+- `aury dev <frase>` passa a fechar também leituras simples de instalar pacote, ping com host explícito, velocidade da rede, criar arquivo/pasta, copiar/mover/renomear arquivo e remoções explícitas já sustentadas pelo modo normal
+- remoção destrutiva anafórica no diagnóstico passa a distinguir com mais precisão falta de antecedente seguro, contexto anterior insuficiente/incompatível e lacuna real de alinhamento com o runtime legado atual
+- o relatório `dev` passa a expor `referência local` e `lacunas` de forma mais auditável
+
+### Testes e regressão
+- `tests/python_core_smoke.py` amplia a cobertura do alinhamento curto da v1.6.2, inclusive nos casos destrutivos prudentes
+
+### Compatibilidade e limites
+- a v1.6.2 não amplia o runtime destrutivo nem força migração nova de execução
+- o objetivo desta versão é reduzir a distância entre diagnóstico e execução real, mantendo a prudência do legado
+
 ## v1.6.1
 
 ### Consolidado

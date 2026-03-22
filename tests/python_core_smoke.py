@@ -60,14 +60,266 @@ def test_dev_remove_pkg() -> None:
     assert_in(proc.stdout, "Remover 'vlc'.")
 
 
+def test_dev_install_package_alignment() -> None:
+    proc = run("dev", "instalar", "firefox")
+    assert proc.returncode == 0
+    assert_in(proc.stdout, "intenção:                      instalar")
+    assert_in(proc.stdout, "domínio:                       pacote")
+    assert_in(proc.stdout, "alvo principal:                firefox")
+    assert_in(proc.stdout, "resumo:                        Instalar 'firefox'.")
+    assert_in(proc.stdout, "candidata a migração futura")
+    assert_in(proc.stdout, "decisão:                       voltar ao Fish")
+
+
+def test_dev_ping_host_alignment() -> None:
+    proc = run("dev", "ping", "google.com")
+    assert proc.returncode == 0
+    assert_in(proc.stdout, "intenção:                      ping")
+    assert_in(proc.stdout, "domínio:                       rede")
+    assert_in(proc.stdout, "alvo principal:                google.com")
+    assert_in(proc.stdout, "resumo:                        Pingar 'google.com'.")
+    assert_in(proc.stdout, "candidata a migração futura")
+    assert_in(proc.stdout, "decisão:                       voltar ao Fish")
+
+
+def test_dev_network_speed_rede_alignment() -> None:
+    proc = run("dev", "velocidade", "da", "rede")
+    assert proc.returncode == 0
+    assert_in(proc.stdout, "intenção:                      velocidade")
+    assert_in(proc.stdout, "domínio:                       rede")
+    assert_in(proc.stdout, "alvo principal:                velocidade da rede")
+    assert_in(proc.stdout, "resumo:                        Medir a velocidade da rede.")
+    assert_in(proc.stdout, "candidata a migração futura")
+    assert_in(proc.stdout, "decisão:                       voltar ao Fish")
+
+
+def test_dev_create_file_alignment() -> None:
+    proc = run("dev", "criar", "arquivo", "abc.txt")
+    assert proc.returncode == 0
+    assert_in(proc.stdout, "intenção:                      criar")
+    assert_in(proc.stdout, "domínio:                       arquivo")
+    assert_in(proc.stdout, "tipo:                          arquivo")
+    assert_in(proc.stdout, "alvo principal:                abc.txt")
+    assert_in(proc.stdout, "resumo:                        Criar 'abc.txt'.")
+    assert_in(proc.stdout, "candidata a migração futura")
+    assert_in(proc.stdout, "decisão:                       voltar ao Fish")
+
+
+def test_dev_create_folder_alignment() -> None:
+    proc = run("dev", "criar", "pasta", "pasta_teste")
+    assert proc.returncode == 0
+    assert_in(proc.stdout, "intenção:                      criar")
+    assert_in(proc.stdout, "domínio:                       arquivo")
+    assert_in(proc.stdout, "tipo:                          pasta")
+    assert_in(proc.stdout, "alvo principal:                pasta_teste")
+    assert_in(proc.stdout, "resumo:                        Criar 'pasta_teste'.")
+    assert_in(proc.stdout, "candidata a migração futura")
+    assert_in(proc.stdout, "decisão:                       voltar ao Fish")
+
+
+def test_dev_copy_file_alignment() -> None:
+    proc = run("dev", "copiar", "arquivo", "origem/item.txt", "para", "destino/item-copia.txt")
+    assert proc.returncode == 0
+    assert_in(proc.stdout, "intenção:                      copiar")
+    assert_in(proc.stdout, "domínio:                       arquivo")
+    assert_in(proc.stdout, "tipo:                          arquivo")
+    assert_in(proc.stdout, "alvo principal:                origem/item.txt")
+    assert_in(proc.stdout, "origem:                        origem/item.txt")
+    assert_in(proc.stdout, "destino:                       destino/item-copia.txt")
+    assert_in(proc.stdout, "resumo:                        Copiar 'origem/item.txt' para 'destino/item-copia.txt'.")
+    assert_in(proc.stdout, "candidata a migração futura")
+    assert_in(proc.stdout, "decisão:                       voltar ao Fish")
+
+
+def test_dev_move_file_alignment() -> None:
+    proc = run("dev", "mover", "arquivo", "destino/item-copia.txt", "para", "destino/item-movido.txt")
+    assert proc.returncode == 0
+    assert_in(proc.stdout, "intenção:                      mover")
+    assert_in(proc.stdout, "domínio:                       arquivo")
+    assert_in(proc.stdout, "tipo:                          arquivo")
+    assert_in(proc.stdout, "alvo principal:                destino/item-copia.txt")
+    assert_in(proc.stdout, "origem:                        destino/item-copia.txt")
+    assert_in(proc.stdout, "destino:                       destino/item-movido.txt")
+    assert_in(proc.stdout, "resumo:                        Mover 'destino/item-copia.txt' para 'destino/item-movido.txt'.")
+    assert_in(proc.stdout, "candidata a migração futura")
+    assert_in(proc.stdout, "decisão:                       voltar ao Fish")
+
+
+def test_dev_rename_file_alignment() -> None:
+    proc = run("dev", "renomear", "arquivo", "destino/item-movido.txt", "para", "item-final.txt")
+    assert proc.returncode == 0
+    assert_in(proc.stdout, "intenção:                      renomear")
+    assert_in(proc.stdout, "domínio:                       arquivo")
+    assert_in(proc.stdout, "tipo:                          arquivo")
+    assert_in(proc.stdout, "alvo principal:                destino/item-movido.txt")
+    assert_in(proc.stdout, "origem:                        destino/item-movido.txt")
+    assert_in(proc.stdout, "destino:                       destino/item-final.txt")
+    assert_in(proc.stdout, "novo nome:                     item-final.txt")
+    assert_in(proc.stdout, "resumo:                        Renomear 'destino/item-movido.txt' para 'destino/item-final.txt'.")
+    assert_in(proc.stdout, "candidata a migração futura")
+    assert_in(proc.stdout, "decisão:                       voltar ao Fish")
+
+
+def test_dev_explicit_remove_file_alignment() -> None:
+    proc = run("dev", "remover", "o", "arquivo", "apagar.txt")
+    assert proc.returncode == 0
+    assert_in(proc.stdout, "intenção:                      remover")
+    assert_in(proc.stdout, "domínio:                       arquivo")
+    assert_in(proc.stdout, "tipo:                          arquivo")
+    assert_in(proc.stdout, "alvo principal:                apagar.txt")
+    assert_in(proc.stdout, "resumo:                        Remover 'apagar.txt'.")
+    assert_in(proc.stdout, "candidata a migração futura")
+    assert_in(proc.stdout, "decisão:                       voltar ao Fish")
+    assert_in(proc.stdout, "confirmação destrutiva no adaptador Fish")
+
+
+def test_dev_explicit_remove_folder_alignment() -> None:
+    proc = run("dev", "remover", "a", "pasta", "pasta_apagar")
+    assert proc.returncode == 0
+    assert_in(proc.stdout, "intenção:                      remover")
+    assert_in(proc.stdout, "domínio:                       arquivo")
+    assert_in(proc.stdout, "tipo:                          pasta")
+    assert_in(proc.stdout, "alvo principal:                pasta_apagar")
+    assert_in(proc.stdout, "resumo:                        Remover 'pasta_apagar'.")
+    assert_in(proc.stdout, "candidata a migração futura")
+    assert_in(proc.stdout, "decisão:                       voltar ao Fish")
+    assert_in(proc.stdout, "confirmação destrutiva no adaptador Fish")
+
+
+def test_dev_explicit_remove_located_folder_alignment() -> None:
+    proc = run("dev", "remova", "a", "pasta", "Aury", "que", "fica", "em", "Downloads")
+    assert proc.returncode == 0
+    assert_in(proc.stdout, "intenção:                      remover")
+    assert_in(proc.stdout, "domínio:                       arquivo")
+    assert_in(proc.stdout, "tipo:                          pasta")
+    assert_in(proc.stdout, "alvo principal:                Downloads/Aury")
+    assert_in(proc.stdout, "origem:                        Downloads/Aury")
+    assert_in(proc.stdout, "resumo:                        Remover 'Downloads/Aury'.")
+    assert_in(proc.stdout, "candidata a migração futura")
+    assert_in(proc.stdout, "decisão:                       voltar ao Fish")
+    assert_in(proc.stdout, "localização conversacional usada para recompor a base 'Downloads'")
+    assert_in(proc.stdout, "confirmação destrutiva no adaptador Fish")
+
+
+def test_dev_explicit_remove_located_file_alignment() -> None:
+    proc = run("dev", "remova", "o", "arquivo", "teste.txt", "que", "fica", "em", "destino")
+    assert proc.returncode == 0
+    assert_in(proc.stdout, "intenção:                      remover")
+    assert_in(proc.stdout, "domínio:                       arquivo")
+    assert_in(proc.stdout, "tipo:                          arquivo")
+    assert_in(proc.stdout, "alvo principal:                destino/teste.txt")
+    assert_in(proc.stdout, "origem:                        destino/teste.txt")
+    assert_in(proc.stdout, "resumo:                        Remover 'destino/teste.txt'.")
+    assert_in(proc.stdout, "candidata a migração futura")
+    assert_in(proc.stdout, "decisão:                       voltar ao Fish")
+    assert_in(proc.stdout, "localização conversacional usada para recompor a base 'destino'")
+    assert_in(proc.stdout, "confirmação destrutiva no adaptador Fish")
+
+
+def test_dev_extract_zip_alignment() -> None:
+    proc = run("dev", "extrair", "pacote.zip")
+    assert proc.returncode == 0
+    assert_in(proc.stdout, "intenção:                      extrair")
+    assert_in(proc.stdout, "domínio:                       arquivo")
+    assert_in(proc.stdout, "tipo:                          zip")
+    assert_in(proc.stdout, "alvo principal:                pacote.zip")
+    assert_in(proc.stdout, "arquivo compactado:            pacote.zip")
+    assert_in(proc.stdout, "destino:                       ./pacote")
+    assert_in(proc.stdout, "resumo:                        Extrair 'pacote.zip' para './pacote'.")
+    assert_in(proc.stdout, "candidata a migração futura")
+    assert_in(proc.stdout, "decisão:                       voltar ao Fish")
+    assert_in(proc.stdout, "destino padrão de extração derivado como './pacote'")
+
+
+def test_dev_extract_tar_gz_alignment() -> None:
+    proc = run("dev", "extrair", "pacote.tar.gz")
+    assert proc.returncode == 0
+    assert_in(proc.stdout, "intenção:                      extrair")
+    assert_in(proc.stdout, "domínio:                       arquivo")
+    assert_in(proc.stdout, "tipo:                          tar.gz")
+    assert_in(proc.stdout, "alvo principal:                pacote.tar.gz")
+    assert_in(proc.stdout, "arquivo compactado:            pacote.tar.gz")
+    assert_in(proc.stdout, "destino:                       ./pacote")
+    assert_in(proc.stdout, "resumo:                        Extrair 'pacote.tar.gz' para './pacote'.")
+    assert_in(proc.stdout, "candidata a migração futura")
+    assert_in(proc.stdout, "decisão:                       voltar ao Fish")
+    assert_in(proc.stdout, "destino padrão de extração derivado como './pacote'")
+
+
+def test_dev_extract_conversational_destination_alignment() -> None:
+    proc = run("dev", "extraia", "pacote.tar.gz", "para", "a", "pasta", "que", "fica", "em", "extracao")
+    assert proc.returncode == 0
+    assert_in(proc.stdout, "intenção:                      extrair")
+    assert_in(proc.stdout, "domínio:                       pasta")
+    assert_in(proc.stdout, "tipo:                          tar.gz")
+    assert_in(proc.stdout, "alvo principal:                pacote.tar.gz")
+    assert_in(proc.stdout, "arquivo compactado:            pacote.tar.gz")
+    assert_in(proc.stdout, "destino:                       extracao")
+    assert_in(proc.stdout, "localização conversacional")
+    assert_in(proc.stdout, "destino simples: extracao")
+    assert_in(proc.stdout, "resumo:                        Extrair 'pacote.tar.gz' para 'extracao'.")
+    assert_in(proc.stdout, "candidata a migração futura")
+    assert_in(proc.stdout, "decisão:                       voltar ao Fish")
+    assert_in(proc.stdout, "localização conversacional simples usada para fechar o destino 'extracao'")
+
+
+def test_dev_extract_explicit_real_path_destination_alignment() -> None:
+    proc = run("dev", "extraia", "pacote.tar.gz", "para", "/usr/steam")
+    assert proc.returncode == 0
+    assert_in(proc.stdout, "intenção:                      extrair")
+    assert_in(proc.stdout, "domínio:                       arquivo")
+    assert_in(proc.stdout, "tipo:                          tar.gz")
+    assert_in(proc.stdout, "alvo principal:                pacote.tar.gz")
+    assert_in(proc.stdout, "arquivo compactado:            pacote.tar.gz")
+    assert_in(proc.stdout, "destino:                       /usr/steam")
+    assert_in(proc.stdout, "resumo:                        Extrair 'pacote.tar.gz' para '/usr/steam'.")
+    assert_in(proc.stdout, "candidata a migração futura")
+    assert_in(proc.stdout, "decisão:                       voltar ao Fish")
+    assert_in(proc.stdout, "destino explícito em caminho real preservado como '/usr/steam'")
+
+
+def test_dev_copy_rename_local_reference_alignment() -> None:
+    phrase = "copie a pasta Aury que fica em origem para destino e renomeie ela para Aury-backup"
+    proc = run("dev", *phrase.split())
+    assert proc.returncode == 0
+    assert_in(proc.stdout, "Plano da sequência")
+    assert_in(proc.stdout, "Ação 1")
+    assert_in(proc.stdout, "trecho original:               copie a pasta Aury que fica em origem para destino")
+    assert_in(proc.stdout, "intenção:                      copiar")
+    assert_in(proc.stdout, "domínio:                       arquivo")
+    assert_in(proc.stdout, "tipo:                          pasta")
+    assert_in(proc.stdout, "alvo principal:                origem/Aury")
+    assert_in(proc.stdout, "origem:                        origem/Aury")
+    assert_in(proc.stdout, "destino:                       destino/Aury")
+    assert_in(proc.stdout, "resumo:                        Copiar 'origem/Aury' para 'destino/Aury'.")
+    assert_in(proc.stdout, "localização conversacional usada para recompor a base 'origem'")
+    assert_in(proc.stdout, "Ação 2")
+    assert_in(proc.stdout, "trecho original:               renomeie ela para Aury-backup")
+    assert_in(proc.stdout, "intenção:                      renomear")
+    assert_in(proc.stdout, "domínio:                       arquivo")
+    assert_in(proc.stdout, "tipo:                          pasta")
+    assert_in(proc.stdout, "alvo principal:                destino/Aury")
+    assert_in(proc.stdout, "origem:                        destino/Aury")
+    assert_in(proc.stdout, "destino:                       destino/Aury-backup")
+    assert_in(proc.stdout, "novo nome:                     Aury-backup")
+    assert_in(proc.stdout, "referência local:              destino/Aury")
+    assert_in(proc.stdout, "resumo:                        Renomear 'destino/Aury' para 'destino/Aury-backup'.")
+    assert_in(proc.stdout, "referência local 'ela' resolvida com segurança como 'destino/Aury'")
+    assert_in(proc.stdout, "candidata a migração futura")
+    assert_in(proc.stdout, "decisão:                       voltar ao Fish")
+
+
 def test_dev_chain() -> None:
     phrase = "copie a pasta Aury que fica em Documentos para Downloads e renomeie ela para Aury-backup"
     proc = run("dev", *phrase.split())
     assert proc.returncode == 0
-    assert_in(proc.stdout, "origem:")
-    assert_in(proc.stdout, "Documentos/Aury")
-    assert_in(proc.stdout, "novo nome:")
-    assert_in(proc.stdout, "Downloads/Aury-backup")
+    assert_in(proc.stdout, "Ação 1")
+    assert_in(proc.stdout, "Ação 2")
+    assert_in(proc.stdout, "origem:                        Documentos/Aury")
+    assert_in(proc.stdout, "destino:                       Downloads/Aury")
+    assert_in(proc.stdout, "referência local:              Downloads/Aury")
+    assert_in(proc.stdout, "novo nome:                     Aury-backup")
+    assert_in(proc.stdout, "destino:                       Downloads/Aury-backup")
 
 
 def test_runtime_speedtest() -> None:
@@ -169,6 +421,21 @@ def test_pipeline_prepare_text() -> None:
     assert_in(protected_phrase.normalized_text, "teste.tar.gz")
     assert_in(protected_phrase.normalized_text, "Downloads/token")
 
+    _chain_phrase, chain_actions = prepare_text("remova a pasta Aury que fica em Downloads e depois apague ela")
+    if [action.original_action for action in chain_actions] != ["remova a pasta Aury que fica em Downloads", "apague ela"]:
+        raise AssertionError(f"split destrutivo inesperado: {[action.original_action for action in chain_actions]!r}")
+
+    _rename_chain_phrase, rename_chain_actions = prepare_text(
+        "copie a pasta Aury que fica em origem para destino e renomeie ela para Aury-backup"
+    )
+    if [action.original_action for action in rename_chain_actions] != [
+        "copie a pasta Aury que fica em origem para destino",
+        "renomeie ela para Aury-backup",
+    ]:
+        raise AssertionError(
+            f"split copiar+renomear inesperado: {[action.original_action for action in rename_chain_actions]!r}"
+        )
+
 
 def test_prepare_analysis_uses_prepared_action() -> None:
     phrase, action, analysis = prepare_analysis("Aury, remover vlc")
@@ -184,6 +451,127 @@ def test_prepare_analysis_uses_prepared_action() -> None:
         raise AssertionError(f"resumo inesperado: {analysis.summary!r}")
 
 
+def test_prepare_analysis_isolated_destructive_remove_local_reference_blocks() -> None:
+    _phrase, _action, analysis = prepare_analysis("remover ela")
+    if analysis.intent != "remover":
+        raise AssertionError(f"intenção inesperada: {analysis.intent!r}")
+    if analysis.domain != "arquivo":
+        raise AssertionError(f"domínio inesperado: {analysis.domain!r}")
+    if analysis.status != "BLOQUEADA":
+        raise AssertionError(f"estado inesperado: {analysis.status!r}")
+    if analysis.entities.get("referencia_local") != "ela (não resolvida)":
+        raise AssertionError(f"referência local inesperada: {analysis.entities.get('referencia_local')!r}")
+    if analysis.summary != "Remoção sem alvo seguro; leitura bloqueada.":
+        raise AssertionError(f"resumo inesperado: {analysis.summary!r}")
+    if "tipo" in analysis.entities:
+        raise AssertionError(f"tipo não deveria existir: {analysis.entities.get('tipo')!r}")
+
+
+def test_prepare_analysis_extract_conversational_destination_alignment() -> None:
+    _phrase, _action, analysis = prepare_analysis("extraia pacote.tar.gz para a pasta que fica em extracao")
+    if analysis.intent != "extrair":
+        raise AssertionError(f"intenção inesperada: {analysis.intent!r}")
+    if analysis.domain != "pasta":
+        raise AssertionError(f"domínio inesperado: {analysis.domain!r}")
+    if analysis.status != "CONSISTENTE":
+        raise AssertionError(f"estado inesperado: {analysis.status!r}")
+    if analysis.entities.get("tipo") != "tar.gz":
+        raise AssertionError(f"tipo inesperado: {analysis.entities.get('tipo')!r}")
+    if analysis.entities.get("arquivo_compactado") != "pacote.tar.gz":
+        raise AssertionError(
+            f"arquivo compactado inesperado: {analysis.entities.get('arquivo_compactado')!r}"
+        )
+    if analysis.entities.get("alvo_principal") != "pacote.tar.gz":
+        raise AssertionError(f"alvo principal inesperado: {analysis.entities.get('alvo_principal')!r}")
+    if analysis.entities.get("destino") != "extracao":
+        raise AssertionError(f"destino inesperado: {analysis.entities.get('destino')!r}")
+    if analysis.entities.get("localizacao_conversacional") != "destino simples: extracao":
+        raise AssertionError(
+            f"localização inesperada: {analysis.entities.get('localizacao_conversacional')!r}"
+        )
+    if analysis.summary != "Extrair 'pacote.tar.gz' para 'extracao'.":
+        raise AssertionError(f"resumo inesperado: {analysis.summary!r}")
+    if not any("localização conversacional simples" in item for item in analysis.observations):
+        raise AssertionError(f"observações inesperadas: {analysis.observations!r}")
+    if not any("adaptador Fish" in item for item in analysis.observations):
+        raise AssertionError(f"observações inesperadas: {analysis.observations!r}")
+
+
+def test_prepare_analysis_extract_explicit_real_path_destination_alignment() -> None:
+    _phrase, _action, analysis = prepare_analysis("extraia pacote.tar.gz para /usr/steam")
+    if analysis.intent != "extrair":
+        raise AssertionError(f"intenção inesperada: {analysis.intent!r}")
+    if analysis.domain != "arquivo":
+        raise AssertionError(f"domínio inesperado: {analysis.domain!r}")
+    if analysis.status != "CONSISTENTE":
+        raise AssertionError(f"estado inesperado: {analysis.status!r}")
+    if analysis.entities.get("tipo") != "tar.gz":
+        raise AssertionError(f"tipo inesperado: {analysis.entities.get('tipo')!r}")
+    if analysis.entities.get("arquivo_compactado") != "pacote.tar.gz":
+        raise AssertionError(
+            f"arquivo compactado inesperado: {analysis.entities.get('arquivo_compactado')!r}"
+        )
+    if analysis.entities.get("alvo_principal") != "pacote.tar.gz":
+        raise AssertionError(f"alvo principal inesperado: {analysis.entities.get('alvo_principal')!r}")
+    if analysis.entities.get("destino") != "/usr/steam":
+        raise AssertionError(f"destino inesperado: {analysis.entities.get('destino')!r}")
+    if analysis.summary != "Extrair 'pacote.tar.gz' para '/usr/steam'.":
+        raise AssertionError(f"resumo inesperado: {analysis.summary!r}")
+    if "localizacao_conversacional" in analysis.entities:
+        raise AssertionError(
+            f"localização conversacional não deveria existir: {analysis.entities.get('localizacao_conversacional')!r}"
+        )
+    if not any("caminho real" in item for item in analysis.observations):
+        raise AssertionError(f"observações inesperadas: {analysis.observations!r}")
+    if not any("adaptador Fish" in item for item in analysis.observations):
+        raise AssertionError(f"observações inesperadas: {analysis.observations!r}")
+
+
+def test_prepare_analyses_copy_rename_local_reference_alignment() -> None:
+    _phrase, actions, analyses = prepare_analyses(
+        "copie a pasta Aury que fica em origem para destino e renomeie ela para Aury-backup"
+    )
+    if [action.original_action for action in actions] != [
+        "copie a pasta Aury que fica em origem para destino",
+        "renomeie ela para Aury-backup",
+    ]:
+        raise AssertionError(f"ações preparadas inesperadas: {[action.original_action for action in actions]!r}")
+    if analyses[0].intent != "copiar":
+        raise AssertionError(f"intenção inesperada na primeira ação: {analyses[0].intent!r}")
+    if analyses[0].domain != "arquivo":
+        raise AssertionError(f"domínio inesperado na primeira ação: {analyses[0].domain!r}")
+    if analyses[0].entities.get("tipo") != "pasta":
+        raise AssertionError(f"tipo inesperado na primeira ação: {analyses[0].entities.get('tipo')!r}")
+    if analyses[0].entities.get("origem") != "origem/Aury":
+        raise AssertionError(f"origem inesperada na primeira ação: {analyses[0].entities.get('origem')!r}")
+    if analyses[0].entities.get("destino") != "destino/Aury":
+        raise AssertionError(f"destino inesperado na primeira ação: {analyses[0].entities.get('destino')!r}")
+    if analyses[1].intent != "renomear":
+        raise AssertionError(f"intenção inesperada na segunda ação: {analyses[1].intent!r}")
+    if analyses[1].status != "CONSISTENTE":
+        raise AssertionError(f"estado inesperado na segunda ação: {analyses[1].status!r}")
+    if analyses[1].domain != "arquivo":
+        raise AssertionError(f"domínio inesperado na segunda ação: {analyses[1].domain!r}")
+    if analyses[1].entities.get("tipo") != "pasta":
+        raise AssertionError(f"tipo inesperado na segunda ação: {analyses[1].entities.get('tipo')!r}")
+    if analyses[1].entities.get("alvo_principal") != "destino/Aury":
+        raise AssertionError(f"alvo principal inesperado na segunda ação: {analyses[1].entities.get('alvo_principal')!r}")
+    if analyses[1].entities.get("origem") != "destino/Aury":
+        raise AssertionError(f"origem inesperada na segunda ação: {analyses[1].entities.get('origem')!r}")
+    if analyses[1].entities.get("destino") != "destino/Aury-backup":
+        raise AssertionError(f"destino inesperado na segunda ação: {analyses[1].entities.get('destino')!r}")
+    if analyses[1].entities.get("novo_nome") != "Aury-backup":
+        raise AssertionError(f"novo nome inesperado na segunda ação: {analyses[1].entities.get('novo_nome')!r}")
+    if analyses[1].entities.get("referencia_local") != "destino/Aury":
+        raise AssertionError(
+            f"referência local inesperada na segunda ação: {analyses[1].entities.get('referencia_local')!r}"
+        )
+    if analyses[1].summary != "Renomear 'destino/Aury' para 'destino/Aury-backup'.":
+        raise AssertionError(f"resumo inesperado na segunda ação: {analyses[1].summary!r}")
+    if not any("referência local 'ela' resolvida com segurança como 'destino/Aury'" in item for item in analyses[1].observations):
+        raise AssertionError(f"observações inesperadas na segunda ação: {analyses[1].observations!r}")
+
+
 def test_prepare_analyses_multiple_actions() -> None:
     phrase, actions, analyses = prepare_analyses("Aury, procurar steam e remover vlc")
     if phrase.original_text != "procurar steam e remover vlc":
@@ -192,6 +580,95 @@ def test_prepare_analyses_multiple_actions() -> None:
         raise AssertionError(f"ações preparadas inesperadas: {[action.original_action for action in actions]!r}")
     if [analysis.summary for analysis in analyses] != ["Procurar 'steam'.", "Remover 'vlc'."]:
         raise AssertionError(f"análises inesperadas: {[analysis.summary for analysis in analyses]!r}")
+
+
+def test_prepare_analyses_destructive_remove_followup_reuses_safe_local_reference() -> None:
+    _phrase, actions, analyses = prepare_analyses("remova a pasta Aury que fica em Downloads e depois apague ela")
+    if [action.original_action for action in actions] != ["remova a pasta Aury que fica em Downloads", "apague ela"]:
+        raise AssertionError(f"ações preparadas inesperadas: {[action.original_action for action in actions]!r}")
+    if analyses[0].summary != "Remover 'Downloads/Aury'.":
+        raise AssertionError(f"primeira análise inesperada: {analyses[0].summary!r}")
+    if analyses[1].intent != "remover":
+        raise AssertionError(f"intenção inesperada: {analyses[1].intent!r}")
+    if analyses[1].status != "BLOQUEADA":
+        raise AssertionError(f"estado inesperado: {analyses[1].status!r}")
+    if analyses[1].domain != "arquivo":
+        raise AssertionError(f"domínio inesperado: {analyses[1].domain!r}")
+    if analyses[1].entities.get("tipo") != "pasta":
+        raise AssertionError(f"tipo inesperado: {analyses[1].entities.get('tipo')!r}")
+    if analyses[1].entities.get("alvo_principal") != "Downloads/Aury":
+        raise AssertionError(f"alvo principal inesperado: {analyses[1].entities.get('alvo_principal')!r}")
+    if analyses[1].entities.get("origem") != "Downloads/Aury":
+        raise AssertionError(f"origem inesperada: {analyses[1].entities.get('origem')!r}")
+    if analyses[1].entities.get("referencia_local") != "Downloads/Aury":
+        raise AssertionError(f"referência local inesperada: {analyses[1].entities.get('referencia_local')!r}")
+    if analyses[1].entities.get("lacuna") != "alinhamento com runtime atual":
+        raise AssertionError(f"lacuna inesperada: {analyses[1].entities.get('lacuna')!r}")
+    if analyses[1].summary != "Remoção de 'Downloads/Aury' reconhecida, mas bloqueada no estado atual.":
+        raise AssertionError(f"resumo inesperado: {analyses[1].summary!r}")
+    if "foi resolvida com segurança" not in analyses[1].reason:
+        raise AssertionError(f"motivo inesperado: {analyses[1].reason!r}")
+
+def test_prepare_analyses_destructive_remove_with_previous_package_context_blocks_local_reference() -> None:
+    _phrase, actions, analyses = prepare_analyses("procurar steam e depois remover ele")
+    if [action.original_action for action in actions] != ["procurar steam", "remover ele"]:
+        raise AssertionError(f"ações preparadas inesperadas: {[action.original_action for action in actions]!r}")
+    if analyses[1].intent != "remover":
+        raise AssertionError(f"intenção inesperada: {analyses[1].intent!r}")
+    if analyses[1].domain != "arquivo":
+        raise AssertionError(f"domínio inesperado: {analyses[1].domain!r}")
+    if analyses[1].status != "BLOQUEADA":
+        raise AssertionError(f"estado inesperado: {analyses[1].status!r}")
+    if analyses[1].entities.get("referencia_local") != "ele":
+        raise AssertionError(f"referência local inesperada: {analyses[1].entities.get('referencia_local')!r}")
+    if analyses[1].summary != "Remoção sem alvo seguro; leitura bloqueada.":
+        raise AssertionError(f"resumo inesperado: {analyses[1].summary!r}")
+    if "contexto anterior" not in analyses[1].reason:
+        raise AssertionError(f"motivo inesperado: {analyses[1].reason!r}")
+    if not any("domínio 'pacote'" in item and "alvo 'steam'" in item for item in analyses[1].observations):
+        raise AssertionError(f"observações inesperadas: {analyses[1].observations!r}")
+
+
+def test_prepare_analyses_destructive_remove_with_previous_file_context_blocks_incompatible_local_reference() -> None:
+    _phrase, actions, analyses = prepare_analyses("criar pasta Aury e depois remover ele")
+    if [action.original_action for action in actions] != ["criar pasta Aury", "remover ele"]:
+        raise AssertionError(f"ações preparadas inesperadas: {[action.original_action for action in actions]!r}")
+    if analyses[0].entities.get("tipo") != "pasta":
+        raise AssertionError(f"tipo inesperado na primeira ação: {analyses[0].entities.get('tipo')!r}")
+    if analyses[1].intent != "remover":
+        raise AssertionError(f"intenção inesperada: {analyses[1].intent!r}")
+    if analyses[1].domain != "arquivo":
+        raise AssertionError(f"domínio inesperado: {analyses[1].domain!r}")
+    if analyses[1].status != "BLOQUEADA":
+        raise AssertionError(f"estado inesperado: {analyses[1].status!r}")
+    if analyses[1].entities.get("referencia_local") != "ele":
+        raise AssertionError(f"referência local inesperada: {analyses[1].entities.get('referencia_local')!r}")
+    if not any("tipo 'pasta'" in item and "alvo 'Aury'" in item for item in analyses[1].observations):
+        raise AssertionError(f"observações inesperadas: {analyses[1].observations!r}")
+
+
+def test_prepare_analyses_destructive_remove_followup_reuses_safe_file_reference() -> None:
+    _phrase, actions, analyses = prepare_analyses("remova o arquivo teste.txt que fica em destino e depois apague ele")
+    if [action.original_action for action in actions] != ["remova o arquivo teste.txt que fica em destino", "apague ele"]:
+        raise AssertionError(f"ações preparadas inesperadas: {[action.original_action for action in actions]!r}")
+    if analyses[1].intent != "remover":
+        raise AssertionError(f"intenção inesperada: {analyses[1].intent!r}")
+    if analyses[1].domain != "arquivo":
+        raise AssertionError(f"domínio inesperado: {analyses[1].domain!r}")
+    if analyses[1].status != "BLOQUEADA":
+        raise AssertionError(f"estado inesperado: {analyses[1].status!r}")
+    if analyses[1].entities.get("tipo") != "arquivo":
+        raise AssertionError(f"tipo inesperado: {analyses[1].entities.get('tipo')!r}")
+    if analyses[1].entities.get("alvo_principal") != "destino/teste.txt":
+        raise AssertionError(f"alvo principal inesperado: {analyses[1].entities.get('alvo_principal')!r}")
+    if analyses[1].entities.get("origem") != "destino/teste.txt":
+        raise AssertionError(f"origem inesperada: {analyses[1].entities.get('origem')!r}")
+    if analyses[1].entities.get("referencia_local") != "destino/teste.txt":
+        raise AssertionError(f"referência local inesperada: {analyses[1].entities.get('referencia_local')!r}")
+    if analyses[1].entities.get("lacuna") != "alinhamento com runtime atual":
+        raise AssertionError(f"lacuna inesperada: {analyses[1].entities.get('lacuna')!r}")
+    if analyses[1].summary != "Remoção de 'destino/teste.txt' reconhecida, mas bloqueada no estado atual.":
+        raise AssertionError(f"resumo inesperado: {analyses[1].summary!r}")
 
 
 def test_action_execution_plan_supported_now() -> None:
@@ -265,11 +742,135 @@ def test_dev_multiple_actions() -> None:
     assert_in(proc.stdout, "resumo:                        Remover 'vlc'.")
 
 
+def test_dev_destructive_remove_without_safe_antecedent_blocks_local_reference() -> None:
+    proc = run("dev", "remover", "ela")
+    assert proc.returncode == 0
+    assert_in(proc.stdout, "intenção:                      remover")
+    assert_in(proc.stdout, "domínio:                       arquivo")
+    assert_in(proc.stdout, "referência local:              ela (não resolvida)")
+    assert_in(proc.stdout, "estado:                        BLOQUEADA")
+    assert_in(proc.stdout, "lacunas:                       alvo seguro")
+    assert_in(proc.stdout, "resumo:                        Remoção sem alvo seguro; leitura bloqueada.")
+    assert_in(proc.stdout, "não há antecedente seguro nesta ação destrutiva isolada")
+    assert_in(proc.stdout, "decisão:                       voltar ao Fish")
+    if "domínio:                       pacote" in proc.stdout:
+        raise AssertionError("remoção destrutiva anafórica isolada não pode continuar enquadrada como pacote")
+
+
+def test_dev_destructive_remove_chain_local_reference_alignment() -> None:
+    phrase = "remova a pasta Aury que fica em Downloads e depois apague ela"
+    proc = run("dev", *phrase.split())
+    assert proc.returncode == 0
+    assert_in(proc.stdout, "Ação 1")
+    assert_in(proc.stdout, "trecho original:               remova a pasta Aury que fica em Downloads")
+    assert_in(proc.stdout, "alvo principal:                Downloads/Aury")
+    assert_in(proc.stdout, "origem:                        Downloads/Aury")
+    assert_in(proc.stdout, "resumo:                        Remover 'Downloads/Aury'.")
+    assert_in(proc.stdout, "Ação 2")
+    assert_in(proc.stdout, "trecho original:               apague ela")
+    assert_in(proc.stdout, "intenção:                      remover")
+    assert_in(proc.stdout, "domínio:                       arquivo")
+    assert_in(proc.stdout, "tipo:                          pasta")
+    assert_in(proc.stdout, "alvo principal:                Downloads/Aury")
+    assert_in(proc.stdout, "origem:                        Downloads/Aury")
+    assert_in(proc.stdout, "referência local:              Downloads/Aury")
+    assert_in(proc.stdout, "estado:                        BLOQUEADA")
+    assert_in(proc.stdout, "lacunas:                       alinhamento com runtime atual")
+    assert_in(proc.stdout, "resumo:                        Remoção de 'Downloads/Aury' reconhecida, mas bloqueada no estado atual.")
+    assert_in(proc.stdout, "foi resolvida com segurança como 'Downloads/Aury'")
+    assert_in(proc.stdout, "referência local 'ela' resolvida com segurança como 'Downloads/Aury'")
+    assert_in(proc.stdout, "runtime legado atual ainda bloqueia continuação destrutiva anafórica equivalente")
+    if "Downloads e/Aury" in proc.stdout:
+        raise AssertionError("o alvo localizado não pode continuar contaminado pelo conector antes de 'depois'")
+
+
+def test_dev_destructive_remove_with_previous_package_context_blocks_local_reference() -> None:
+    phrase = "procurar steam e depois remover ele"
+    proc = run("dev", *phrase.split())
+    assert proc.returncode == 0
+    assert_in(proc.stdout, "Ação 1")
+    assert_in(proc.stdout, "intenção:                      procurar")
+    assert_in(proc.stdout, "domínio:                       pacote")
+    assert_in(proc.stdout, "alvo principal:                steam")
+    assert_in(proc.stdout, "Ação 2")
+    assert_in(proc.stdout, "trecho original:               remover ele")
+    assert_in(proc.stdout, "intenção:                      remover")
+    assert_in(proc.stdout, "domínio:                       arquivo")
+    assert_in(proc.stdout, "referência local:              ele")
+    assert_in(proc.stdout, "estado:                        BLOQUEADA")
+    assert_in(proc.stdout, "lacunas:                       alvo seguro")
+    assert_in(proc.stdout, "resumo:                        Remoção sem alvo seguro; leitura bloqueada.")
+    assert_in(proc.stdout, "contexto anterior insuficiente ou incompatível")
+    assert_in(proc.stdout, "domínio 'pacote'")
+    if "alvo principal:                ele" in proc.stdout:
+        raise AssertionError("remoção destrutiva com contexto anterior incompatível não pode voltar a expor 'ele' como alvo de pacote")
+
+
+def test_dev_destructive_remove_with_previous_file_context_blocks_incompatible_local_reference() -> None:
+    phrase = "criar pasta Aury e depois remover ele"
+    proc = run("dev", *phrase.split())
+    assert proc.returncode == 0
+    assert_in(proc.stdout, "Ação 1")
+    assert_in(proc.stdout, "intenção:                      criar")
+    assert_in(proc.stdout, "domínio:                       arquivo")
+    assert_in(proc.stdout, "tipo:                          pasta")
+    assert_in(proc.stdout, "alvo principal:                Aury")
+    assert_in(proc.stdout, "Ação 2")
+    assert_in(proc.stdout, "trecho original:               remover ele")
+    assert_in(proc.stdout, "intenção:                      remover")
+    assert_in(proc.stdout, "domínio:                       arquivo")
+    assert_in(proc.stdout, "referência local:              ele")
+    assert_in(proc.stdout, "estado:                        BLOQUEADA")
+    assert_in(proc.stdout, "lacunas:                       alvo seguro")
+    assert_in(proc.stdout, "tipo 'pasta'")
+    if "alvo principal:                ele" in proc.stdout:
+        raise AssertionError("referência local destrutiva incompatível não pode reaparecer como alvo principal de pacote")
+
+
+def test_dev_destructive_remove_followup_reuses_safe_file_reference() -> None:
+    phrase = "remova o arquivo teste.txt que fica em destino e depois apague ele"
+    proc = run("dev", *phrase.split())
+    assert proc.returncode == 0
+    assert_in(proc.stdout, "Ação 1")
+    assert_in(proc.stdout, "trecho original:               remova o arquivo teste.txt que fica em destino")
+    assert_in(proc.stdout, "alvo principal:                destino/teste.txt")
+    assert_in(proc.stdout, "origem:                        destino/teste.txt")
+    assert_in(proc.stdout, "Ação 2")
+    assert_in(proc.stdout, "trecho original:               apague ele")
+    assert_in(proc.stdout, "intenção:                      remover")
+    assert_in(proc.stdout, "domínio:                       arquivo")
+    assert_in(proc.stdout, "tipo:                          arquivo")
+    assert_in(proc.stdout, "alvo principal:                destino/teste.txt")
+    assert_in(proc.stdout, "origem:                        destino/teste.txt")
+    assert_in(proc.stdout, "referência local:              destino/teste.txt")
+    assert_in(proc.stdout, "estado:                        BLOQUEADA")
+    assert_in(proc.stdout, "lacunas:                       alinhamento com runtime atual")
+    assert_in(proc.stdout, "resumo:                        Remoção de 'destino/teste.txt' reconhecida, mas bloqueada no estado atual.")
+    assert_in(proc.stdout, "referência local 'ele' resolvida com segurança como 'destino/teste.txt'")
+
+
 def main() -> int:
     tests = [
         test_help,
         test_version,
         test_dev_remove_pkg,
+        test_dev_install_package_alignment,
+        test_dev_ping_host_alignment,
+        test_dev_network_speed_rede_alignment,
+        test_dev_create_file_alignment,
+        test_dev_create_folder_alignment,
+        test_dev_copy_file_alignment,
+        test_dev_move_file_alignment,
+        test_dev_rename_file_alignment,
+        test_dev_explicit_remove_file_alignment,
+        test_dev_explicit_remove_folder_alignment,
+        test_dev_explicit_remove_located_folder_alignment,
+        test_dev_explicit_remove_located_file_alignment,
+        test_dev_extract_zip_alignment,
+        test_dev_extract_tar_gz_alignment,
+        test_dev_extract_conversational_destination_alignment,
+        test_dev_extract_explicit_real_path_destination_alignment,
+        test_dev_copy_rename_local_reference_alignment,
         test_dev_chain,
         test_runtime_speedtest,
         test_runtime_ping,
@@ -280,13 +881,26 @@ def main() -> int:
         test_sensitive_tokens_contract,
         test_pipeline_prepare_text,
         test_prepare_analysis_uses_prepared_action,
+        test_prepare_analysis_isolated_destructive_remove_local_reference_blocks,
+        test_prepare_analysis_extract_conversational_destination_alignment,
+        test_prepare_analysis_extract_explicit_real_path_destination_alignment,
+        test_prepare_analyses_copy_rename_local_reference_alignment,
         test_prepare_analyses_multiple_actions,
+        test_prepare_analyses_destructive_remove_followup_reuses_safe_local_reference,
+        test_prepare_analyses_destructive_remove_with_previous_package_context_blocks_local_reference,
+        test_prepare_analyses_destructive_remove_with_previous_file_context_blocks_incompatible_local_reference,
+        test_prepare_analyses_destructive_remove_followup_reuses_safe_file_reference,
         test_action_execution_plan_supported_now,
         test_action_execution_plan_supported_runtime_route_contract,
         test_action_execution_plan_future_migration_candidate,
         test_sequence_execution_plan_supported_now,
         test_sequence_execution_plan_returns_to_fish,
         test_dev_multiple_actions,
+        test_dev_destructive_remove_without_safe_antecedent_blocks_local_reference,
+        test_dev_destructive_remove_chain_local_reference_alignment,
+        test_dev_destructive_remove_with_previous_package_context_blocks_local_reference,
+        test_dev_destructive_remove_with_previous_file_context_blocks_incompatible_local_reference,
+        test_dev_destructive_remove_followup_reuses_safe_file_reference,
     ]
     for test in tests:
         test()

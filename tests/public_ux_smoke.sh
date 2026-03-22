@@ -54,7 +54,10 @@ mkdir -p "$rename_chain_tmp/Documentos/Aury" "$rename_chain_tmp/Downloads"
 rename_chain_output="$(ROOT="$ROOT" TMP="$rename_chain_tmp" fish -c 'source $ROOT/bin/aury.fish; cd $TMP; aury copie a pasta Aury que fica em Documentos para Downloads e renomeie ela para Aury-backup; echo ---DEV---; aury dev copie a pasta Aury que fica em Documentos para Downloads e renomeie ela para Aury-backup' 2>&1 || true)"
 require_in_output "$rename_chain_output" "copiei a pasta 'Documentos/Aury' para 'Downloads/Aury'" "copiar pasta com localização conversacional deve fechar o destino correto"
 require_in_output "$rename_chain_output" "renomeei a pasta 'Downloads/Aury' para 'Downloads/Aury-backup'" "renomear ela deve preservar a base do alvo copiado"
-require_in_output "$rename_chain_output" "novo nome:                     Downloads/Aury-backup" "aury dev deve expor o novo nome final coerente"
+require_in_output "$rename_chain_output" "Ação 1" "aury dev deve expor a ação de cópia separadamente"
+require_in_output "$rename_chain_output" "Ação 2" "aury dev deve expor a ação de renomeação separadamente"
+require_in_output "$rename_chain_output" "referência local:              Downloads/Aury" "aury dev deve expor a referência local resolvida"
+require_in_output "$rename_chain_output" "novo nome:                     Aury-backup" "aury dev deve expor o novo nome solicitado coerente"
 require_in_output "$rename_chain_output" "Renomear 'Downloads/Aury' para 'Downloads/Aury-backup'." "aury dev deve resumir a renomeação com a base preservada"
 
 if [[ ! -d "$rename_chain_tmp/Downloads/Aury-backup" || -e "$rename_chain_tmp/Aury-backup" || -e "$rename_chain_tmp/Downloads/Aury" ]]; then

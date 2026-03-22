@@ -21,7 +21,8 @@ nome: v1.6-regressao-minima-inicial
 descricao: >-
   Primeira matriz mínima de regressão da v1.6. Prioriza paridade entre `aury dev`
   e fluxo real, fallback honesto, arquivos com localização conversacional,
-  anáfora local, extração sem deformar tokens sensíveis e um recorte mínimo do
+  anáfora local, extração sem deformar tokens sensíveis, extração simples,
+  destino conversacional simples, caminho real explícito e um recorte mínimo do
   pipeline observável.
 
 cases:
@@ -61,7 +62,7 @@ cases:
     categoria: dev
     modo: dev
     frase: copie a pasta Aury que fica em Documentos para Downloads e renomeie ela para Aury-backup
-    foco: encadeamento observado em aury dev com anáfora local entre ações
+    foco: sequência curta copiar + renomear com anáfora local em aury dev
     verificar: leitura por ação, em ordem, preservando o alvo observado na renomeação
     acoes_esperadas: 2
     estados_esperados: [CONSISTENTE, CONSISTENTE]
@@ -69,6 +70,51 @@ cases:
     espera: >-
       aury dev deve relatar duas ações coerentes, mantendo continuidade suficiente
       para interpretar "ela" na segunda ação sem embaralhar origem, destino ou novo nome.
+
+  - id: D04
+    ordem: 26
+    essencial: true
+    categoria: dev
+    modo: dev
+    frase: extrair pacote.tar.gz
+    foco: extração simples com destino derivado de forma canônica
+    verificar: leitura da intenção, do arquivo compactado e do destino padrão
+    acoes_esperadas: 1
+    estados_esperados: [CONSISTENTE]
+    blocos_obrigatorios: [Entrada global, Entrada, Enquadramento, Entidades, Diagnostico, Acao prevista, Observacoes]
+    espera: >-
+      aury dev deve reconhecer a extração simples de `pacote.tar.gz` e derivar
+      `./pacote` como destino padrão sem abrir parser novo nem deformar o resumo.
+
+  - id: D05
+    ordem: 27
+    essencial: true
+    categoria: dev
+    modo: dev
+    frase: extraia pacote.tar.gz para a pasta que fica em extracao
+    foco: extração com destino conversacional simples já alinhado no pre-push
+    verificar: fechamento do destino simples e leitura consistente do resumo
+    acoes_esperadas: 1
+    estados_esperados: [CONSISTENTE]
+    blocos_obrigatorios: [Entrada global, Entrada, Enquadramento, Entidades, Diagnostico, Acao prevista, Observacoes]
+    espera: >-
+      aury dev deve fechar `extracao` como destino conversacional simples e
+      expor a leitura auditável sem espalhar a regra em recortes paralelos.
+
+  - id: D06
+    ordem: 28
+    essencial: true
+    categoria: dev
+    modo: dev
+    frase: extraia pacote.tar.gz para /usr/steam
+    foco: extração com destino explícito em caminho real preservado
+    verificar: preservação do caminho absoluto e leitura consistente do destino
+    acoes_esperadas: 1
+    estados_esperados: [CONSISTENTE]
+    blocos_obrigatorios: [Entrada global, Entrada, Enquadramento, Entidades, Diagnostico, Acao prevista, Observacoes]
+    espera: >-
+      aury dev deve manter `/usr/steam` intacto como caminho real explícito,
+      enquadrando a extração sem inventar localização conversacional.
 
   - id: F01
     ordem: 30
@@ -226,9 +272,3 @@ cases:
     espera: >-
       a Aury deve recompor a base Downloads com o nome Aury e confirmar/remover
       apenas Downloads/Aury, sem apagar Downloads inteiro por engano.
-
-later_cases:
-  - id: L03
-    categoria: extracao
-    frase: extraia teste.tar.gz para /usr/steam
-    motivo: caso adicional com caminho absoluto pode entrar depois da base mínima

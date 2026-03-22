@@ -1,6 +1,6 @@
 # 💜 Aury
 
-![version](https://img.shields.io/badge/version-v1.6.1-purple)
+![version](https://img.shields.io/badge/version-v1.6.2-purple)
 ![shell](https://img.shields.io/badge/shell-fish-blue)
 ![platform](https://img.shields.io/badge/platform-CachyOS-orange)
 ![license](https://img.shields.io/badge/license-MIT-green)
@@ -11,7 +11,7 @@ Ela permite executar tarefas do sistema usando **linguagem natural**, traduzindo
 
 ---
 
-> Estado público real da **v1.6.1**: a entrada continua em Fish, mas `help`, `version`, `dev <frase>` e as rotas Python já suportadas passam por um núcleo Python; o restante segue no adaptador Fish com fallback explícito.
+> Estado público real da **v1.6.2**: a entrada continua em Fish, mas `help`, `version`, `dev <frase>` e as rotas Python já suportadas passam por um núcleo Python; nesta versão, `aury dev` reduz a distância diagnóstica para um conjunto curto de fluxos que o modo normal já sustenta, sem forçar nova migração de runtime.
 
 ## O que é a Aury
 
@@ -115,7 +115,7 @@ A versão atual da **💜 Aury** já oferece:
 
 ## Instalação
 
-A instalação pública mínima da v1.6.1 é feita pelo script do repositório:
+A instalação pública mínima da v1.6.2 é feita pelo script do repositório:
 
 ```fish
 git clone https://github.com/el-abni/aury.git
@@ -163,7 +163,7 @@ No código, a identidade visual da assistente é:
 No comando de ajuda, a versão deve aparecer no formato:
 
 ```text
-💜 Aury v1.6.1
+💜 Aury v1.6.2
 ```
 
 A Aury entende tanto comandos diretos quanto frases mais naturais, como:
@@ -184,11 +184,12 @@ aury dev ver cpu e memória
 aury dev copiar arquivo teste.txt para backup.txt
 ```
 
-## Contrato público mínimo da v1.6.1
+## Contrato público mínimo da v1.6.2
 
 - `aury ajuda` e `ay ajuda` renderizam `resources/help.txt` usando a `VERSION` da base ativa.
 - `aury --version` e `ay --version` imprimem `💜 Aury <VERSION>` a partir da mesma base ativa.
 - `aury dev <frase>` usa o núcleo Python e expõe plano da sequência, leitura por ação e decisão de execução.
+- na v1.6.2, `aury dev` amplia o alinhamento diagnóstico para um conjunto curto de fluxos já sustentados pelo modo normal, sem prometer paridade total nem migração equivalente de runtime.
 - `aury dev` sem frase continua disponível como utilitário mínimo do adaptador Fish; hoje ele serve para checagem rápida e deve ser tratado como provisório.
 - `bin/aury.fish` é o ponto de entrada público: ele tenta o runtime Python primeiro e volta ao Fish quando a ação ainda não tem rota Python explícita.
 - Em desenvolvimento, ao fazer `source bin/aury.fish`, a base ativa é o próprio root do repositório. Na instalação, a base ativa é `~/.local/share/aury`.

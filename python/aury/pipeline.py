@@ -7,6 +7,12 @@ from .normalize import normalize_token, preprocess_text, strip_accents
 from .sensitive_tokens import protect_sensitive_tokens, restore_sensitive_tokens
 
 INTENTS = {'ajuda','reload','dev','atualizar','otimizar','status','procurar','instalar','remover','criar','copiar','mover','renomear','extrair','ping','ver','internet','velocidade'}
+COMMAND_ALIASES = {
+    'copie': 'copiar',
+    'copia': 'copiar',
+    'renomeie': 'renomear',
+    'renomeia': 'renomear',
+}
 
 
 def _original_tokens_from_value(value: Sequence[str] | str) -> list[str]:
@@ -38,7 +44,8 @@ def build_input_phrase(value: Sequence[str] | str) -> InputPhrase:
 
 
 def is_command_token(token: str) -> bool:
-    return normalize_token(token) in INTENTS
+    normalized = normalize_token(token)
+    return normalized in INTENTS or COMMAND_ALIASES.get(normalized, normalized) in INTENTS
 
 
 def split_actions(tokens: list[str]) -> list[list[str]]:
@@ -47,6 +54,8 @@ def split_actions(tokens: list[str]) -> list[list[str]]:
     for index, token in enumerate(tokens):
         normalized = normalize_token(token)
         if current and normalized in {'depois'}:
+            if current and normalize_token(current[-1]) == 'e':
+                current.pop()
             actions.append(current)
             current = []
             continue

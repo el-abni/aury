@@ -50,6 +50,17 @@ def _render_sequence_plan(sequence_plan: SequenceExecutionPlan) -> list[str]:
     ]
 
 
+def _lacunas_label(analysis: Analysis) -> str:
+    explicit_gap = analysis.entities.get("lacuna")
+    if explicit_gap:
+        return explicit_gap
+    if analysis.status == "CONSISTENTE":
+        return "-"
+    if analysis.status == "BLOQUEADA":
+        return "alvo seguro"
+    return "pedido fora do recorte"
+
+
 def _render_action_report(action: PreparedAction, analysis: Analysis, action_plan: ActionExecutionPlan) -> list[str]:
     entities = analysis.entities
     lines = [
@@ -64,18 +75,24 @@ def _render_action_report(action: PreparedAction, analysis: Analysis, action_pla
         _field("tipo", entities.get("tipo", "-")),
         _field("alvo principal", entities.get("alvo_principal", entities.get("destino", "-"))),
     ]
+    if entities.get("arquivo_compactado"):
+        lines.append(_field("arquivo compactado", entities["arquivo_compactado"]))
     if entities.get("origem"):
         lines.append(_field("origem", entities["origem"]))
+    if entities.get("referencia_local"):
+        lines.append(_field("referência local", entities["referencia_local"]))
     if entities.get("destino"):
         lines.append(_field("destino", entities["destino"]))
     if entities.get("novo_nome"):
         lines.append(_field("novo nome", entities["novo_nome"]))
+    if entities.get("localizacao_conversacional"):
+        lines.append(_field("localização conversacional", entities["localizacao_conversacional"]))
     lines.extend(
         [
             "Diagnostico",
             _field("estado", analysis.status),
             _field("motivo", analysis.reason),
-            _field("lacunas", "-" if analysis.status == "CONSISTENTE" else "pedido fora do recorte"),
+            _field("lacunas", _lacunas_label(analysis)),
             "Acao prevista",
             _field("resumo", analysis.summary),
             "Plano de execução",
