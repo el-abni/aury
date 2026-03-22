@@ -13,7 +13,7 @@ def share_root() -> Path:
 
 def read_version() -> str:
     version = (share_root() / "VERSION").read_text(encoding="utf-8").strip()
-    return version or "v1.6.1"
+    return version or "v1.6.3"
 
 
 def render_help() -> str:

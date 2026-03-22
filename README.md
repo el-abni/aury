@@ -1,6 +1,6 @@
 # 💜 Aury
 
-![version](https://img.shields.io/badge/version-v1.6.2-purple)
+![version](https://img.shields.io/badge/version-v1.6.3-purple)
 ![shell](https://img.shields.io/badge/shell-fish-blue)
 ![platform](https://img.shields.io/badge/platform-CachyOS-orange)
 ![license](https://img.shields.io/badge/license-MIT-green)
@@ -11,7 +11,7 @@ Ela permite executar tarefas do sistema usando **linguagem natural**, traduzindo
 
 ---
 
-> Estado público real da **v1.6.2**: a entrada continua em Fish, mas `help`, `version`, `dev <frase>` e as rotas Python já suportadas passam por um núcleo Python; nesta versão, `aury dev` reduz a distância diagnóstica para um conjunto curto de fluxos que o modo normal já sustenta, sem forçar nova migração de runtime.
+> Estado público real da **v1.6.3**: a linha 1.6.x foi fechada. A entrada continua em Fish, mas `help`, `version`, `dev <frase>` e as rotas Python já suportadas passam por um núcleo Python; `aury dev` segue como relatório canônico curto do que o modo normal já sustenta, sem prometer migração total de runtime.
 
 ## O que é a Aury
 
@@ -71,10 +71,10 @@ aury ping google.com
 aury criar arquivo teste.txt
 aury cria um arquivo teste.txt
 aury criar pasta projetos
-aury copiar teste.txt para backup.txt
-aury mover teste.txt para pasta/teste.txt
-aury renomear teste.txt para novo.txt
-aury apaga o arquivo teste.txt
+aury copiar arquivo teste.txt para backup.txt
+aury mover arquivo teste.txt para pasta/teste.txt
+aury renomear arquivo teste.txt para novo.txt
+aury remover o arquivo teste.txt
 ```
 
 ### Extração
@@ -115,12 +115,12 @@ A versão atual da **💜 Aury** já oferece:
 
 ## Instalação
 
-A instalação pública mínima da v1.6.2 é feita pelo script do repositório:
+A instalação pública atual da v1.6.3 usa o script do próprio repositório:
 
 ```fish
 git clone https://github.com/el-abni/aury.git
 cd aury
-bash install.sh
+./install.sh
 ```
 
 O script instala a superfície pública em:
@@ -163,7 +163,7 @@ No código, a identidade visual da assistente é:
 No comando de ajuda, a versão deve aparecer no formato:
 
 ```text
-💜 Aury v1.6.2
+💜 Aury v1.6.3
 ```
 
 A Aury entende tanto comandos diretos quanto frases mais naturais, como:
@@ -184,12 +184,12 @@ aury dev ver cpu e memória
 aury dev copiar arquivo teste.txt para backup.txt
 ```
 
-## Contrato público mínimo da v1.6.2
+## Contrato público mínimo da v1.6.3
 
 - `aury ajuda` e `ay ajuda` renderizam `resources/help.txt` usando a `VERSION` da base ativa.
 - `aury --version` e `ay --version` imprimem `💜 Aury <VERSION>` a partir da mesma base ativa.
 - `aury dev <frase>` usa o núcleo Python e expõe plano da sequência, leitura por ação e decisão de execução.
-- na v1.6.2, `aury dev` amplia o alinhamento diagnóstico para um conjunto curto de fluxos já sustentados pelo modo normal, sem prometer paridade total nem migração equivalente de runtime.
+- na v1.6.3, `aury dev` preserva o alinhamento diagnóstico curto fechado na linha 1.6.x, sem prometer paridade total nem migração equivalente de runtime.
 - `aury dev` sem frase continua disponível como utilitário mínimo do adaptador Fish; hoje ele serve para checagem rápida e deve ser tratado como provisório.
 - `bin/aury.fish` é o ponto de entrada público: ele tenta o runtime Python primeiro e volta ao Fish quando a ação ainda não tem rota Python explícita.
 - Em desenvolvimento, ao fazer `source bin/aury.fish`, a base ativa é o próprio root do repositório. Na instalação, a base ativa é `~/.local/share/aury`.
@@ -203,9 +203,15 @@ aury dev copiar arquivo teste.txt para backup.txt
 
 ---
 
+## Estado da linha 1.6.x
+
+- `v1.6.1`: base pública híbrida entre adaptador Fish e núcleo Python
+- `v1.6.2`: alinhamento diagnóstico curto extra de `aury dev` com fluxos já sustentados pelo modo normal
+- `v1.6.3`: fechamento público da linha 1.6.x, sem ampliar o escopo funcional da Aury
+
 ## Roadmap
 
-O roadmap mostra **apenas versões futuras ainda não lançadas para o fechamento da linha principal 1.x da Aury neste repositório**.
+O roadmap abaixo mostra **apenas versões futuras ainda não lançadas**. A linha 1.6.x já foi fechada.
 
 ### v1.7
 

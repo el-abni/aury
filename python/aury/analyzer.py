@@ -50,6 +50,24 @@ _EXTRACTION_DESTINATION_NOISE_TOKENS = {
     "nos",
     "nas",
 }
+_CREATE_LOCATION_BASE_NOISE_TOKENS = {
+    "a",
+    "as",
+    "o",
+    "os",
+    "um",
+    "uma",
+    "uns",
+    "umas",
+    "pasta",
+    "arquivo",
+    "caminho",
+    "local",
+    "destino",
+    "lugar",
+    "diretorio",
+    "diretório",
+}
 
 
 def _unsupported(action: PreparedAction) -> Analysis:
@@ -107,6 +125,10 @@ def _join_tokens(tokens: list[str]) -> str:
 
 
 def _normalized_intent_token(token: str) -> str:
+    if token in {"criar", "crie"}:
+        return "criar"
+    if token in {"procurar", "procure"}:
+        return "procurar"
     if token in {"remover", "remova", "apagar", "apague", "apaga"}:
         return "remover"
     if token in _COPY_INTENT_TOKENS:
@@ -134,6 +156,22 @@ def _is_probably_path(value: str) -> bool:
     )
 
 
+def _is_probably_filename(value: str) -> bool:
+    if not value:
+        return False
+    return bool(
+        _is_probably_path(value)
+        or re.match(r"^\.[^/]+$", value)
+        or re.match(r"^[^\s/]+\.[A-Za-z0-9][A-Za-z0-9._-]*$", value)
+    )
+
+
+def _is_probably_directory_hint(value: str) -> bool:
+    if not value:
+        return False
+    return bool(re.search(r"/$", value))
+
+
 def _parent_directory_or_empty(path: str) -> str:
     if not path or "/" not in path:
         return ""
@@ -149,6 +187,18 @@ def _join_base_and_name(base: str, name: str) -> str:
     if _is_probably_path(name):
         return name
     return f"{base}/{name}" if not base.endswith("/") else f"{base}{name}"
+
+
+def _join_location_base_and_name(base: str, name: str) -> str:
+    if not base:
+        return name
+    if not name:
+        return base
+    if name.endswith("/"):
+        trimmed_name = name[:-1]
+        if trimmed_name and not re.match(r"^(~/|/|\./|\.\./)", trimmed_name) and "/" not in trimmed_name:
+            return f"{base}/{name}" if not base.endswith("/") else f"{base}{name}"
+    return _join_base_and_name(base, name)
 
 
 def _basename(path: str) -> str:
@@ -354,6 +404,48 @@ def _resolve_located_target(original_tokens: list[str], normalized_tokens: list[
     return _join_base_and_name(target_base, target_name), target_base
 
 
+def _strip_leading_location_base_noise(
+    original_tokens: list[str],
+    normalized_tokens: list[str],
+) -> tuple[list[str], list[str]]:
+    start = 0
+    while start < len(normalized_tokens):
+        if token_sensitive_type(original_tokens[start]) is not None:
+            break
+        if normalized_tokens[start] in _CREATE_LOCATION_BASE_NOISE_TOKENS:
+            start += 1
+            continue
+        break
+    return original_tokens[start:], normalized_tokens[start:]
+
+
+def _resolve_simple_create_target(
+    original_tokens: list[str],
+    normalized_tokens: list[str],
+    *,
+    start: int,
+) -> tuple[str, str, str] | None:
+    connector_idx = next(
+        (index for index in range(start, len(normalized_tokens) - 1) if normalized_tokens[index] == "em"),
+        None,
+    )
+    if connector_idx is None:
+        return None
+
+    target_name = _join_tokens(original_tokens[start:connector_idx])
+    base_original_tokens, base_normalized_tokens = _strip_leading_location_base_noise(
+        original_tokens[connector_idx + 1 :],
+        normalized_tokens[connector_idx + 1 :],
+    )
+    target_base = _join_tokens(base_original_tokens)
+    if not target_name or not target_base:
+        return None
+    if "e" in base_normalized_tokens:
+        return None
+
+    return _join_location_base_and_name(target_base, target_name), target_name, target_base
+
+
 def _is_local_reference_token(token: str) -> bool:
     return token in {"ele", "ela", "isso"}
 
@@ -449,16 +541,53 @@ def _match_basic_file_action(action: PreparedAction) -> Analysis | None:
     normalized_tokens = action.normalized_tokens
     original_tokens = action.original_tokens
 
-    if len(normalized_tokens) < 3:
+    if len(normalized_tokens) < 2:
         return None
 
     first_token = _normalized_intent_token(normalized_tokens[0])
     second_token = normalized_tokens[1]
 
-    if first_token == "criar" and second_token in {"arquivo", "pasta"}:
-        if _has_out_of_scope_location(normalized_tokens[2:]):
+    if first_token == "criar":
+        target_type = ""
+        target_start = 0
+        if second_token in {"arquivo", "pasta"}:
+            target_type = second_token
+            target_start = 2
+        elif len(normalized_tokens) >= 4 and second_token in {"o", "a", "um", "uma"} and normalized_tokens[2] in {"arquivo", "pasta"}:
+            target_type = normalized_tokens[2]
+            target_start = 3
+        elif _is_probably_directory_hint(original_tokens[1]):
+            target_type = "pasta"
+            target_start = 1
+        elif _is_probably_filename(original_tokens[1]):
+            target_type = "arquivo"
+            target_start = 1
+        if not target_type:
             return None
-        target = _join_tokens(original_tokens[2:])
+        located_target = _resolve_simple_create_target(original_tokens, normalized_tokens, start=target_start)
+        if located_target is not None:
+            target, target_name, target_base = located_target
+            return _analysis(
+                action,
+                intent="criar",
+                domain="arquivo",
+                status="CONSISTENTE",
+                reason=f"pedido de criação de {target_type} com localização conversacional simples reconhecido.",
+                summary=f"Criar '{target}'.",
+                entities={
+                    "tipo": target_type,
+                    "alvo_principal": target,
+                    "destino": target_base,
+                    "localizacao_conversacional": f"nome: {target_name} | base: {target_base} | conector: em",
+                },
+                observations=[
+                    f"localização conversacional simples usada para recompor a base '{target_base}'",
+                    "execução normal atual continua no adaptador Fish",
+                ],
+            )
+        if _has_out_of_scope_location(normalized_tokens[target_start:]):
+            return None
+        target = _join_tokens(original_tokens[target_start:])
         if not target:
             return None
         return _analysis(
@@ -466,11 +595,39 @@ def _match_basic_file_action(action: PreparedAction) -> Analysis | None:
             intent="criar",
             domain="arquivo",
             status="CONSISTENTE",
-            reason=f"pedido básico de criação de {second_token} reconhecido.",
+            reason=f"pedido básico de criação de {target_type} reconhecido.",
             summary=f"Criar '{target}'.",
-            entities={"tipo": second_token, "alvo_principal": target},
+            entities={"tipo": target_type, "alvo_principal": target},
             observations=["execução normal atual continua no adaptador Fish"],
         )
+
+    if first_token == "remover" and len(normalized_tokens) == 2:
+        target = original_tokens[1]
+        target_type = ""
+        reason = ""
+        if _is_probably_directory_hint(target):
+            target_type = "pasta"
+            reason = "pedido curto de remoção de pasta reconhecido."
+        elif _is_probably_filename(target):
+            target_type = "arquivo"
+            reason = "pedido curto de remoção de arquivo reconhecido."
+        if not target_type:
+            return None
+        return _analysis(
+            action,
+            intent="remover",
+            domain="arquivo",
+            status="CONSISTENTE",
+            reason=reason,
+            summary=f"Remover '{target}'.",
+            entities={"tipo": target_type, "alvo_principal": target},
+            observations=[
+                "remoção destrutiva continua com confirmação no adaptador Fish",
+            ],
+        )
+
+    if len(normalized_tokens) < 3:
+        return None
 
     if first_token in {"copiar", "mover"} and second_token == "arquivo":
         try:
@@ -528,10 +685,21 @@ def _match_basic_file_action(action: PreparedAction) -> Analysis | None:
 
     if first_token == "remover":
         explicit_type = _explicit_file_type(normalized_tokens)
-        if explicit_type is None:
+        target_type = ""
+        target_start = 0
+        implicit_file_requires_location = False
+        if explicit_type is not None:
+            target_type, type_idx = explicit_type
+            target_start = type_idx + 1
+        elif _is_probably_directory_hint(original_tokens[1]):
+            target_type = "pasta"
+            target_start = 1
+        elif _is_probably_filename(original_tokens[1]):
+            target_type = "arquivo"
+            target_start = 1
+            implicit_file_requires_location = True
+        if not target_type:
             return None
-        target_type, type_idx = explicit_type
-        target_start = type_idx + 1
         located_target = _resolve_located_target(original_tokens, normalized_tokens, start=target_start)
         if located_target is not None:
             target, target_base = located_target
@@ -552,6 +720,28 @@ def _match_basic_file_action(action: PreparedAction) -> Analysis | None:
                     "remoção explícita continua com confirmação destrutiva no adaptador Fish",
                 ],
             )
+        simple_located_target = _resolve_simple_create_target(original_tokens, normalized_tokens, start=target_start)
+        if simple_located_target is not None:
+            target, _target_name, target_base = simple_located_target
+            return _analysis(
+                action,
+                intent="remover",
+                domain="arquivo",
+                status="CONSISTENTE",
+                reason=f"pedido de remoção de {target_type} com localização conversacional simples reconhecido.",
+                summary=f"Remover '{target}'.",
+                entities={
+                    "tipo": target_type,
+                    "alvo_principal": target,
+                    "origem": target,
+                },
+                observations=[
+                    f"localização conversacional simples usada para recompor a base '{target_base}'",
+                    "remoção destrutiva continua com confirmação no adaptador Fish",
+                ],
+            )
+        if implicit_file_requires_location:
+            return None
         if _has_out_of_scope_location(normalized_tokens[target_start:]):
             return None
         target = _join_tokens(original_tokens[target_start:])

@@ -5,7 +5,7 @@ FISH_FUNCTIONS_DIR="$HOME/.config/fish/functions"
 SHARE_DIR="$HOME/.local/share/aury"
 
 echo ""
-echo "💜 Instalando a Aury v1.6.1..."
+echo "💜 Instalando a Aury v1.6.3..."
 echo ""
 
 mkdir -p "$FISH_FUNCTIONS_DIR"

@@ -5,7 +5,7 @@ FISH_FUNCTIONS_DIR="$HOME/.config/fish/functions"
 SHARE_DIR="$HOME/.local/share/aury"
 
 echo ""
-echo "🗑 Removendo a Aury v1.6.1..."
+echo "🗑 Removendo a Aury v1.6.3..."
 echo ""
 
 rm -f "$FISH_FUNCTIONS_DIR/aury.fish"

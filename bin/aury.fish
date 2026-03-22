@@ -224,7 +224,7 @@ end
 
 function __aury_show_help
     echo "
-💜 Aury v1.6.1
+💜 Aury v1.6.3
 
 PACOTES
 aury instalar firefox
@@ -2287,6 +2287,13 @@ function __aury_detect_domain --argument-names intent
             end
         end
 
+        set -l simple_located_kind (__aury_infer_simple_located_removal_target_kind $norm_words)
+
+        if test -n "$simple_located_kind"
+            echo $simple_located_kind
+            return 0
+        end
+
         if test (count $orig_words) -gt 0
             set -l last_token $orig_words[-1]
             set -l inferred_kind (__aury_infer_explicit_removal_target_kind $last_token)
@@ -2437,6 +2444,52 @@ function __aury_infer_explicit_removal_target_kind --argument-names target
 
     if __aury_token_is_probably_path $target; or __aury_token_is_probably_filename $target
         echo arquivo
+        return 0
+    end
+
+    return 1
+end
+
+function __aury_infer_simple_located_removal_target_kind
+    set -l norm_words $argv
+    set -l orig_words $orig_words_global
+    set -l remove_idx (contains -i -- remover $norm_words)
+
+    if test -z "$remove_idx"
+        return 1
+    end
+
+    set -l start (math $remove_idx + 1)
+
+    if test (count $orig_words) -lt $start
+        return 1
+    end
+
+    set -l rel_connector (__aury_find_first_connector_index $norm_words[$start..-1])
+
+    if test -z "$rel_connector"
+        return 1
+    end
+
+    set -l conn_idx (math $start + $rel_connector - 1)
+
+    if test "$norm_words[$conn_idx]" != "em"
+        return 1
+    end
+
+    if test (count $orig_words) -le $conn_idx
+        return 1
+    end
+
+    if test (math $conn_idx - 1) -lt $start
+        return 1
+    end
+
+    set -l target_name (string join " " -- $orig_words[$start..(math $conn_idx - 1)])
+    set -l inferred_kind (__aury_infer_explicit_removal_target_kind "$target_name")
+
+    if test "$inferred_kind" = "arquivo"; or test "$inferred_kind" = "pasta"
+        echo $inferred_kind
         return 0
     end
 
@@ -2696,6 +2749,39 @@ function __aury_join_base_and_name --argument-names base name
     else
         echo "$base/$name"
     end
+end
+
+function __aury_join_location_base_and_name --argument-names base name
+    if test -z "$base"
+        echo $name
+        return 0
+    end
+
+    if test -z "$name"
+        echo $base
+        return 0
+    end
+
+    if string match -rq '.+/$' -- $name
+        set -l trimmed_name (string replace -r '/$' '' -- $name)
+
+        if test -n "$trimmed_name"
+            if not string match -rq '^(~/|/|\./|\.\./)' -- $trimmed_name
+                if not string match -rq '.+/.+' -- $trimmed_name
+                    if string match -rq '/$' -- $base
+                        echo "$base$name"
+                    else
+                        echo "$base/$name"
+                    end
+
+                    return 0
+                end
+            end
+        end
+    end
+
+    __aury_join_base_and_name "$base" "$name"
+    return 0
 end
 
 function __aury_parent_directory_or_empty --argument-names path
@@ -3068,7 +3154,31 @@ function __aury_extract_file_args
                                 set -l target_base (string join " " -- $base_tokens)
 
                                 if test -n "$target_name"; and test -n "$target_base"
-                                    set -g __aury_arg_target (__aury_join_base_and_name "$target_base" "$target_name")
+                                    set -l location_join_kind ''
+
+                                    if test "$intent" = "criar"
+                                        set location_join_kind (__aury_infer_path_kind "$target_name" "$__aury_arg_type")
+                                    else if test "$intent" = "remover"
+                                        if test "$__aury_arg_type" = "pasta"
+                                            set location_join_kind pasta
+                                        else
+                                            set location_join_kind (__aury_infer_explicit_removal_target_kind "$target_name")
+                                        end
+                                    end
+
+                                    if test "$intent" = "criar"; or test "$intent" = "remover"; and test "$location_join_kind" = "pasta"
+                                        set -g __aury_arg_target (__aury_join_location_base_and_name "$target_base" "$target_name")
+                                        set -g __aury_arg_location_name $target_name
+                                        set -g __aury_arg_location_base $target_base
+                                        set -g __aury_arg_location_connector $norm_words[$conn_idx]
+
+                                        if test -n "$location_join_kind"
+                                            set -g __aury_arg_type $location_join_kind
+                                        end
+                                    else
+                                        set -g __aury_arg_target (__aury_join_base_and_name "$target_base" "$target_name")
+                                    end
+
                                     return 0
                                 end
                             end
@@ -4053,7 +4163,7 @@ function __aury_show_shared_version
         return 0
     end
 
-    echo "💜 Aury v1.6.1"
+    echo "💜 Aury v1.6.3"
 end
 
 function __aury_show_shared_help

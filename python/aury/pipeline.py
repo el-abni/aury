@@ -8,8 +8,10 @@ from .sensitive_tokens import protect_sensitive_tokens, restore_sensitive_tokens
 
 INTENTS = {'ajuda','reload','dev','atualizar','otimizar','status','procurar','instalar','remover','criar','copiar','mover','renomear','extrair','ping','ver','internet','velocidade'}
 COMMAND_ALIASES = {
+    'crie': 'criar',
     'copie': 'copiar',
     'copia': 'copiar',
+    'procure': 'procurar',
     'renomeie': 'renomear',
     'renomeia': 'renomear',
 }

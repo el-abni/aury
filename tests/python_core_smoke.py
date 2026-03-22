@@ -117,6 +117,234 @@ def test_dev_create_folder_alignment() -> None:
     assert_in(proc.stdout, "decisão:                       voltar ao Fish")
 
 
+def test_dev_create_folder_inflected_alignment() -> None:
+    proc = run("dev", "crie", "a", "pasta", "Aury")
+    assert proc.returncode == 0
+    assert_in(proc.stdout, "trecho original:               crie a pasta Aury")
+    assert_in(proc.stdout, "trecho normalizado:            crie a pasta aury")
+    assert_in(proc.stdout, "intenção:                      criar")
+    assert_in(proc.stdout, "domínio:                       arquivo")
+    assert_in(proc.stdout, "tipo:                          pasta")
+    assert_in(proc.stdout, "alvo principal:                Aury")
+    assert_in(proc.stdout, "resumo:                        Criar 'Aury'.")
+    assert_in(proc.stdout, "candidata a migração futura")
+    assert_in(proc.stdout, "decisão:                       voltar ao Fish")
+
+
+def test_dev_create_file_inflected_alignment() -> None:
+    proc = run("dev", "crie", "um", "arquivo", "teste.txt")
+    assert proc.returncode == 0
+    assert_in(proc.stdout, "trecho original:               crie um arquivo teste.txt")
+    assert_in(proc.stdout, "trecho normalizado:            crie um arquivo teste.txt")
+    assert_in(proc.stdout, "intenção:                      criar")
+    assert_in(proc.stdout, "domínio:                       arquivo")
+    assert_in(proc.stdout, "tipo:                          arquivo")
+    assert_in(proc.stdout, "alvo principal:                teste.txt")
+    assert_in(proc.stdout, "resumo:                        Criar 'teste.txt'.")
+    assert_in(proc.stdout, "candidata a migração futura")
+    assert_in(proc.stdout, "decisão:                       voltar ao Fish")
+
+
+def test_dev_create_folder_located_alignment() -> None:
+    proc = run("dev", "criar", "pasta", "Relatorios", "em", "Downloads")
+    assert proc.returncode == 0
+    assert_in(proc.stdout, "trecho original:               criar pasta Relatorios em Downloads")
+    assert_in(proc.stdout, "intenção:                      criar")
+    assert_in(proc.stdout, "domínio:                       arquivo")
+    assert_in(proc.stdout, "tipo:                          pasta")
+    assert_in(proc.stdout, "alvo principal:                Downloads/Relatorios")
+    assert_in(proc.stdout, "destino:                       Downloads")
+    assert_in(proc.stdout, "localização conversacional:    nome: Relatorios | base: Downloads | conector: em")
+    assert_in(proc.stdout, "resumo:                        Criar 'Downloads/Relatorios'.")
+    assert_in(proc.stdout, "candidata a migração futura")
+    assert_in(proc.stdout, "decisão:                       voltar ao Fish")
+    assert_in(proc.stdout, "localização conversacional simples usada para recompor a base 'Downloads'")
+
+
+def test_dev_create_folder_located_inflected_alignment() -> None:
+    proc = run("dev", "crie", "a", "pasta", "Relatorios", "em", "Downloads")
+    assert proc.returncode == 0
+    assert_in(proc.stdout, "trecho original:               crie a pasta Relatorios em Downloads")
+    assert_in(proc.stdout, "intenção:                      criar")
+    assert_in(proc.stdout, "domínio:                       arquivo")
+    assert_in(proc.stdout, "tipo:                          pasta")
+    assert_in(proc.stdout, "alvo principal:                Downloads/Relatorios")
+    assert_in(proc.stdout, "destino:                       Downloads")
+    assert_in(proc.stdout, "localização conversacional:    nome: Relatorios | base: Downloads | conector: em")
+    assert_in(proc.stdout, "resumo:                        Criar 'Downloads/Relatorios'.")
+    assert_in(proc.stdout, "candidata a migração futura")
+    assert_in(proc.stdout, "decisão:                       voltar ao Fish")
+
+
+def test_dev_create_file_located_alignment() -> None:
+    proc = run("dev", "criar", "arquivo", "teste.txt", "em", "Downloads")
+    assert proc.returncode == 0
+    assert_in(proc.stdout, "trecho original:               criar arquivo teste.txt em Downloads")
+    assert_in(proc.stdout, "intenção:                      criar")
+    assert_in(proc.stdout, "domínio:                       arquivo")
+    assert_in(proc.stdout, "tipo:                          arquivo")
+    assert_in(proc.stdout, "alvo principal:                Downloads/teste.txt")
+    assert_in(proc.stdout, "destino:                       Downloads")
+    assert_in(proc.stdout, "localização conversacional:    nome: teste.txt | base: Downloads | conector: em")
+    assert_in(proc.stdout, "resumo:                        Criar 'Downloads/teste.txt'.")
+    assert_in(proc.stdout, "candidata a migração futura")
+    assert_in(proc.stdout, "decisão:                       voltar ao Fish")
+    assert_in(proc.stdout, "localização conversacional simples usada para recompor a base 'Downloads'")
+
+
+def test_dev_create_file_located_inflected_alignment() -> None:
+    proc = run("dev", "crie", "um", "arquivo", "teste.txt", "em", "Downloads")
+    assert proc.returncode == 0
+    assert_in(proc.stdout, "trecho original:               crie um arquivo teste.txt em Downloads")
+    assert_in(proc.stdout, "intenção:                      criar")
+    assert_in(proc.stdout, "domínio:                       arquivo")
+    assert_in(proc.stdout, "tipo:                          arquivo")
+    assert_in(proc.stdout, "alvo principal:                Downloads/teste.txt")
+    assert_in(proc.stdout, "destino:                       Downloads")
+    assert_in(proc.stdout, "localização conversacional:    nome: teste.txt | base: Downloads | conector: em")
+    assert_in(proc.stdout, "resumo:                        Criar 'Downloads/teste.txt'.")
+    assert_in(proc.stdout, "candidata a migração futura")
+    assert_in(proc.stdout, "decisão:                       voltar ao Fish")
+
+
+def test_dev_create_implicit_file_alignment() -> None:
+    proc = run("dev", "criar", "teste.txt")
+    assert proc.returncode == 0
+    assert_in(proc.stdout, "trecho original:               criar teste.txt")
+    assert_in(proc.stdout, "trecho normalizado:            criar teste.txt")
+    assert_in(proc.stdout, "intenção:                      criar")
+    assert_in(proc.stdout, "domínio:                       arquivo")
+    assert_in(proc.stdout, "tipo:                          arquivo")
+    assert_in(proc.stdout, "alvo principal:                teste.txt")
+    assert_in(proc.stdout, "resumo:                        Criar 'teste.txt'.")
+    assert_in(proc.stdout, "candidata a migração futura")
+    assert_in(proc.stdout, "decisão:                       voltar ao Fish")
+
+
+def test_dev_create_implicit_file_inflected_alignment() -> None:
+    proc = run("dev", "crie", "teste.txt")
+    assert proc.returncode == 0
+    assert_in(proc.stdout, "trecho original:               crie teste.txt")
+    assert_in(proc.stdout, "trecho normalizado:            crie teste.txt")
+    assert_in(proc.stdout, "intenção:                      criar")
+    assert_in(proc.stdout, "domínio:                       arquivo")
+    assert_in(proc.stdout, "tipo:                          arquivo")
+    assert_in(proc.stdout, "alvo principal:                teste.txt")
+    assert_in(proc.stdout, "resumo:                        Criar 'teste.txt'.")
+    assert_in(proc.stdout, "candidata a migração futura")
+    assert_in(proc.stdout, "decisão:                       voltar ao Fish")
+
+
+def test_dev_create_implicit_file_located_alignment() -> None:
+    proc = run("dev", "criar", "teste.txt", "em", "Downloads")
+    assert proc.returncode == 0
+    assert_in(proc.stdout, "trecho original:               criar teste.txt em Downloads")
+    assert_in(proc.stdout, "trecho normalizado:            criar teste.txt em downloads")
+    assert_in(proc.stdout, "intenção:                      criar")
+    assert_in(proc.stdout, "domínio:                       arquivo")
+    assert_in(proc.stdout, "tipo:                          arquivo")
+    assert_in(proc.stdout, "alvo principal:                Downloads/teste.txt")
+    assert_in(proc.stdout, "destino:                       Downloads")
+    assert_in(proc.stdout, "localização conversacional:    nome: teste.txt | base: Downloads | conector: em")
+    assert_in(proc.stdout, "resumo:                        Criar 'Downloads/teste.txt'.")
+    assert_in(proc.stdout, "candidata a migração futura")
+    assert_in(proc.stdout, "decisão:                       voltar ao Fish")
+    assert_in(proc.stdout, "localização conversacional simples usada para recompor a base 'Downloads'")
+
+
+def test_dev_create_implicit_file_located_inflected_alignment() -> None:
+    proc = run("dev", "crie", "teste.txt", "em", "Downloads")
+    assert proc.returncode == 0
+    assert_in(proc.stdout, "trecho original:               crie teste.txt em Downloads")
+    assert_in(proc.stdout, "trecho normalizado:            crie teste.txt em downloads")
+    assert_in(proc.stdout, "intenção:                      criar")
+    assert_in(proc.stdout, "domínio:                       arquivo")
+    assert_in(proc.stdout, "tipo:                          arquivo")
+    assert_in(proc.stdout, "alvo principal:                Downloads/teste.txt")
+    assert_in(proc.stdout, "destino:                       Downloads")
+    assert_in(proc.stdout, "localização conversacional:    nome: teste.txt | base: Downloads | conector: em")
+    assert_in(proc.stdout, "resumo:                        Criar 'Downloads/teste.txt'.")
+    assert_in(proc.stdout, "candidata a migração futura")
+    assert_in(proc.stdout, "decisão:                       voltar ao Fish")
+
+
+def test_dev_create_implicit_folder_alignment() -> None:
+    proc = run("dev", "criar", "projetos/")
+    assert proc.returncode == 0
+    assert_in(proc.stdout, "trecho original:               criar projetos/")
+    assert_in(proc.stdout, "trecho normalizado:            criar projetos/")
+    assert_in(proc.stdout, "intenção:                      criar")
+    assert_in(proc.stdout, "domínio:                       arquivo")
+    assert_in(proc.stdout, "tipo:                          pasta")
+    assert_in(proc.stdout, "alvo principal:                projetos/")
+    assert_in(proc.stdout, "resumo:                        Criar 'projetos/'.")
+    assert_in(proc.stdout, "candidata a migração futura")
+    assert_in(proc.stdout, "decisão:                       voltar ao Fish")
+
+
+def test_dev_create_implicit_folder_inflected_alignment() -> None:
+    proc = run("dev", "crie", "projetos/")
+    assert proc.returncode == 0
+    assert_in(proc.stdout, "trecho original:               crie projetos/")
+    assert_in(proc.stdout, "trecho normalizado:            crie projetos/")
+    assert_in(proc.stdout, "intenção:                      criar")
+    assert_in(proc.stdout, "domínio:                       arquivo")
+    assert_in(proc.stdout, "tipo:                          pasta")
+    assert_in(proc.stdout, "alvo principal:                projetos/")
+    assert_in(proc.stdout, "resumo:                        Criar 'projetos/'.")
+    assert_in(proc.stdout, "candidata a migração futura")
+    assert_in(proc.stdout, "decisão:                       voltar ao Fish")
+
+
+def test_dev_create_implicit_folder_located_alignment() -> None:
+    proc = run("dev", "criar", "projetos/", "em", "Downloads")
+    assert proc.returncode == 0
+    assert_in(proc.stdout, "trecho original:               criar projetos/ em Downloads")
+    assert_in(proc.stdout, "trecho normalizado:            criar projetos/ em downloads")
+    assert_in(proc.stdout, "intenção:                      criar")
+    assert_in(proc.stdout, "domínio:                       arquivo")
+    assert_in(proc.stdout, "tipo:                          pasta")
+    assert_in(proc.stdout, "alvo principal:                Downloads/projetos/")
+    assert_in(proc.stdout, "destino:                       Downloads")
+    assert_in(proc.stdout, "localização conversacional:    nome: projetos/ | base: Downloads | conector: em")
+    assert_in(proc.stdout, "resumo:                        Criar 'Downloads/projetos/'.")
+    assert_in(proc.stdout, "candidata a migração futura")
+    assert_in(proc.stdout, "decisão:                       voltar ao Fish")
+    assert_in(proc.stdout, "localização conversacional simples usada para recompor a base 'Downloads'")
+
+
+def test_dev_create_implicit_folder_located_inflected_alignment() -> None:
+    proc = run("dev", "crie", "projetos/", "em", "Downloads")
+    assert proc.returncode == 0
+    assert_in(proc.stdout, "trecho original:               crie projetos/ em Downloads")
+    assert_in(proc.stdout, "trecho normalizado:            crie projetos/ em downloads")
+    assert_in(proc.stdout, "intenção:                      criar")
+    assert_in(proc.stdout, "domínio:                       arquivo")
+    assert_in(proc.stdout, "tipo:                          pasta")
+    assert_in(proc.stdout, "alvo principal:                Downloads/projetos/")
+    assert_in(proc.stdout, "destino:                       Downloads")
+    assert_in(proc.stdout, "localização conversacional:    nome: projetos/ | base: Downloads | conector: em")
+    assert_in(proc.stdout, "resumo:                        Criar 'Downloads/projetos/'.")
+    assert_in(proc.stdout, "candidata a migração futura")
+    assert_in(proc.stdout, "decisão:                       voltar ao Fish")
+
+
+def test_dev_create_explicit_folder_slash_located_alignment() -> None:
+    proc = run("dev", "criar", "pasta", "projetos/", "em", "Downloads")
+    assert proc.returncode == 0
+    assert_in(proc.stdout, "trecho original:               criar pasta projetos/ em Downloads")
+    assert_in(proc.stdout, "trecho normalizado:            criar pasta projetos/ em downloads")
+    assert_in(proc.stdout, "intenção:                      criar")
+    assert_in(proc.stdout, "domínio:                       arquivo")
+    assert_in(proc.stdout, "tipo:                          pasta")
+    assert_in(proc.stdout, "alvo principal:                Downloads/projetos/")
+    assert_in(proc.stdout, "destino:                       Downloads")
+    assert_in(proc.stdout, "localização conversacional:    nome: projetos/ | base: Downloads | conector: em")
+    assert_in(proc.stdout, "resumo:                        Criar 'Downloads/projetos/'.")
+    assert_in(proc.stdout, "candidata a migração futura")
+    assert_in(proc.stdout, "decisão:                       voltar ao Fish")
+
+
 def test_dev_copy_file_alignment() -> None:
     proc = run("dev", "copiar", "arquivo", "origem/item.txt", "para", "destino/item-copia.txt")
     assert proc.returncode == 0
@@ -214,6 +442,168 @@ def test_dev_explicit_remove_located_file_alignment() -> None:
     assert_in(proc.stdout, "decisão:                       voltar ao Fish")
     assert_in(proc.stdout, "localização conversacional usada para recompor a base 'destino'")
     assert_in(proc.stdout, "confirmação destrutiva no adaptador Fish")
+
+
+def test_dev_implicit_remove_file_alignment() -> None:
+    proc = run("dev", "remover", "teste.txt")
+    assert proc.returncode == 0
+    assert_in(proc.stdout, "trecho original:               remover teste.txt")
+    assert_in(proc.stdout, "trecho normalizado:            remover teste.txt")
+    assert_in(proc.stdout, "intenção:                      remover")
+    assert_in(proc.stdout, "domínio:                       arquivo")
+    assert_in(proc.stdout, "tipo:                          arquivo")
+    assert_in(proc.stdout, "alvo principal:                teste.txt")
+    assert_in(proc.stdout, "resumo:                        Remover 'teste.txt'.")
+    assert_in(proc.stdout, "candidata a migração futura")
+    assert_in(proc.stdout, "decisão:                       voltar ao Fish")
+    assert_in(proc.stdout, "confirmação no adaptador Fish")
+
+
+def test_dev_implicit_remove_file_inflected_alignment() -> None:
+    proc = run("dev", "remova", "teste.txt")
+    assert proc.returncode == 0
+    assert_in(proc.stdout, "trecho original:               remova teste.txt")
+    assert_in(proc.stdout, "trecho normalizado:            remova teste.txt")
+    assert_in(proc.stdout, "intenção:                      remover")
+    assert_in(proc.stdout, "domínio:                       arquivo")
+    assert_in(proc.stdout, "tipo:                          arquivo")
+    assert_in(proc.stdout, "alvo principal:                teste.txt")
+    assert_in(proc.stdout, "resumo:                        Remover 'teste.txt'.")
+    assert_in(proc.stdout, "candidata a migração futura")
+    assert_in(proc.stdout, "decisão:                       voltar ao Fish")
+    assert_in(proc.stdout, "confirmação no adaptador Fish")
+
+
+def test_dev_implicit_remove_folder_alignment() -> None:
+    proc = run("dev", "remover", "projetos/")
+    assert proc.returncode == 0
+    assert_in(proc.stdout, "trecho original:               remover projetos/")
+    assert_in(proc.stdout, "trecho normalizado:            remover projetos/")
+    assert_in(proc.stdout, "intenção:                      remover")
+    assert_in(proc.stdout, "domínio:                       arquivo")
+    assert_in(proc.stdout, "tipo:                          pasta")
+    assert_in(proc.stdout, "alvo principal:                projetos/")
+    assert_in(proc.stdout, "resumo:                        Remover 'projetos/'.")
+    assert_in(proc.stdout, "candidata a migração futura")
+    assert_in(proc.stdout, "decisão:                       voltar ao Fish")
+    assert_in(proc.stdout, "confirmação no adaptador Fish")
+
+
+def test_dev_implicit_remove_folder_inflected_alignment() -> None:
+    proc = run("dev", "remova", "projetos/")
+    assert proc.returncode == 0
+    assert_in(proc.stdout, "trecho original:               remova projetos/")
+    assert_in(proc.stdout, "trecho normalizado:            remova projetos/")
+    assert_in(proc.stdout, "intenção:                      remover")
+    assert_in(proc.stdout, "domínio:                       arquivo")
+    assert_in(proc.stdout, "tipo:                          pasta")
+    assert_in(proc.stdout, "alvo principal:                projetos/")
+    assert_in(proc.stdout, "resumo:                        Remover 'projetos/'.")
+    assert_in(proc.stdout, "candidata a migração futura")
+    assert_in(proc.stdout, "decisão:                       voltar ao Fish")
+    assert_in(proc.stdout, "confirmação no adaptador Fish")
+
+
+def test_dev_implicit_remove_located_file_alignment() -> None:
+    proc = run("dev", "remover", "teste.txt", "em", "Downloads")
+    assert proc.returncode == 0
+    assert_in(proc.stdout, "trecho original:               remover teste.txt em Downloads")
+    assert_in(proc.stdout, "trecho normalizado:            remover teste.txt em downloads")
+    assert_in(proc.stdout, "intenção:                      remover")
+    assert_in(proc.stdout, "domínio:                       arquivo")
+    assert_in(proc.stdout, "tipo:                          arquivo")
+    assert_in(proc.stdout, "alvo principal:                Downloads/teste.txt")
+    assert_in(proc.stdout, "origem:                        Downloads/teste.txt")
+    assert_in(proc.stdout, "resumo:                        Remover 'Downloads/teste.txt'.")
+    assert_in(proc.stdout, "candidata a migração futura")
+    assert_in(proc.stdout, "decisão:                       voltar ao Fish")
+    assert_in(proc.stdout, "localização conversacional simples usada para recompor a base 'Downloads'")
+    assert_in(proc.stdout, "confirmação no adaptador Fish")
+
+
+def test_dev_implicit_remove_located_file_inflected_alignment() -> None:
+    proc = run("dev", "remova", "teste.txt", "em", "Downloads")
+    assert proc.returncode == 0
+    assert_in(proc.stdout, "trecho original:               remova teste.txt em Downloads")
+    assert_in(proc.stdout, "trecho normalizado:            remova teste.txt em downloads")
+    assert_in(proc.stdout, "intenção:                      remover")
+    assert_in(proc.stdout, "domínio:                       arquivo")
+    assert_in(proc.stdout, "tipo:                          arquivo")
+    assert_in(proc.stdout, "alvo principal:                Downloads/teste.txt")
+    assert_in(proc.stdout, "origem:                        Downloads/teste.txt")
+    assert_in(proc.stdout, "resumo:                        Remover 'Downloads/teste.txt'.")
+    assert_in(proc.stdout, "candidata a migração futura")
+    assert_in(proc.stdout, "decisão:                       voltar ao Fish")
+    assert_in(proc.stdout, "localização conversacional simples usada para recompor a base 'Downloads'")
+    assert_in(proc.stdout, "confirmação no adaptador Fish")
+
+
+def test_dev_implicit_remove_located_folder_alignment() -> None:
+    proc = run("dev", "remover", "projetos/", "em", "Downloads")
+    assert proc.returncode == 0
+    assert_in(proc.stdout, "trecho original:               remover projetos/ em Downloads")
+    assert_in(proc.stdout, "trecho normalizado:            remover projetos/ em downloads")
+    assert_in(proc.stdout, "intenção:                      remover")
+    assert_in(proc.stdout, "domínio:                       arquivo")
+    assert_in(proc.stdout, "tipo:                          pasta")
+    assert_in(proc.stdout, "alvo principal:                Downloads/projetos/")
+    assert_in(proc.stdout, "origem:                        Downloads/projetos/")
+    assert_in(proc.stdout, "resumo:                        Remover 'Downloads/projetos/'.")
+    assert_in(proc.stdout, "candidata a migração futura")
+    assert_in(proc.stdout, "decisão:                       voltar ao Fish")
+    assert_in(proc.stdout, "localização conversacional simples usada para recompor a base 'Downloads'")
+    assert_in(proc.stdout, "confirmação no adaptador Fish")
+
+
+def test_dev_implicit_remove_located_folder_inflected_alignment() -> None:
+    proc = run("dev", "remova", "projetos/", "em", "Downloads")
+    assert proc.returncode == 0
+    assert_in(proc.stdout, "trecho original:               remova projetos/ em Downloads")
+    assert_in(proc.stdout, "trecho normalizado:            remova projetos/ em downloads")
+    assert_in(proc.stdout, "intenção:                      remover")
+    assert_in(proc.stdout, "domínio:                       arquivo")
+    assert_in(proc.stdout, "tipo:                          pasta")
+    assert_in(proc.stdout, "alvo principal:                Downloads/projetos/")
+    assert_in(proc.stdout, "origem:                        Downloads/projetos/")
+    assert_in(proc.stdout, "resumo:                        Remover 'Downloads/projetos/'.")
+    assert_in(proc.stdout, "candidata a migração futura")
+    assert_in(proc.stdout, "decisão:                       voltar ao Fish")
+    assert_in(proc.stdout, "localização conversacional simples usada para recompor a base 'Downloads'")
+    assert_in(proc.stdout, "confirmação no adaptador Fish")
+
+
+def test_dev_explicit_remove_short_located_folder_alignment() -> None:
+    proc = run("dev", "remover", "a", "pasta", "projetos/", "em", "Downloads")
+    assert proc.returncode == 0
+    assert_in(proc.stdout, "trecho original:               remover a pasta projetos/ em Downloads")
+    assert_in(proc.stdout, "trecho normalizado:            remover a pasta projetos/ em downloads")
+    assert_in(proc.stdout, "intenção:                      remover")
+    assert_in(proc.stdout, "domínio:                       arquivo")
+    assert_in(proc.stdout, "tipo:                          pasta")
+    assert_in(proc.stdout, "alvo principal:                Downloads/projetos/")
+    assert_in(proc.stdout, "origem:                        Downloads/projetos/")
+    assert_in(proc.stdout, "resumo:                        Remover 'Downloads/projetos/'.")
+    assert_in(proc.stdout, "candidata a migração futura")
+    assert_in(proc.stdout, "decisão:                       voltar ao Fish")
+    assert_in(proc.stdout, "localização conversacional simples usada para recompor a base 'Downloads'")
+    assert_in(proc.stdout, "confirmação no adaptador Fish")
+
+
+def test_dev_explicit_remove_short_located_folder_inflected_alignment() -> None:
+    proc = run("dev", "remova", "a", "pasta", "projetos/", "em", "Downloads")
+    assert proc.returncode == 0
+    assert_in(proc.stdout, "trecho original:               remova a pasta projetos/ em Downloads")
+    assert_in(proc.stdout, "trecho normalizado:            remova a pasta projetos/ em downloads")
+    assert_in(proc.stdout, "intenção:                      remover")
+    assert_in(proc.stdout, "domínio:                       arquivo")
+    assert_in(proc.stdout, "tipo:                          pasta")
+    assert_in(proc.stdout, "alvo principal:                Downloads/projetos/")
+    assert_in(proc.stdout, "origem:                        Downloads/projetos/")
+    assert_in(proc.stdout, "resumo:                        Remover 'Downloads/projetos/'.")
+    assert_in(proc.stdout, "candidata a migração futura")
+    assert_in(proc.stdout, "decisão:                       voltar ao Fish")
+    assert_in(proc.stdout, "localização conversacional simples usada para recompor a base 'Downloads'")
+    assert_in(proc.stdout, "confirmação no adaptador Fish")
 
 
 def test_dev_extract_zip_alignment() -> None:
@@ -354,6 +744,21 @@ def test_runtime_package_search() -> None:
         proc = run("procurar", "steam", env=env)
         assert proc.returncode == 0
         assert_in(proc.stdout, "PACMAN_SEARCH_STUB")
+
+
+def test_dev_search_inflected_alignment() -> None:
+    proc = run("dev", "procure", "steam")
+    assert proc.returncode == 0
+    assert_in(proc.stdout, "trecho original:               procure steam")
+    assert_in(proc.stdout, "trecho normalizado:            procure steam")
+    assert_in(proc.stdout, "intenção:                      procurar")
+    assert_in(proc.stdout, "domínio:                       pacote")
+    assert_in(proc.stdout, "alvo principal:                steam")
+    assert_in(proc.stdout, "resumo:                        Procurar 'steam'.")
+    assert_in(proc.stdout, "suportada agora")
+    assert_in(proc.stdout, "rota suportada:                package_search")
+    assert_in(proc.stdout, "backend necessário:            pacman")
+    assert_in(proc.stdout, "decisão:                       executar no Python")
 
 
 def test_runtime_gpu() -> None:
@@ -784,6 +1189,33 @@ def test_dev_destructive_remove_chain_local_reference_alignment() -> None:
         raise AssertionError("o alvo localizado não pode continuar contaminado pelo conector antes de 'depois'")
 
 
+def test_dev_destructive_remove_chain_local_reference_inflected_alignment() -> None:
+    phrase = "remova a pasta Aury que fica em Downloads e depois remova ela"
+    proc = run("dev", *phrase.split())
+    assert proc.returncode == 0
+    assert_in(proc.stdout, "Ação 1")
+    assert_in(proc.stdout, "trecho original:               remova a pasta Aury que fica em Downloads")
+    assert_in(proc.stdout, "alvo principal:                Downloads/Aury")
+    assert_in(proc.stdout, "origem:                        Downloads/Aury")
+    assert_in(proc.stdout, "resumo:                        Remover 'Downloads/Aury'.")
+    assert_in(proc.stdout, "Ação 2")
+    assert_in(proc.stdout, "trecho original:               remova ela")
+    assert_in(proc.stdout, "intenção:                      remover")
+    assert_in(proc.stdout, "domínio:                       arquivo")
+    assert_in(proc.stdout, "tipo:                          pasta")
+    assert_in(proc.stdout, "alvo principal:                Downloads/Aury")
+    assert_in(proc.stdout, "origem:                        Downloads/Aury")
+    assert_in(proc.stdout, "referência local:              Downloads/Aury")
+    assert_in(proc.stdout, "estado:                        BLOQUEADA")
+    assert_in(proc.stdout, "lacunas:                       alinhamento com runtime atual")
+    assert_in(proc.stdout, "resumo:                        Remoção de 'Downloads/Aury' reconhecida, mas bloqueada no estado atual.")
+    assert_in(proc.stdout, "foi resolvida com segurança como 'Downloads/Aury'")
+    assert_in(proc.stdout, "referência local 'ela' resolvida com segurança como 'Downloads/Aury'")
+    assert_in(proc.stdout, "runtime legado atual ainda bloqueia continuação destrutiva anafórica equivalente")
+    if "Downloads e/Aury" in proc.stdout:
+        raise AssertionError("o alvo localizado não pode continuar contaminado pelo conector antes de 'depois'")
+
+
 def test_dev_destructive_remove_with_previous_package_context_blocks_local_reference() -> None:
     phrase = "procurar steam e depois remover ele"
     proc = run("dev", *phrase.split())
@@ -859,6 +1291,21 @@ def main() -> int:
         test_dev_network_speed_rede_alignment,
         test_dev_create_file_alignment,
         test_dev_create_folder_alignment,
+        test_dev_create_folder_inflected_alignment,
+        test_dev_create_file_inflected_alignment,
+        test_dev_create_folder_located_alignment,
+        test_dev_create_folder_located_inflected_alignment,
+        test_dev_create_file_located_alignment,
+        test_dev_create_file_located_inflected_alignment,
+        test_dev_create_implicit_file_alignment,
+        test_dev_create_implicit_file_inflected_alignment,
+        test_dev_create_implicit_file_located_alignment,
+        test_dev_create_implicit_file_located_inflected_alignment,
+        test_dev_create_implicit_folder_alignment,
+        test_dev_create_implicit_folder_inflected_alignment,
+        test_dev_create_implicit_folder_located_alignment,
+        test_dev_create_implicit_folder_located_inflected_alignment,
+        test_dev_create_explicit_folder_slash_located_alignment,
         test_dev_copy_file_alignment,
         test_dev_move_file_alignment,
         test_dev_rename_file_alignment,
@@ -866,6 +1313,16 @@ def main() -> int:
         test_dev_explicit_remove_folder_alignment,
         test_dev_explicit_remove_located_folder_alignment,
         test_dev_explicit_remove_located_file_alignment,
+        test_dev_implicit_remove_file_alignment,
+        test_dev_implicit_remove_file_inflected_alignment,
+        test_dev_implicit_remove_folder_alignment,
+        test_dev_implicit_remove_folder_inflected_alignment,
+        test_dev_implicit_remove_located_file_alignment,
+        test_dev_implicit_remove_located_file_inflected_alignment,
+        test_dev_implicit_remove_located_folder_alignment,
+        test_dev_implicit_remove_located_folder_inflected_alignment,
+        test_dev_explicit_remove_short_located_folder_alignment,
+        test_dev_explicit_remove_short_located_folder_inflected_alignment,
         test_dev_extract_zip_alignment,
         test_dev_extract_tar_gz_alignment,
         test_dev_extract_conversational_destination_alignment,
@@ -875,6 +1332,7 @@ def main() -> int:
         test_runtime_speedtest,
         test_runtime_ping,
         test_runtime_package_search,
+        test_dev_search_inflected_alignment,
         test_runtime_gpu,
         test_runtime_multi_action_supported,
         test_runtime_multi_action_unsupported_no_partial,
@@ -898,6 +1356,7 @@ def main() -> int:
         test_dev_multiple_actions,
         test_dev_destructive_remove_without_safe_antecedent_blocks_local_reference,
         test_dev_destructive_remove_chain_local_reference_alignment,
+        test_dev_destructive_remove_chain_local_reference_inflected_alignment,
         test_dev_destructive_remove_with_previous_package_context_blocks_local_reference,
         test_dev_destructive_remove_with_previous_file_context_blocks_incompatible_local_reference,
         test_dev_destructive_remove_followup_reuses_safe_file_reference,

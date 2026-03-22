@@ -47,6 +47,46 @@ require_in_output "$fallback_output" "aury ajuda" "fallback precisa oferecer aju
 blocked_output="$(fish -c "source '$ROOT/bin/aury.fish'; aury remover ela" 2>&1 || true)"
 require_in_output "$blocked_output" "não vou remover nada sem um alvo explícito." "remoção sem alvo seguro deve bloquear explicitamente"
 
+dev_diag_speed_extract_output="$(ROOT="$ROOT" fish -c 'source $ROOT/bin/aury.fish; aury dev velocidade da rede; echo ---CASE2---; aury dev extrair pacote.zip' 2>&1 || true)"
+require_in_output "$dev_diag_speed_extract_output" "trecho original:               velocidade da rede" "'aury dev velocidade da rede' precisa expor o trecho original correto"
+require_in_output "$dev_diag_speed_extract_output" "intenção:                      velocidade" "'aury dev velocidade da rede' precisa restaurar a intenção de velocidade"
+require_in_output "$dev_diag_speed_extract_output" "domínio:                       rede" "'aury dev velocidade da rede' precisa restaurar o domínio de rede"
+require_in_output "$dev_diag_speed_extract_output" "alvo principal:                velocidade da rede" "'aury dev velocidade da rede' precisa restaurar o alvo consolidado"
+require_in_output "$dev_diag_speed_extract_output" "resumo:                        Medir a velocidade da rede." "'aury dev velocidade da rede' precisa restaurar o resumo de speedtest"
+require_in_output "$dev_diag_speed_extract_output" "trecho original:               extrair pacote.zip" "'aury dev extrair pacote.zip' precisa expor o trecho original correto"
+require_in_output "$dev_diag_speed_extract_output" "estado:                        CONSISTENTE" "'aury dev extrair pacote.zip' não pode voltar a parcial"
+require_in_output "$dev_diag_speed_extract_output" "arquivo compactado:            pacote.zip" "'aury dev extrair pacote.zip' precisa expor o arquivo compactado"
+require_in_output "$dev_diag_speed_extract_output" "destino:                       ./pacote" "'aury dev extrair pacote.zip' precisa restaurar o destino padrão"
+require_in_output "$dev_diag_speed_extract_output" "Extrair 'pacote.zip' para './pacote'." "'aury dev extrair pacote.zip' precisa restaurar o resumo com destino padrão"
+
+dev_diag_regression_output="$(ROOT="$ROOT" fish -c 'source $ROOT/bin/aury.fish; aury dev copie a pasta Aury que fica em origem para destino e renomeie ela para Aury-backup; echo ---CASE4---; aury dev remova a pasta projetos/ em Downloads; echo ---CASE5---; aury dev remova teste.txt em Downloads' 2>&1 || true)"
+require_in_output "$dev_diag_regression_output" "trecho original:               copie a pasta Aury que fica em origem para destino" "a cópia localizada em aury dev precisa manter o trecho original da regressão"
+require_in_output "$dev_diag_regression_output" "origem:                        origem/Aury" "a cópia localizada em aury dev precisa restaurar a origem recomposta"
+require_in_output "$dev_diag_regression_output" "destino:                       destino/Aury" "a cópia localizada em aury dev precisa restaurar o destino recomposto"
+require_in_output "$dev_diag_regression_output" "trecho original:               renomeie ela para Aury-backup" "a renomeação anafórica em aury dev precisa preservar a segunda ação"
+require_in_output "$dev_diag_regression_output" "referência local:              destino/Aury" "a renomeação anafórica em aury dev precisa preservar a referência local específica"
+require_in_output "$dev_diag_regression_output" "destino:                       destino/Aury-backup" "a renomeação anafórica em aury dev precisa restaurar a base final correta"
+require_in_output "$dev_diag_regression_output" "trecho original:               remova a pasta projetos/ em Downloads" "'aury dev remova a pasta projetos/ em Downloads' precisa expor o trecho original correto"
+require_in_output "$dev_diag_regression_output" "alvo principal:                Downloads/projetos/" "'aury dev remova a pasta projetos/ em Downloads' precisa recompor a base correta"
+require_in_output "$dev_diag_regression_output" "origem:                        Downloads/projetos/" "'aury dev remova a pasta projetos/ em Downloads' precisa expor a origem recomposta"
+require_in_output "$dev_diag_regression_output" "trecho original:               remova teste.txt em Downloads" "'aury dev remova teste.txt em Downloads' precisa expor o trecho original correto"
+require_in_output "$dev_diag_regression_output" "tipo:                          arquivo" "'aury dev remova teste.txt em Downloads' precisa permanecer enquadrada como arquivo"
+require_in_output "$dev_diag_regression_output" "alvo principal:                Downloads/teste.txt" "'aury dev remova teste.txt em Downloads' precisa recompor o alvo final"
+require_in_output "$dev_diag_regression_output" "origem:                        Downloads/teste.txt" "'aury dev remova teste.txt em Downloads' precisa expor a origem recomposta"
+
+dev_diag_anaphoric_output="$(ROOT="$ROOT" fish -c 'source $ROOT/bin/aury.fish; aury dev remover ela; echo ---CASE6B---; aury dev procurar steam e depois remover ele; echo ---CASE6C---; aury dev remova a pasta Aury que fica em Downloads e depois remova ela' 2>&1 || true)"
+require_in_output "$dev_diag_anaphoric_output" "trecho original:               remover ela" "'aury dev remover ela' precisa expor o trecho original correto"
+require_in_output "$dev_diag_anaphoric_output" "referência local:              ela (não resolvida)" "'aury dev remover ela' precisa manter a referência local explícita"
+require_in_output "$dev_diag_anaphoric_output" "não há antecedente seguro nesta ação destrutiva isolada" "'aury dev remover ela' precisa manter o bloqueio honesto"
+require_in_output "$dev_diag_anaphoric_output" "trecho original:               remover ele" "'aury dev procurar steam e depois remover ele' precisa preservar a segunda ação destrutiva"
+require_in_output "$dev_diag_anaphoric_output" "referência local:              ele" "'aury dev procurar steam e depois remover ele' precisa manter a referência local explícita"
+require_in_output "$dev_diag_anaphoric_output" "contexto anterior insuficiente ou incompatível" "'aury dev procurar steam e depois remover ele' precisa expor o contexto anterior incompatível"
+require_in_output "$dev_diag_anaphoric_output" "trecho original:               remova ela" "'aury dev remova a pasta Aury que fica em Downloads e depois remova ela' precisa preservar a segunda ação infletida"
+require_in_output "$dev_diag_anaphoric_output" "referência local:              Downloads/Aury" "'aury dev remova a pasta Aury que fica em Downloads e depois remova ela' precisa manter a referência local resolvida"
+require_in_output "$dev_diag_anaphoric_output" "Remoção de 'Downloads/Aury' reconhecida, mas bloqueada no estado atual." "'aury dev remova ... e depois remova ela' precisa manter o bloqueio prudente com diagnóstico rico"
+require_in_output "$dev_diag_anaphoric_output" "runtime legado atual ainda bloqueia continuação destrutiva anafórica equivalente" "'aury dev remova ... e depois remova ela' precisa manter a observabilidade fina"
+require_not_in_output "$dev_diag_anaphoric_output" "alvo principal:                ele" "anáfora destrutiva incompatível não pode regredir para alvo genérico"
+
 rename_chain_tmp="$(mktemp -d /tmp/aury-public-ux-XXXXXX)"
 tmpdirs+=("$rename_chain_tmp")
 mkdir -p "$rename_chain_tmp/Documentos/Aury" "$rename_chain_tmp/Downloads"
@@ -64,6 +104,76 @@ if [[ ! -d "$rename_chain_tmp/Downloads/Aury-backup" || -e "$rename_chain_tmp/Au
     fail "copiar -> renomear ela precisa materializar apenas o destino final dentro de Downloads"
 fi
 
+create_located_tmp="$(mktemp -d /tmp/aury-public-ux-XXXXXX)"
+tmpdirs+=("$create_located_tmp")
+mkdir -p "$create_located_tmp/Downloads"
+
+create_located_output="$(ROOT="$ROOT" TMP="$create_located_tmp" fish -c 'source $ROOT/bin/aury.fish; cd $TMP; aury criar pasta Relatorios em Downloads; aury criar arquivo teste.txt em Downloads; echo ---DEV1---; aury dev criar pasta Relatorios em Downloads; echo ---DEV2---; aury dev crie a pasta Relatorios em Downloads; echo ---DEV3---; aury dev criar arquivo teste.txt em Downloads; echo ---DEV4---; aury dev crie um arquivo teste.txt em Downloads' 2>&1 || true)"
+require_in_output "$create_located_output" "eu criei a pasta 'Downloads/Relatorios'" "criação localizada de pasta no modo normal deve materializar o alvo recomposto"
+require_in_output "$create_located_output" "eu criei o arquivo 'Downloads/teste.txt'" "criação localizada de arquivo no modo normal deve materializar o alvo recomposto"
+require_in_output "$create_located_output" "trecho original:               criar pasta Relatorios em Downloads" "'aury dev criar pasta ... em Downloads' precisa fechar a leitura localizada"
+require_in_output "$create_located_output" "trecho original:               crie a pasta Relatorios em Downloads" "'aury dev crie a pasta ... em Downloads' precisa fechar a leitura localizada"
+require_in_output "$create_located_output" "trecho original:               criar arquivo teste.txt em Downloads" "'aury dev criar arquivo ... em Downloads' precisa fechar a leitura localizada"
+require_in_output "$create_located_output" "trecho original:               crie um arquivo teste.txt em Downloads" "'aury dev crie um arquivo ... em Downloads' precisa fechar a leitura localizada"
+require_in_output "$create_located_output" "alvo principal:                Downloads/Relatorios" "criação localizada de pasta em aury dev precisa recompor o alvo final"
+require_in_output "$create_located_output" "alvo principal:                Downloads/teste.txt" "criação localizada de arquivo em aury dev precisa recompor o alvo final"
+require_in_output "$create_located_output" "destino:                       Downloads" "criação localizada em aury dev precisa expor a base de destino"
+require_in_output "$create_located_output" "localização conversacional:    nome: Relatorios | base: Downloads | conector: em" "criação localizada de pasta em aury dev precisa expor a localização conversacional"
+require_in_output "$create_located_output" "localização conversacional:    nome: teste.txt | base: Downloads | conector: em" "criação localizada de arquivo em aury dev precisa expor a localização conversacional"
+require_in_output "$create_located_output" "Criar 'Downloads/Relatorios'." "criação localizada de pasta em aury dev precisa resumir o alvo recomposto"
+require_in_output "$create_located_output" "Criar 'Downloads/teste.txt'." "criação localizada de arquivo em aury dev precisa resumir o alvo recomposto"
+
+if [[ ! -d "$create_located_tmp/Downloads/Relatorios" || ! -f "$create_located_tmp/Downloads/teste.txt" ]]; then
+    fail "criação localizada precisa materializar apenas os alvos esperados dentro de Downloads"
+fi
+
+create_implicit_tmp="$(mktemp -d /tmp/aury-public-ux-XXXXXX)"
+tmpdirs+=("$create_implicit_tmp")
+mkdir -p "$create_implicit_tmp/Downloads"
+
+create_implicit_output="$(ROOT="$ROOT" TMP="$create_implicit_tmp" fish -c 'source $ROOT/bin/aury.fish; cd $TMP; aury criar teste.txt; aury crie teste.txt; aury criar teste.txt em Downloads; aury crie teste.txt em Downloads; echo ---DEV1---; aury dev criar teste.txt; echo ---DEV2---; aury dev crie teste.txt; echo ---DEV3---; aury dev criar teste.txt em Downloads; echo ---DEV4---; aury dev crie teste.txt em Downloads' 2>&1 || true)"
+require_in_output "$create_implicit_output" "eu criei o arquivo 'teste.txt'" "criação implícita simples no modo normal deve continuar tratando o alvo como arquivo"
+require_in_output "$create_implicit_output" "eu criei o arquivo 'Downloads/teste.txt'" "criação implícita localizada no modo normal deve continuar tratando o alvo como arquivo"
+require_in_output "$create_implicit_output" "trecho original:               criar teste.txt" "'aury dev criar teste.txt' precisa fechar a leitura implícita de arquivo"
+require_in_output "$create_implicit_output" "trecho original:               crie teste.txt" "'aury dev crie teste.txt' precisa fechar a leitura implícita de arquivo"
+require_in_output "$create_implicit_output" "trecho original:               criar teste.txt em Downloads" "'aury dev criar teste.txt em Downloads' precisa fechar a leitura implícita localizada"
+require_in_output "$create_implicit_output" "trecho original:               crie teste.txt em Downloads" "'aury dev crie teste.txt em Downloads' precisa fechar a leitura implícita localizada"
+require_in_output "$create_implicit_output" "tipo:                          arquivo" "criação implícita em aury dev precisa permanecer enquadrada como arquivo"
+require_in_output "$create_implicit_output" "alvo principal:                teste.txt" "criação implícita simples em aury dev precisa preservar o alvo do arquivo"
+require_in_output "$create_implicit_output" "alvo principal:                Downloads/teste.txt" "criação implícita localizada em aury dev precisa recompor o alvo final"
+require_in_output "$create_implicit_output" "destino:                       Downloads" "criação implícita localizada em aury dev precisa expor a base de destino"
+require_in_output "$create_implicit_output" "localização conversacional:    nome: teste.txt | base: Downloads | conector: em" "criação implícita localizada em aury dev precisa expor a localização conversacional"
+require_in_output "$create_implicit_output" "Criar 'teste.txt'." "criação implícita simples em aury dev precisa resumir o arquivo"
+require_in_output "$create_implicit_output" "Criar 'Downloads/teste.txt'." "criação implícita localizada em aury dev precisa resumir o alvo recomposto"
+
+if [[ ! -f "$create_implicit_tmp/teste.txt" || ! -f "$create_implicit_tmp/Downloads/teste.txt" ]]; then
+    fail "criação implícita precisa materializar apenas os arquivos esperados"
+fi
+
+create_implicit_folder_tmp="$(mktemp -d /tmp/aury-public-ux-XXXXXX)"
+tmpdirs+=("$create_implicit_folder_tmp")
+mkdir -p "$create_implicit_folder_tmp/Downloads"
+
+create_implicit_folder_output="$(ROOT="$ROOT" TMP="$create_implicit_folder_tmp" fish -c 'source $ROOT/bin/aury.fish; cd $TMP; aury criar projetos/; aury crie projetos/; aury criar projetos/ em Downloads; aury crie projetos/ em Downloads; aury criar pasta projetos/ em Downloads; echo ---DEV1---; aury dev criar projetos/; echo ---DEV2---; aury dev crie projetos/; echo ---DEV3---; aury dev criar projetos/ em Downloads; echo ---DEV4---; aury dev crie projetos/ em Downloads; echo ---DEV5---; aury dev criar pasta projetos/ em Downloads' 2>&1 || true)"
+require_in_output "$create_implicit_folder_output" "eu criei a pasta 'projetos/'" "criação implícita simples de pasta no modo normal deve continuar inferindo pasta"
+require_in_output "$create_implicit_folder_output" "eu criei a pasta 'Downloads/projetos/'" "criação implícita localizada de pasta no modo normal deve recompôr a base correta"
+require_in_output "$create_implicit_folder_output" "trecho original:               criar projetos/" "'aury dev criar projetos/' precisa fechar a inferência implícita de pasta"
+require_in_output "$create_implicit_folder_output" "trecho original:               crie projetos/" "'aury dev crie projetos/' precisa fechar a inferência implícita de pasta"
+require_in_output "$create_implicit_folder_output" "trecho original:               criar projetos/ em Downloads" "'aury dev criar projetos/ em Downloads' precisa fechar a inferência implícita localizada de pasta"
+require_in_output "$create_implicit_folder_output" "trecho original:               crie projetos/ em Downloads" "'aury dev crie projetos/ em Downloads' precisa fechar a inferência implícita localizada de pasta"
+require_in_output "$create_implicit_folder_output" "trecho original:               criar pasta projetos/ em Downloads" "'aury dev criar pasta projetos/ em Downloads' precisa preservar a base localizada com barra final"
+require_in_output "$create_implicit_folder_output" "tipo:                          pasta" "criação implícita de pasta em aury dev precisa permanecer enquadrada como pasta"
+require_in_output "$create_implicit_folder_output" "alvo principal:                projetos/" "criação implícita de pasta em aury dev precisa preservar o alvo inferido"
+require_in_output "$create_implicit_folder_output" "alvo principal:                Downloads/projetos/" "criação implícita localizada de pasta em aury dev precisa recompor o alvo final"
+require_in_output "$create_implicit_folder_output" "destino:                       Downloads" "criação implícita localizada de pasta em aury dev precisa expor a base de destino"
+require_in_output "$create_implicit_folder_output" "localização conversacional:    nome: projetos/ | base: Downloads | conector: em" "criação implícita localizada de pasta em aury dev precisa expor a localização conversacional"
+require_in_output "$create_implicit_folder_output" "Criar 'projetos/'." "criação implícita de pasta em aury dev precisa resumir o alvo efetivamente fechado"
+require_in_output "$create_implicit_folder_output" "Criar 'Downloads/projetos/'." "criação implícita localizada de pasta em aury dev precisa resumir o alvo recomposto"
+
+if [[ ! -d "$create_implicit_folder_tmp/projetos" || ! -d "$create_implicit_folder_tmp/Downloads/projetos" ]]; then
+    fail "criação implícita de pasta precisa refletir o comportamento canônico atual do Fish com e sem base localizada"
+fi
+
 confirm_tmp="$(mktemp -d /tmp/aury-public-ux-XXXXXX)"
 tmpdirs+=("$confirm_tmp")
 
@@ -71,6 +181,80 @@ confirm_output="$(ROOT="$ROOT" TMP="$confirm_tmp" fish -c 'source $ROOT/bin/aury
 require_in_output "$confirm_output" "Confirma? [s/N]" "remoção precisa pedir confirmação explícita"
 require_in_output "$confirm_output" "eu não removi 'teste.txt'." "negação de confirmação deve cancelar a remoção"
 require_in_output "$confirm_output" "STILL_PRESENT" "arquivo deve permanecer quando a confirmação não for positiva"
+
+remove_simple_file_tmp="$(mktemp -d /tmp/aury-public-ux-XXXXXX)"
+tmpdirs+=("$remove_simple_file_tmp")
+
+remove_simple_file_output="$(ROOT="$ROOT" TMP="$remove_simple_file_tmp" fish -c 'source $ROOT/bin/aury.fish; cd $TMP; touch teste.txt; printf \"n\n\" | aury remover teste.txt; printf \"n\n\" | aury remova teste.txt; if test -e teste.txt; echo STILL_PRESENT; else; echo REMOVED; end; echo ---DEV1---; aury dev remover teste.txt; echo ---DEV2---; aury dev remova teste.txt' 2>&1 || true)"
+require_in_output "$remove_simple_file_output" "Confirma? [s/N]" "remoção curta simples de arquivo precisa continuar exigindo confirmação destrutiva"
+require_in_output "$remove_simple_file_output" "eu não removi 'teste.txt'." "negação de confirmação precisa cancelar a remoção curta simples de arquivo"
+require_in_output "$remove_simple_file_output" "STILL_PRESENT" "remoção curta simples negada precisa preservar o arquivo local"
+require_in_output "$remove_simple_file_output" "trecho original:               remover teste.txt" "'aury dev remover teste.txt' precisa fechar a leitura curta simples de arquivo"
+require_in_output "$remove_simple_file_output" "trecho original:               remova teste.txt" "'aury dev remova teste.txt' precisa fechar a leitura curta simples de arquivo"
+require_in_output "$remove_simple_file_output" "domínio:                       arquivo" "remoção curta simples de arquivo em aury dev não pode continuar enquadrada como pacote"
+require_in_output "$remove_simple_file_output" "tipo:                          arquivo" "remoção curta simples de arquivo em aury dev precisa permanecer enquadrada como arquivo"
+require_in_output "$remove_simple_file_output" "alvo principal:                teste.txt" "remoção curta simples de arquivo em aury dev precisa preservar o alvo do arquivo"
+require_in_output "$remove_simple_file_output" "Remover 'teste.txt'." "remoção curta simples de arquivo em aury dev precisa resumir o alvo do arquivo"
+require_in_output "$remove_simple_file_output" "confirmação no adaptador Fish" "remoção curta simples de arquivo em aury dev precisa manter a prudência destrutiva no adaptador"
+require_not_in_output "$remove_simple_file_output" "domínio:                       pacote" "remoção curta simples de arquivo em aury dev não pode recair para pacote"
+
+remove_simple_folder_tmp="$(mktemp -d /tmp/aury-public-ux-XXXXXX)"
+tmpdirs+=("$remove_simple_folder_tmp")
+
+remove_simple_folder_output="$(ROOT="$ROOT" TMP="$remove_simple_folder_tmp" fish -c 'source $ROOT/bin/aury.fish; cd $TMP; mkdir -p projetos; printf \"n\n\" | aury remover projetos/; printf \"n\n\" | aury remova projetos/; if test -d projetos; echo STILL_PRESENT; else; echo REMOVED; end; echo ---DEV1---; aury dev remover projetos/; echo ---DEV2---; aury dev remova projetos/' 2>&1 || true)"
+require_in_output "$remove_simple_folder_output" "Confirma? [s/N]" "remoção curta simples de pasta precisa continuar exigindo confirmação destrutiva"
+require_in_output "$remove_simple_folder_output" "eu não removi 'projetos/'." "negação de confirmação precisa cancelar a remoção curta simples de pasta"
+require_in_output "$remove_simple_folder_output" "STILL_PRESENT" "remoção curta simples negada precisa preservar a pasta local"
+require_in_output "$remove_simple_folder_output" "trecho original:               remover projetos/" "'aury dev remover projetos/' precisa fechar a leitura curta simples de pasta"
+require_in_output "$remove_simple_folder_output" "trecho original:               remova projetos/" "'aury dev remova projetos/' precisa fechar a leitura curta simples de pasta"
+require_in_output "$remove_simple_folder_output" "domínio:                       arquivo" "remoção curta simples de pasta em aury dev não pode continuar enquadrada como pacote"
+require_in_output "$remove_simple_folder_output" "tipo:                          pasta" "remoção curta simples de pasta em aury dev precisa permanecer enquadrada como pasta"
+require_in_output "$remove_simple_folder_output" "alvo principal:                projetos/" "remoção curta simples de pasta em aury dev precisa preservar o alvo da pasta"
+require_in_output "$remove_simple_folder_output" "Remover 'projetos/'." "remoção curta simples de pasta em aury dev precisa resumir o alvo da pasta"
+require_in_output "$remove_simple_folder_output" "confirmação no adaptador Fish" "remoção curta simples de pasta em aury dev precisa manter a prudência destrutiva no adaptador"
+require_not_in_output "$remove_simple_folder_output" "domínio:                       pacote" "remoção curta simples de pasta em aury dev não pode recair para pacote"
+
+remove_located_file_tmp="$(mktemp -d /tmp/aury-public-ux-XXXXXX)"
+tmpdirs+=("$remove_located_file_tmp")
+mkdir -p "$remove_located_file_tmp/Downloads"
+touch "$remove_located_file_tmp/Downloads/teste.txt"
+
+remove_located_file_output="$(ROOT="$ROOT" TMP="$remove_located_file_tmp" fish -c 'source $ROOT/bin/aury.fish; cd $TMP; printf \"n\n\" | aury remover teste.txt em Downloads; printf \"n\n\" | aury remova teste.txt em Downloads; echo ---DEV1---; aury dev remover teste.txt em Downloads; echo ---DEV2---; aury dev remova teste.txt em Downloads' 2>&1 || true)"
+require_in_output "$remove_located_file_output" "Confirma? [s/N]" "remoção localizada curta de arquivo precisa continuar exigindo confirmação destrutiva"
+require_in_output "$remove_located_file_output" "eu não removi 'Downloads/teste.txt'." "negação de confirmação precisa cancelar a remoção localizada curta recomposta"
+require_in_output "$remove_located_file_output" "trecho original:               remover teste.txt em Downloads" "'aury dev remover teste.txt em Downloads' precisa fechar a leitura localizada curta de arquivo"
+require_in_output "$remove_located_file_output" "trecho original:               remova teste.txt em Downloads" "'aury dev remova teste.txt em Downloads' precisa fechar a leitura localizada curta de arquivo"
+require_in_output "$remove_located_file_output" "domínio:                       arquivo" "remoção localizada curta de arquivo em aury dev não pode continuar enquadrada como pacote"
+require_in_output "$remove_located_file_output" "tipo:                          arquivo" "remoção localizada curta de arquivo em aury dev precisa permanecer enquadrada como arquivo"
+require_in_output "$remove_located_file_output" "alvo principal:                Downloads/teste.txt" "remoção localizada curta de arquivo em aury dev precisa recompor o alvo final"
+require_in_output "$remove_located_file_output" "origem:                        Downloads/teste.txt" "remoção localizada curta de arquivo em aury dev precisa expor a origem recomposta"
+require_in_output "$remove_located_file_output" "Remover 'Downloads/teste.txt'." "remoção localizada curta de arquivo em aury dev precisa resumir o alvo recomposto"
+require_in_output "$remove_located_file_output" "localização conversacional simples usada para recompor a base 'Downloads'" "remoção localizada curta de arquivo em aury dev precisa registrar a recomposição da base"
+
+if [[ ! -f "$remove_located_file_tmp/Downloads/teste.txt" ]]; then
+    fail "remoção localizada curta de arquivo com confirmação negada precisa preservar o alvo recomposto em Downloads"
+fi
+
+remove_located_folder_tmp="$(mktemp -d /tmp/aury-public-ux-XXXXXX)"
+tmpdirs+=("$remove_located_folder_tmp")
+mkdir -p "$remove_located_folder_tmp/Downloads/projetos"
+
+remove_located_folder_output="$(ROOT="$ROOT" TMP="$remove_located_folder_tmp" fish -c 'source $ROOT/bin/aury.fish; cd $TMP; printf \"n\n\" | aury remover projetos/ em Downloads; printf \"n\n\" | aury remova projetos/ em Downloads; printf \"n\n\" | aury remover a pasta projetos/ em Downloads; echo ---DEV1---; aury dev remover projetos/ em Downloads; echo ---DEV2---; aury dev remova projetos/ em Downloads; echo ---DEV3---; aury dev remover a pasta projetos/ em Downloads' 2>&1 || true)"
+require_in_output "$remove_located_folder_output" "Confirma? [s/N]" "remoção localizada de pasta precisa continuar exigindo confirmação destrutiva"
+require_in_output "$remove_located_folder_output" "eu não removi 'Downloads/projetos/'." "negação de confirmação precisa cancelar a remoção localizada recomposta"
+require_in_output "$remove_located_folder_output" "trecho original:               remover projetos/ em Downloads" "'aury dev remover projetos/ em Downloads' precisa fechar a leitura localizada de pasta"
+require_in_output "$remove_located_folder_output" "trecho original:               remova projetos/ em Downloads" "'aury dev remova projetos/ em Downloads' precisa fechar a leitura localizada de pasta"
+require_in_output "$remove_located_folder_output" "trecho original:               remover a pasta projetos/ em Downloads" "'aury dev remover a pasta projetos/ em Downloads' precisa preservar a base localizada"
+require_in_output "$remove_located_folder_output" "domínio:                       arquivo" "remoção localizada de pasta em aury dev não pode continuar enquadrada como pacote"
+require_in_output "$remove_located_folder_output" "tipo:                          pasta" "remoção localizada de pasta em aury dev precisa permanecer enquadrada como pasta"
+require_in_output "$remove_located_folder_output" "alvo principal:                Downloads/projetos/" "remoção localizada de pasta em aury dev precisa recompor o alvo final"
+require_in_output "$remove_located_folder_output" "origem:                        Downloads/projetos/" "remoção localizada de pasta em aury dev precisa expor a origem recomposta"
+require_in_output "$remove_located_folder_output" "Remover 'Downloads/projetos/'." "remoção localizada de pasta em aury dev precisa resumir o alvo recomposto"
+require_in_output "$remove_located_folder_output" "localização conversacional simples usada para recompor a base 'Downloads'" "remoção localizada de pasta em aury dev precisa registrar a recomposição da base"
+
+if [[ ! -d "$remove_located_folder_tmp/Downloads/projetos" ]]; then
+    fail "remoção localizada de pasta com confirmação negada precisa preservar o alvo recomposto em Downloads"
+fi
 
 anaphoric_confirm_tmp="$(mktemp -d /tmp/aury-public-ux-XXXXXX)"
 tmpdirs+=("$anaphoric_confirm_tmp")

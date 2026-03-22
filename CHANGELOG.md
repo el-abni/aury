@@ -6,6 +6,19 @@ A linha principal pública da **💜 Aury** está planejada até a **v1.9**. Est
 
 ---
 
+## v1.6.3
+
+### Consolidado
+- fechamento público final da linha 1.6.x no repositório canônico
+
+### Documentação e apresentação pública
+- `README.md`, instalação pública e documentação de apoio passam a refletir `# 💜 Aury`, a versão pública `v1.6.3` e o fluxo real atual
+- o estado público da linha `v1.6.1` / `v1.6.2` / `v1.6.3` fica registrado de forma explícita, sem sugerir `v1.6` como etapa futura
+
+### Compatibilidade e limites
+- sem ampliação de escopo funcional da Aury neste bloco
+- o contrato operacional segue o recorte já entregue pela linha 1.6.x
+
 ## v1.6.2
 
 ### Consolidado
