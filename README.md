@@ -1,6 +1,6 @@
 # 💜 Aury
 
-![version](https://img.shields.io/badge/version-v1.6.0-purple)
+![version](https://img.shields.io/badge/version-v1.6.1-purple)
 ![shell](https://img.shields.io/badge/shell-fish-blue)
 ![platform](https://img.shields.io/badge/platform-CachyOS-orange)
 ![license](https://img.shields.io/badge/license-MIT-green)
@@ -10,6 +10,8 @@
 Ela permite executar tarefas do sistema usando **linguagem natural**, traduzindo frases humanas em ações reais no terminal. A proposta do projeto é reduzir fricção, acelerar tarefas comuns e tornar o uso do terminal mais natural sem perder o poder das ferramentas tradicionais.
 
 ---
+
+> Estado público real da **v1.6.1**: a entrada continua em Fish, mas `help`, `version`, `dev <frase>` e as rotas Python já suportadas passam por um núcleo Python; o restante segue no adaptador Fish com fallback explícito.
 
 ## O que é a Aury
 
@@ -113,27 +115,33 @@ A versão atual da **💜 Aury** já oferece:
 
 ## Instalação
 
-Clone o repositório:
+A instalação pública mínima da v1.6.1 é feita pelo script do repositório:
 
 ```fish
 git clone https://github.com/el-abni/aury.git
 cd aury
+bash install.sh
 ```
 
-Copie as funções para o Fish:
+O script instala a superfície pública em:
 
-```fish
-cp bin/aury.fish ~/.config/fish/functions/aury.fish
-cp bin/ay.fish ~/.config/fish/functions/ay.fish
-```
+- `~/.config/fish/functions/aury.fish`
+- `~/.config/fish/functions/ay.fish`
+- `~/.local/share/aury/python/`
+- `~/.local/share/aury/resources/`
+- `~/.local/share/aury/VERSION`
+- `~/.local/share/aury/LICENSE.md`
 
-Recarregue o shell:
+A instalação pública assume **Fish** e **python3** disponíveis no ambiente.
+
+Depois da instalação, abra um novo shell Fish ou recarregue as funções:
 
 ```fish
 source ~/.config/fish/functions/aury.fish
+source ~/.config/fish/functions/ay.fish
 ```
 
-Agora o comando `aury` já pode ser usado no terminal. O atalho curto `ay` também fica disponível e encaminha para a mesma função.
+A partir daí, `aury` e `ay` passam a usar a base instalada em `~/.local/share/aury`.
 
 ---
 
@@ -155,7 +163,7 @@ No código, a identidade visual da assistente é:
 No comando de ajuda, a versão deve aparecer no formato:
 
 ```text
-💜 Aury v1.6.0
+💜 Aury v1.6.1
 ```
 
 A Aury entende tanto comandos diretos quanto frases mais naturais, como:
@@ -176,10 +184,20 @@ aury dev ver cpu e memória
 aury dev copiar arquivo teste.txt para backup.txt
 ```
 
+## Contrato público mínimo da v1.6.1
+
+- `aury ajuda` e `ay ajuda` renderizam `resources/help.txt` usando a `VERSION` da base ativa.
+- `aury --version` e `ay --version` imprimem `💜 Aury <VERSION>` a partir da mesma base ativa.
+- `aury dev <frase>` usa o núcleo Python e expõe plano da sequência, leitura por ação e decisão de execução.
+- `aury dev` sem frase continua disponível como utilitário mínimo do adaptador Fish; hoje ele serve para checagem rápida e deve ser tratado como provisório.
+- `bin/aury.fish` é o ponto de entrada público: ele tenta o runtime Python primeiro e volta ao Fish quando a ação ainda não tem rota Python explícita.
+- Em desenvolvimento, ao fazer `source bin/aury.fish`, a base ativa é o próprio root do repositório. Na instalação, a base ativa é `~/.local/share/aury`.
+
 ## Limites honestos
 
 - pedidos fora do recorte atual, como `abrir arquivo`, continuam em fallback honesto
-- `aury dev` já é útil para auditoria do pipeline, mas ainda não promete paridade total com toda formulação conversacional aceita no runtime
+- o runtime Python atual cobre `help`, `version`, `dev <frase>` e um subconjunto explícito de ações; o restante continua voltando ao adaptador Fish
+- `aury dev` sem frase continua provisório e não deve ser tratado como relatório canônico completo
 - `aury velocidade da internet` depende de `librespeed-cli` e `python3` disponíveis no ambiente
 
 ---

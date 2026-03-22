@@ -6,6 +6,11 @@
 
 set -g __aury_loaded_from (status filename)
 
+# limpa um alias antigo que não deve mais continuar exposto
+if functions -q Aury
+    functions -e Aury
+end
+
 # -------------------------------------------------
 # mensagens
 # -------------------------------------------------
@@ -219,7 +224,7 @@ end
 
 function __aury_show_help
     echo "
-💜 Aury v1.6.0
+💜 Aury v1.6.1
 
 PACOTES
 aury instalar firefox
@@ -4003,12 +4008,100 @@ end
 # 6.2 Função principal
 # -------------------------------------------------
 
+
+function __aury_share_root
+    set -l loaded $__aury_loaded_from
+    set -l loaded_dir (dirname -- $loaded)
+    set -l repo_root (dirname -- $loaded_dir)
+
+    if test -f "$repo_root/VERSION"; and test -d "$repo_root/resources"; and test -d "$repo_root/python"
+        echo $repo_root
+        return 0
+    end
+
+    echo ~/.local/share/aury
+end
+
+function __aury_python_bin
+    if command -sq python3
+        echo python3
+        return 0
+    end
+
+    if command -sq python
+        echo python
+        return 0
+    end
+
+    return 1
+end
+
+function __aury_run_python
+    set -l root (__aury_share_root)
+    set -l pybin (__aury_python_bin)
+    or return 127
+
+    env PYTHONPATH="$root/python" AURY_SHARE_DIR="$root" $pybin -m aury $argv
+    return $status
+end
+
+function __aury_show_shared_version
+    set -l root (__aury_share_root)
+    if test -f "$root/VERSION"
+        set -l version (string trim -- (cat "$root/VERSION"))
+        echo "💜 Aury $version"
+        return 0
+    end
+
+    echo "💜 Aury v1.6.1"
+end
+
+function __aury_show_shared_help
+    set -l root (__aury_share_root)
+    set -l help_file "$root/resources/help.txt"
+
+    if test -f "$help_file"; and test -f "$root/VERSION"
+        set -l version (string trim -- (cat "$root/VERSION" | string collect))
+        set -l template (cat "$help_file" | string collect)
+        set -l rendered (string replace -a "{version}" "$version" -- "$template")
+        printf '%s
+' "$rendered"
+        return 0
+    end
+
+    __aury_show_help
+end
+
 function aury
     __aury_clear_action_error_state
 
     if test (count $argv) -eq 0
         __aury_msg_error "comando inválido"
         return 1
+    end
+
+    set -l first_raw (string lower -- (string trim -- $argv[1]))
+
+    if contains -- $first_raw ajuda help --help -h
+        __aury_run_python ajuda >/dev/null 2>/dev/null
+        if test $status -eq 0
+            __aury_run_python ajuda
+            return $status
+        end
+
+        __aury_show_shared_help
+        return 0
+    end
+
+    if contains -- $first_raw version --version -v
+        __aury_run_python --version >/dev/null 2>/dev/null
+        if test $status -eq 0
+            __aury_run_python --version
+            return $status
+        end
+
+        __aury_show_shared_version
+        return 0
     end
 
     set -l raw_tokens (__aury_preprocess_input $argv)
@@ -4025,9 +4118,32 @@ function aury
     end
 
     set -l first_norm (__aury_normalize_token $raw_tokens[1])
-    if test "$first_norm" = "dev"; and test (count $raw_tokens) -gt 1
-        __aury_dev_inspect_phrase $raw_tokens[2..-1]
+    if test "$first_norm" = "dev"
+        if test (count $raw_tokens) -gt 1
+            __aury_run_python dev $raw_tokens[2..-1]
+            switch $status
+                case 0
+                    return 0
+                case 127
+                case '*'
+                    return $status
+            end
+            __aury_dev_inspect_phrase $raw_tokens[2..-1]
+            return $status
+        end
+        __aury_dev_show_syntax_status
+        echo ""
+        echo "Use: aury dev <frase>"
         return $status
+    end
+
+    __aury_run_python $raw_tokens
+    switch $status
+        case 0
+            return 0
+        case 120 127
+        case '*'
+            return $status
     end
 
     set -g __aury_runtime_walk_status 0
@@ -4057,12 +4173,4 @@ function aury
     set -e __aury_emitted_action_is_expanded
 
     return $overall_status
-end
-
-# -------------------------------------------------
-# 6.3 Alias principal
-# -------------------------------------------------
-
-function Aury
-    aury $argv
 end

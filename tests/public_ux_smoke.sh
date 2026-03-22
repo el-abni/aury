@@ -239,4 +239,25 @@ chmod +x "$download_guard_tmp/bin/librespeed-cli"
 download_guard_output="$(ROOT="$ROOT" PATH="$download_guard_tmp/bin:$PATH" fish -c 'source $ROOT/bin/aury.fish; aury download da internet' 2>&1 || true)"
 require_not_in_output "$download_guard_output" "LIBRESPEED_DOWNLOAD_GUARD" "'download' sozinho não pode virar speedtest"
 
+
+help_output="$(fish -c "source '$ROOT/bin/aury.fish'; aury ajuda" 2>&1 || true)"
+require_in_output "$help_output" "💜 Aury" "ajuda precisa continuar disponível"
+
+version_expected="$(cat "$ROOT/VERSION")"
+version_output="$(fish -c "source '$ROOT/bin/aury.fish'; aury --version" 2>&1 || true)"
+require_in_output "$version_output" "$version_expected" "version precisa refletir VERSION"
+
+dev_usage_output="$(fish -c "source '$ROOT/bin/aury.fish'; aury dev" 2>&1 || true)"
+require_in_output "$dev_usage_output" "🛠 modo dev da Aury" "'aury dev' sem frase precisa continuar disponível"
+require_in_output "$dev_usage_output" "Use: aury dev <frase>" "'aury dev' sem frase precisa orientar o uso correto"
+
+ay_help_output="$(fish -c "source '$ROOT/bin/aury.fish'; source '$ROOT/bin/ay.fish'; ay ajuda" 2>&1 || true)"
+require_in_output "$ay_help_output" "💜 Aury" "ay ajuda precisa continuar disponível"
+
+ay_version_output="$(fish -c "source '$ROOT/bin/aury.fish'; source '$ROOT/bin/ay.fish'; ay --version" 2>&1 || true)"
+require_in_output "$ay_version_output" "$version_expected" "ay --version precisa refletir VERSION"
+
+alias_check_output="$(fish -c "source '$ROOT/bin/aury.fish'; functions -q Aury; and echo ALIAS_PRESENT; or echo ALIAS_ABSENT" 2>&1 || true)"
+require_in_output "$alias_check_output" "ALIAS_ABSENT" "alias extra Aury não deve continuar exposto"
+
 printf 'public_ux_smoke: ok\n'

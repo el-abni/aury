@@ -1,0 +1,48 @@
+💜 Aury {version}
+
+PACOTES
+aury instalar firefox
+aury instala firefox
+aury baixa o firefox
+aury pode instalar firefox
+aury quero instalar obs studio
+aury Aury, instala o obs studio.
+aury remover vlc
+aury procurar steam
+
+SISTEMA
+aury atualizar sistema
+aury otimizar sistema
+aury atualiza, otimiza e baixa o firefox
+aury status
+aury mostrar cpu
+aury mostrar o status do sistema
+aury checar memória
+aury ver cpu e memória
+
+REDE
+aury ver ip
+aury testar internet
+aury velocidade da internet
+aury ping google.com
+
+ARQUIVOS
+aury criar arquivo teste.txt
+aury criar teste.txt
+aury criar pasta projetos
+aury copiar arquivo teste.txt para backup.txt
+aury mover arquivo teste.txt para pasta/teste.txt
+aury renomear arquivo teste.txt para novo.txt
+aury cria um arquivo teste.txt
+aury cria a pasta projetos
+aury apaga o arquivo teste.txt
+aury deleta backup.txt
+aury remove o arquivo teste.txt
+aury extrair teste.zip
+aury descompacte backup.tar.gz
+aury extraia teste.tar para a pasta que fica em /usr/steam
+
+EXTRAS
+aury reload
+aury dev
+aury dev <frase>

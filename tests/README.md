@@ -1,6 +1,6 @@
 # tests/
 
-Esta pasta guarda a base pública mínima de regressão auditável da **💜 Aury v1.6**.
+Esta pasta guarda a base pública mínima de regressão auditável da **💜 Aury v1.6.1**.
 
 Ela nasceu como **Fase 0** e continua pequena de propósito. O papel atual não é virar framework: é proteger o miolo público que a v1.6 consolidou e deixar o estado observável do projeto auditável.
 
@@ -18,6 +18,20 @@ Ela **não** existe para:
 - virar framework genérico
 - prometer cobertura total do projeto
 - substituir validação manual quando o caso ainda é fronteira de parser
+
+## Execução mínima hoje
+
+Os comandos mínimos validados nesta fase são:
+
+```bash
+bash tests/public_ux_smoke.sh
+python3 tests/python_core_smoke.py
+```
+
+Na prática:
+
+- `public_ux_smoke.sh` protege a superfície pública do adaptador Fish
+- `python_core_smoke.py` protege o núcleo Python já canonizado
 
 ## Arquivos atuais
 
@@ -52,6 +66,7 @@ Hoje ele cobre de forma executável:
 - ambiguidade mínima exposta no runtime
 - encadeamento pequeno com referência local
 - recorte público da medição de velocidade de rede
+- `help`, `version`, `ay` e o contrato mínimo do adaptador Fish
 
 Ele não substitui o `casos.yaml`. Os dois cumprem papéis diferentes:
 
@@ -89,3 +104,19 @@ O foco aqui continua sendo:
 - auditável
 - útil
 - disciplinado
+
+
+### `python_core_smoke.py`
+
+Este smoke cobre o núcleo Python inicial da v1.6.1.
+
+Hoje ele protege:
+
+- `help`
+- `version`
+- `aury dev <frase>` no núcleo novo
+- leituras simples de rede no runtime Python
+- busca de pacote e leitura de GPU no runtime Python
+- preparação de frase, ações e tokens sensíveis
+- plano de execução por ação e por sequência
+- regressão mínima da virada Fish -> Python

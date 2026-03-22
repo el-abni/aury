@@ -6,6 +6,28 @@ A linha principal pública da **💜 Aury** está planejada até a **v1.9**. Est
 
 ---
 
+## v1.6.1
+
+### Consolidado
+- núcleo Python canonizado em `python/aury`
+- `help` e `version` passam a refletir a mesma base ativa via `resources/help.txt` e `VERSION`
+- `bin/aury.fish` assume explicitamente o papel de adaptador público entre Fish e o núcleo Python
+
+### Melhorado
+- `aury dev <frase>` passa a expor o relatório canônico do núcleo Python para a transição Fish → Python
+- rotas explícitas do runtime Python passam a sustentar busca de pacote, leituras simples de rede, leituras simples de sistema e execução multi-ação quando toda a sequência já tem rota suportada
+- `install.sh` e `uninstall.sh` passam a assumir a base instalada em `~/.local/share/aury`
+- `README.md`, `docs/ARCHITECTURE.md` e `tests/README.md` deixam de descrever a Aury como se a linha pública ainda fosse exclusivamente Fish
+
+### Testes e regressão
+- `tests/python_core_smoke.py` passa a proteger o núcleo Python já rastreado
+- `tests/public_ux_smoke.sh` absorve o contrato público mínimo de `help`, `version`, `ay` e do adaptador Fish
+
+### Compatibilidade e limites
+- a entrada pública continua em Fish, com fallback controlado para o que ainda não migrou ao runtime Python
+- `aury dev` sem frase permanece como utilitário mínimo do adaptador Fish
+- a v1.6.1 fecha coerência pública e estrutural da transição atual, sem prometer expansão de recorte funcional
+
 ## v1.6.0
 
 ### Consolidado
