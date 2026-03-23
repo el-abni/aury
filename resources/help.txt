@@ -46,3 +46,7 @@ EXTRAS
 aury reload
 aury dev
 aury dev <frase>
+
+NOTA
+aury dev sem frase faz checagem rápida do adaptador Fish.
+o relatório canônico continua em aury dev <frase>.

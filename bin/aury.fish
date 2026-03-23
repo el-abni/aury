@@ -224,54 +224,10 @@ end
 
 function __aury_show_help
     echo "
-💜 Aury v1.6.3
+💜 Aury versão-indisponível
 
-PACOTES
-aury instalar firefox
-aury instala firefox
-aury baixa o firefox
-aury pode instalar firefox
-aury quero instalar obs studio
-aury Aury, instala o obs studio.
-aury remover vlc
-aury procurar steam
-
-SISTEMA
-aury atualizar sistema
-aury otimizar sistema
-aury atualiza, otimiza e baixa o firefox
-aury status
-aury mostrar cpu
-aury mostrar o status do sistema
-aury checar memória
-aury ver cpu e memória
-
-REDE
-aury ver ip
-aury testar internet
-aury velocidade da internet
-aury ping google.com
-
-ARQUIVOS
-aury criar arquivo teste.txt
-aury criar teste.txt
-aury criar pasta projetos
-aury copiar arquivo teste.txt para backup.txt
-aury mover arquivo teste.txt para pasta/teste.txt
-aury renomear arquivo teste.txt para novo.txt
-aury cria um arquivo teste.txt
-aury cria a pasta projetos
-aury apaga o arquivo teste.txt
-aury deleta backup.txt
-aury remove o arquivo teste.txt
-aury extrair teste.zip
-aury descompacte backup.tar.gz
-aury extraia teste.tar para a pasta que fica em /usr/steam
-
-EXTRAS
-aury reload
-aury dev
-aury dev <frase>
+❌ não encontrei resources/help.txt na base ativa.
+Use: aury ajuda a partir de uma instalação íntegra ou do checkout canônico.
 "
 end
 
@@ -1185,6 +1141,11 @@ function __aury_dev_show_syntax_status
     echo ""
     echo $result
     return 1
+end
+
+function __aury_dev_show_usage_hint
+    echo "Escopo: checagem rápida do adaptador Fish; o relatório canônico exige uma frase."
+    echo "Use: aury dev <frase>"
 end
 
 function __aury_dev_report_current_action --argument-names index original_action
@@ -3318,7 +3279,7 @@ end
 function __aury_exec_internal --argument-names intent
     switch $intent
         case ajuda
-            __aury_show_help
+            __aury_show_shared_help
             return 0
 
         case reload
@@ -3342,7 +3303,7 @@ function __aury_exec_internal --argument-names intent
         case dev
             __aury_dev_show_syntax_status
             echo ""
-            echo "Use: aury dev <frase>"
+            __aury_dev_show_usage_hint
             return $status
     end
 
@@ -4163,15 +4124,19 @@ function __aury_show_shared_version
         return 0
     end
 
-    echo "💜 Aury v1.6.3"
+    echo "💜 Aury versão-indisponível"
 end
 
 function __aury_show_shared_help
     set -l root (__aury_share_root)
     set -l help_file "$root/resources/help.txt"
+    set -l version "versão-indisponível"
 
-    if test -f "$help_file"; and test -f "$root/VERSION"
-        set -l version (string trim -- (cat "$root/VERSION" | string collect))
+    if test -f "$root/VERSION"
+        set version (string trim -- (cat "$root/VERSION" | string collect))
+    end
+
+    if test -f "$help_file"
         set -l template (cat "$help_file" | string collect)
         set -l rendered (string replace -a "{version}" "$version" -- "$template")
         printf '%s
@@ -4243,7 +4208,7 @@ function aury
         end
         __aury_dev_show_syntax_status
         echo ""
-        echo "Use: aury dev <frase>"
+        __aury_dev_show_usage_hint
         return $status
     end
 

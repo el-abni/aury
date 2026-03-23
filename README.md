@@ -212,20 +212,23 @@ aury dev copiar arquivo teste.txt para backup.txt
 ## Roadmap
 
 O roadmap abaixo mostra **apenas versões futuras ainda não lançadas**. A linha 1.6.x já foi fechada.
+Na abertura real da v1.7, o recorte imediato é operacional e contido.
 
 ### v1.7
 
-- ampliação incremental da capacidade operacional local
-- continuidade do refinamento seguro dos fluxos práticos da Aury
+- coerência pública e workflow canônico
+- saneamento da fronteira híbrida Fish/Python
+- tooling mínimo de auditoria
 
 ### v1.8
 
-- refinamentos intermediários da linha 1.x com foco em robustez, previsibilidade e experiência
+- consolidação semântica e endurecimento incremental depois da abertura operacional
+- observabilidade e previsibilidade mais fortes sobre a base já saneada
 
 ### v1.9
 
-- refinamento geral
-- fechamento planejado da linha principal da Aury neste repositório
+- fechamento público da linha 1.x com hardening final
+- consistência final de UX, documentação e regressão
 
 ---
 

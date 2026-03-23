@@ -803,7 +803,7 @@ def test_runtime_multi_action_unsupported_no_partial() -> None:
 def test_sensitive_tokens_contract() -> None:
     original = ["teste.tar.gz", "Downloads/token", "google.com"]
     protected, mapping = protect_sensitive_tokens(original)
-    if [item.token_type for item in mapping] != ["archive", "path", "host"]:
+    if [item.token_type for item in mapping] != ["file", "path", "host"]:
         raise AssertionError(f"tipagem inesperada: {[item.token_type for item in mapping]!r}")
     if restore_sensitive_tokens(protected, mapping) != original:
         raise AssertionError("restauração de tokens sensíveis não retornou a sequência original")
@@ -819,7 +819,7 @@ def test_pipeline_prepare_text() -> None:
         raise AssertionError(f"split inesperado: {[action.original_action for action in actions]!r}")
 
     protected_phrase, _ = prepare_text("extraia teste.tar.gz para Downloads/token 123")
-    if [item.token_type for item in protected_phrase.protected_tokens] != ["archive", "path"]:
+    if [item.token_type for item in protected_phrase.protected_tokens] != ["file", "path"]:
         raise AssertionError(
             f"tokens protegidos inesperados: {[item.token_type for item in protected_phrase.protected_tokens]!r}"
         )

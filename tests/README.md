@@ -1,8 +1,8 @@
 # tests/
 
-Esta pasta guarda a base pública mínima de regressão auditável da **💜 Aury v1.6.3**.
+Esta pasta guarda a base pública mínima de regressão auditável herdada do fechamento da **💜 Aury v1.6.3**.
 
-Ela nasceu como **Fase 0** e continua pequena de propósito. O papel atual não é virar framework: é proteger o miolo público que a v1.6 consolidou e deixar o estado observável do projeto auditável.
+Ela nasceu como **Fase 0** na linha 1.6.x e continua pequena de propósito. Na abertura operacional da v1.7, essa mesma base ganhou um tooling inicial curto de preflight e auditoria para blindar melhor o chão público já herdado, sem virar framework.
 
 ## Papel atual
 
@@ -24,12 +24,14 @@ Ela **não** existe para:
 Os comandos mínimos validados nesta fase são:
 
 ```bash
+bash tests/preflight_canonico.sh
 bash tests/public_ux_smoke.sh
 python3 tests/python_core_smoke.py
 ```
 
 Na prática:
 
+- `preflight_canonico.sh` junta a checagem mínima de sintaxe, coerência pública, paridade normal vs `aury dev` e os dois smokes já canonizados
 - `public_ux_smoke.sh` protege a superfície pública do adaptador Fish
 - `python_core_smoke.py` protege o núcleo Python já canonizado
 
@@ -56,7 +58,7 @@ Essa última distinção importa: alguns casos de `modo: dev`, especialmente os 
 
 ### `public_ux_smoke.sh`
 
-Este script protege o recorte público mais estável da v1.6.
+Este script protege o recorte público mais estável herdado da v1.6.3.
 
 Hoje ele cobre de forma executável:
 
@@ -67,6 +69,25 @@ Hoje ele cobre de forma executável:
 - encadeamento pequeno com referência local
 - recorte público da medição de velocidade de rede
 - `help`, `version`, `ay` e o contrato mínimo do adaptador Fish
+
+### `audit_public_coherence.py`
+
+Este auditor pequeno verifica o chão público mínimo que a abertura da v1.7 precisa manter coerente:
+
+- `VERSION` preenchida
+- `resources/help.txt` com placeholder de versão e nota honesta sobre `aury dev`
+- `README.md` e `CHANGELOG.md` alinhados à versão pública atual e à abertura operacional contida da v1.7
+- ausência de hardcode de versão no runtime público e nos scripts de instalação
+- renderização real de `help` e `version` via entrada pública Fish
+
+### `audit_dev_parity.py`
+
+Este auditor pequeno verifica um recorte de paridade operacional entre:
+
+- a decisão do plano que `aury dev` expõe
+- o executor realmente observado no modo normal
+
+O foco é manter auditáveis as rotas já assumidas como Python e as que seguem canonicamente no adaptador Fish.
 
 Ele não substitui o `casos.yaml`. Os dois cumprem papéis diferentes:
 
@@ -108,7 +129,7 @@ O foco aqui continua sendo:
 
 ### `python_core_smoke.py`
 
-Este smoke cobre o núcleo Python rastreado da v1.6.3.
+Este smoke cobre o núcleo Python rastreado herdado do fechamento da v1.6.3.
 
 Hoje ele protege:
 

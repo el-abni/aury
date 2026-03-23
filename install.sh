@@ -3,9 +3,10 @@ set -euo pipefail
 
 FISH_FUNCTIONS_DIR="$HOME/.config/fish/functions"
 SHARE_DIR="$HOME/.local/share/aury"
+AURY_VERSION="$(tr -d '\n' < VERSION 2>/dev/null || true)"
 
 echo ""
-echo "💜 Instalando a Aury v1.6.3..."
+echo "💜 Instalando a Aury ${AURY_VERSION:-versão-indisponível}..."
 echo ""
 
 mkdir -p "$FISH_FUNCTIONS_DIR"

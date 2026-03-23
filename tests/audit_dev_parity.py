@@ -1,0 +1,139 @@
+#!/usr/bin/env python3
+from __future__ import annotations
+
+import os
+import stat
+import subprocess
+import sys
+import tempfile
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "python"))
+
+from aury.analyzer import prepare_analyses
+from aury.runtime import plan_sequence_execution
+
+
+def fail(message: str) -> None:
+    raise SystemExit(f"FAIL: {message}")
+
+
+def ok(message: str) -> None:
+    print(f"OK: {message}")
+
+
+def write_stub(bin_dir: Path, name: str, body: str) -> None:
+    path = bin_dir / name
+    path.write_text(body, encoding="utf-8")
+    path.chmod(path.stat().st_mode | stat.S_IXUSR)
+
+
+def dev_executor(phrase: str) -> tuple[str, str]:
+    _phrase, _actions, analyses = prepare_analyses(phrase)
+    sequence_plan = plan_sequence_execution(analyses)
+    action_plan = sequence_plan.action_plans[0]
+    executor = "python" if sequence_plan.executes_in_python else "fish"
+    route = action_plan.route or "-"
+    return executor, route
+
+
+def run_fish(args: list[str], *, env: dict[str, str] | None = None, cwd: Path | None = None) -> str:
+    merged_env = os.environ.copy()
+    if env:
+        merged_env.update(env)
+    proc = subprocess.run(
+        ["fish", "-c", f"source '{ROOT / 'bin' / 'aury.fish'}'; aury $argv", "--", *args],
+        cwd=cwd or ROOT,
+        env=merged_env,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    if proc.returncode != 0:
+        fail(f"execução Fish falhou para {args!r}: {proc.stderr or proc.stdout}")
+    return proc.stdout
+
+
+def assert_executor(phrase: str, expected_executor: str) -> str:
+    actual_executor, route = dev_executor(phrase)
+    if actual_executor != expected_executor:
+        fail(f"plano de 'aury dev' para {phrase!r} deveria usar {expected_executor}, mas retornou {actual_executor}")
+    return route
+
+
+def main() -> int:
+    with tempfile.TemporaryDirectory() as tmp:
+        bin_dir = Path(tmp) / "bin"
+        bin_dir.mkdir(parents=True, exist_ok=True)
+
+        write_stub(bin_dir, "pacman", "#!/usr/bin/env bash\nprintf 'PACMAN_STUB %s\\n' \"$*\"\n")
+        write_stub(bin_dir, "ip", "#!/usr/bin/env bash\nprintf 'IP_STUB %s\\n' \"$*\"\n")
+        write_stub(bin_dir, "ping", "#!/usr/bin/env bash\nprintf 'PING_STUB %s\\n' \"$*\"\n")
+        write_stub(
+            bin_dir,
+            "librespeed-cli",
+            "#!/usr/bin/env bash\nprintf '{\"ping\":11.2,\"download\":123.4,\"upload\":56.7,\"jitter\":1.8}'\n",
+        )
+        path_env = {"PATH": f"{bin_dir}:{os.environ['PATH']}"}
+
+        route = assert_executor("procurar steam", "python")
+        output = run_fish(["procurar", "steam"], env=path_env)
+        if "PACMAN_STUB -Ss -- steam" not in output:
+            fail("modo normal não observou a rota Python esperada para procurar pacote")
+        ok(f"procurar steam alinhado em Python ({route})")
+
+        route = assert_executor("ver ip", "python")
+        output = run_fish(["ver", "ip"], env=path_env)
+        if "IP_STUB -brief address" not in output:
+            fail("modo normal não observou a rota Python esperada para ver ip")
+        ok(f"ver ip alinhado em Python ({route})")
+
+        route = assert_executor("testar internet", "python")
+        output = run_fish(["testar", "internet"], env=path_env)
+        if "PING_STUB -c 2 -- 8.8.8.8" not in output:
+            fail("modo normal não observou a rota Python esperada para testar internet")
+        ok(f"testar internet alinhado em Python ({route})")
+
+        route = assert_executor("velocidade da internet", "python")
+        output = run_fish(["velocidade", "da", "internet"], env=path_env)
+        if "download: 123.4 Mbps" not in output:
+            fail("modo normal não observou a rota Python esperada para velocidade da internet")
+        ok(f"velocidade da internet alinhada em Python ({route})")
+
+    with tempfile.TemporaryDirectory() as tmp:
+        bin_dir = Path(tmp) / "bin"
+        bin_dir.mkdir(parents=True, exist_ok=True)
+        write_stub(bin_dir, "sudo", "#!/usr/bin/env bash\n\"$@\"\n")
+        write_stub(
+            bin_dir,
+            "pacman",
+            "#!/usr/bin/env bash\nif [ \"$1\" = \"-Si\" ]; then\n  exit 1\nfi\nprintf 'PACMAN_FALLBACK %s\\n' \"$*\"\n",
+        )
+        write_stub(
+            bin_dir,
+            "paru",
+            "#!/usr/bin/env bash\nif [ \"$1\" = \"-Si\" ]; then\n  exit 0\nfi\nprintf 'PARU_FALLBACK %s\\n' \"$*\"\n",
+        )
+        path_env = {"PATH": f"{bin_dir}:{os.environ['PATH']}"}
+
+        assert_executor("instalar firefox", "fish")
+        output = run_fish(["instalar", "firefox"], env=path_env)
+        if "PARU_FALLBACK -S --needed -- firefox" not in output:
+            fail("modo normal não caiu no adaptador Fish para instalar firefox")
+        ok("instalar firefox alinhado em Fish")
+
+    with tempfile.TemporaryDirectory() as tmp:
+        workdir = Path(tmp)
+        assert_executor("criar arquivo teste.txt", "fish")
+        output = run_fish(["criar", "arquivo", "teste.txt"], cwd=workdir)
+        if "eu criei o arquivo 'teste.txt'" not in output or not (workdir / "teste.txt").is_file():
+            fail("modo normal não caiu no adaptador Fish para criar arquivo")
+        ok("criar arquivo teste.txt alinhado em Fish")
+
+    print("audit_dev_parity: ok")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

@@ -429,6 +429,7 @@ require_not_in_output "$download_guard_output" "LIBRESPEED_DOWNLOAD_GUARD" "'dow
 
 help_output="$(fish -c "source '$ROOT/bin/aury.fish'; aury ajuda" 2>&1 || true)"
 require_in_output "$help_output" "💜 Aury" "ajuda precisa continuar disponível"
+require_in_output "$help_output" "aury dev sem frase faz checagem rápida do adaptador Fish." "ajuda precisa declarar o escopo estreito de 'aury dev' sem frase"
 
 version_expected="$(cat "$ROOT/VERSION")"
 version_output="$(fish -c "source '$ROOT/bin/aury.fish'; aury --version" 2>&1 || true)"
@@ -436,6 +437,7 @@ require_in_output "$version_output" "$version_expected" "version precisa refleti
 
 dev_usage_output="$(fish -c "source '$ROOT/bin/aury.fish'; aury dev" 2>&1 || true)"
 require_in_output "$dev_usage_output" "🛠 modo dev da Aury" "'aury dev' sem frase precisa continuar disponível"
+require_in_output "$dev_usage_output" "Escopo: checagem rápida do adaptador Fish; o relatório canônico exige uma frase." "'aury dev' sem frase precisa declarar o escopo real do adaptador"
 require_in_output "$dev_usage_output" "Use: aury dev <frase>" "'aury dev' sem frase precisa orientar o uso correto"
 
 ay_help_output="$(fish -c "source '$ROOT/bin/aury.fish'; source '$ROOT/bin/ay.fish'; ay ajuda" 2>&1 || true)"
