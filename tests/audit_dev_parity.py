@@ -55,6 +55,33 @@ def run_fish(args: list[str], *, env: dict[str, str] | None = None, cwd: Path | 
     return proc.stdout
 
 
+def run_fish_result(
+    args: list[str],
+    *,
+    env: dict[str, str] | None = None,
+    cwd: Path | None = None,
+) -> subprocess.CompletedProcess[str]:
+    merged_env = os.environ.copy()
+    if env:
+        merged_env.update(env)
+    proc = subprocess.run(
+        ["fish", "-c", f"source '{ROOT / 'bin' / 'aury.fish'}'; aury $argv", "--", *args],
+        cwd=cwd or ROOT,
+        env=merged_env,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    return proc
+
+
+def run_fish_public_error(args: list[str], *, env: dict[str, str] | None = None, cwd: Path | None = None) -> str:
+    proc = run_fish_result(args, env=env, cwd=cwd)
+    if proc.returncode != 0:
+        return proc.stdout
+    fail(f"execução Fish deveria falhar publicamente para {args!r}, mas saiu com 0")
+
+
 def assert_executor(phrase: str, expected_executor: str) -> str:
     actual_executor, route = dev_executor(phrase)
     if actual_executor != expected_executor:
@@ -100,6 +127,18 @@ def main() -> int:
         if "download: 123.4 Mbps" not in output:
             fail("modo normal não observou a rota Python esperada para velocidade da internet")
         ok(f"velocidade da internet alinhada em Python ({route})")
+
+        assert_executor("abra o arquivo relatorio.pdf", "fish")
+        output = run_fish_public_error(["abra", "o", "arquivo", "relatorio.pdf"], env=path_env)
+        if "não consegui entender esse pedido com segurança" not in output:
+            fail("modo normal não preservou o fallback honesto para pedido fora do recorte")
+        ok("abra o arquivo relatorio.pdf alinhado em Fish")
+
+        assert_executor("remover ela", "fish")
+        output = run_fish_public_error(["remover", "ela"], env=path_env)
+        if "não vou remover nada sem um alvo explícito." not in output:
+            fail("modo normal não preservou o bloqueio destrutivo explícito")
+        ok("remover ela alinhado em Fish")
 
     with tempfile.TemporaryDirectory() as tmp:
         bin_dir = Path(tmp) / "bin"

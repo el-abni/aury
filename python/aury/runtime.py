@@ -32,6 +32,35 @@ def _analysis_target(analysis: Analysis) -> str:
     return analysis.entities.get("alvo_principal", "")
 
 
+def _analysis_gap(analysis: Analysis) -> str:
+    return analysis.entities.get("lacuna", "").strip()
+
+
+def _fish_fallback_reason(analysis: Analysis) -> str:
+    gap = _analysis_gap(analysis)
+    if analysis.status == "BLOQUEADA":
+        if gap:
+            return f"a análise ficou bloqueada por lacuna explícita: {gap}."
+        return "a análise ficou bloqueada antes da execução direta no runtime Python."
+    if analysis.status == "NAO_ENQUADRADA":
+        return "a ação ficou fora do recorte reconhecido com segurança para execução direta no runtime Python."
+    return "a análise não fechou com segurança para execução direta no runtime Python."
+
+
+def _sequence_return_reason(index: int, analysis: Analysis, action_plan: ActionExecutionPlan) -> str:
+    if action_plan.status == "FUTURE_MIGRATION_CANDIDATE":
+        return f"a ação {index} ainda depende do adaptador Fish."
+
+    gap = _analysis_gap(analysis)
+    if analysis.status == "BLOQUEADA":
+        if gap:
+            return f"a ação {index} ficou bloqueada por lacuna explícita: {gap}."
+        return f"a ação {index} ficou bloqueada antes da execução direta no runtime Python."
+    if analysis.status == "NAO_ENQUADRADA":
+        return f"a ação {index} ficou fora do recorte reconhecido com segurança."
+    return f"a ação {index} não fechou com segurança no runtime Python."
+
+
 def _run_and_print(backend: str, args: Sequence[str]) -> int:
     proc = _run(args)
     if proc.returncode != 0:
@@ -249,7 +278,7 @@ def plan_action_execution(analysis: Analysis) -> ActionExecutionPlan:
         )
 
     return ActionExecutionPlan.fish_fallback(
-        reason="a análise não fechou com segurança para execução direta no runtime Python.",
+        reason=_fish_fallback_reason(analysis),
     )
 
 
@@ -258,19 +287,13 @@ def plan_sequence_execution(analyses: list[Analysis]) -> SequenceExecutionPlan:
     if not action_plans:
         return SequenceExecutionPlan(reason="não há ações preparadas para executar.")
 
-    for index, action_plan in enumerate(action_plans, start=1):
+    for index, (analysis, action_plan) in enumerate(zip(analyses, action_plans), start=1):
         if action_plan.executes_in_python:
             continue
-        if action_plan.status == "FUTURE_MIGRATION_CANDIDATE":
-            return SequenceExecutionPlan(
-                action_plans=action_plans,
-                decision="RETURN_TO_FISH",
-                reason=f"a ação {index} ainda depende do adaptador Fish.",
-            )
         return SequenceExecutionPlan(
             action_plans=action_plans,
             decision="RETURN_TO_FISH",
-            reason=f"a ação {index} não fechou com segurança no runtime Python.",
+            reason=_sequence_return_reason(index, analysis, action_plan),
         )
 
     return SequenceExecutionPlan(

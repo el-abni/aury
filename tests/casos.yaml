@@ -1,10 +1,10 @@
-# Contrato inicial de regressão mínima da v1.6 da 💜 Aury.
-# Esta primeira versão prioriza legibilidade e cobertura do miolo que será tocado
-# na Fase 1 e na Fase 2. Ainda não existe runner sofisticado.
+# Contrato incremental de regressão mínima pública da v1.8 da 💜 Aury.
+# O recorte continua pequeno de propósito: endurece o observável real do
+# `aury dev <frase>`, a fronteira Fish/Python e as superfícies mínimas de erro.
 # Campos curtos por caso:
 # - id: identificador estável
 # - ordem: ordem mínima sugerida de execução
-# - essencial: true quando faz parte do piso mínimo da Fase 0
+# - essencial: true quando faz parte do piso mínimo do gate público atual
 # - categoria: grupo principal do caso
 # - modo: exec | dev
 # - frase: entrada canônica
@@ -14,16 +14,15 @@
 # Campos opcionais atuais para `modo: dev`:
 # - acoes_esperadas: quantas ações finais o `aury dev` deve emitir
 # - estados_esperados: estado diagnóstico esperado por ação, em ordem
-# - blocos_obrigatorios: blocos mínimos da saída auditável
+# - blocos_obrigatorios: blocos mínimos da saída auditável, em ordem
 
 schema_version: 1
-nome: v1.6-regressao-minima-inicial
+nome: v1.8-regressao-publica-minima
 descricao: >-
-  Primeira matriz mínima de regressão da v1.6. Prioriza paridade entre `aury dev`
-  e fluxo real, fallback honesto, arquivos com localização conversacional,
-  anáfora local, extração sem deformar tokens sensíveis, extração simples,
-  destino conversacional simples, caminho real explícito e um recorte mínimo do
-  pipeline observável.
+  Matriz mínima pública da v1.8. Prioriza paridade entre `aury dev` e fluxo
+  real, fallback honesto, bloqueios auditáveis, plano de sequência observável,
+  localização conversacional, anáfora local, extração sem deformar tokens
+  sensíveis e um recorte pequeno do pipeline híbrido atual.
 
 cases:
   - id: D01
@@ -36,7 +35,7 @@ cases:
     verificar: leitura de intenção, domínio, origem, destino e ação expandida
     acoes_esperadas: 1
     estados_esperados: [CONSISTENTE]
-    blocos_obrigatorios: [Entrada global, Entrada, Enquadramento, Entidades, Diagnostico, Acao prevista, Observacoes]
+    blocos_obrigatorios: [Plano da sequência, Entrada, Enquadramento, Entidades, Diagnostico, Acao prevista, Plano de execução, Observacoes]
     espera: >-
       aury dev deve refletir leitura compatível com o fluxo real de arquivos,
       reconhecendo copiar, a origem localizada em Documentos e o destino Downloads.
@@ -51,7 +50,7 @@ cases:
     verificar: preservação de tokens e leitura correta de destino em modo dev
     acoes_esperadas: 1
     estados_esperados: [CONSISTENTE]
-    blocos_obrigatorios: [Entrada global, Entrada, Enquadramento, Entidades, Diagnostico, Acao prevista, Observacoes]
+    blocos_obrigatorios: [Plano da sequência, Entrada, Enquadramento, Entidades, Diagnostico, Acao prevista, Plano de execução, Observacoes]
     espera: >-
       aury dev deve manter o token sensível intacto e descrever extração para o
       destino localizado sem corromper segmentos do caminho.
@@ -66,7 +65,7 @@ cases:
     verificar: leitura por ação, em ordem, preservando o alvo observado na renomeação
     acoes_esperadas: 2
     estados_esperados: [CONSISTENTE, CONSISTENTE]
-    blocos_obrigatorios: [Entrada global, Entrada, Enquadramento, Entidades, Diagnostico, Acao prevista, Observacoes]
+    blocos_obrigatorios: [Plano da sequência, Entrada, Enquadramento, Entidades, Diagnostico, Acao prevista, Plano de execução, Observacoes]
     espera: >-
       aury dev deve relatar duas ações coerentes, mantendo continuidade suficiente
       para interpretar "ela" na segunda ação sem embaralhar origem, destino ou novo nome.
@@ -81,7 +80,7 @@ cases:
     verificar: leitura da intenção, do arquivo compactado e do destino padrão
     acoes_esperadas: 1
     estados_esperados: [CONSISTENTE]
-    blocos_obrigatorios: [Entrada global, Entrada, Enquadramento, Entidades, Diagnostico, Acao prevista, Observacoes]
+    blocos_obrigatorios: [Plano da sequência, Entrada, Enquadramento, Entidades, Diagnostico, Acao prevista, Plano de execução, Observacoes]
     espera: >-
       aury dev deve reconhecer a extração simples de `pacote.tar.gz` e derivar
       `./pacote` como destino padrão sem abrir parser novo nem deformar o resumo.
@@ -96,7 +95,7 @@ cases:
     verificar: fechamento do destino simples e leitura consistente do resumo
     acoes_esperadas: 1
     estados_esperados: [CONSISTENTE]
-    blocos_obrigatorios: [Entrada global, Entrada, Enquadramento, Entidades, Diagnostico, Acao prevista, Observacoes]
+    blocos_obrigatorios: [Plano da sequência, Entrada, Enquadramento, Entidades, Diagnostico, Acao prevista, Plano de execução, Observacoes]
     espera: >-
       aury dev deve fechar `extracao` como destino conversacional simples e
       expor a leitura auditável sem espalhar a regra em recortes paralelos.
@@ -111,10 +110,26 @@ cases:
     verificar: preservação do caminho absoluto e leitura consistente do destino
     acoes_esperadas: 1
     estados_esperados: [CONSISTENTE]
-    blocos_obrigatorios: [Entrada global, Entrada, Enquadramento, Entidades, Diagnostico, Acao prevista, Observacoes]
+    blocos_obrigatorios: [Plano da sequência, Entrada, Enquadramento, Entidades, Diagnostico, Acao prevista, Plano de execução, Observacoes]
     espera: >-
       aury dev deve manter `/usr/steam` intacto como caminho real explícito,
       enquadrando a extração sem inventar localização conversacional.
+
+  - id: D07
+    ordem: 29
+    essencial: true
+    categoria: dev
+    modo: dev
+    frase: procurar steam
+    foco: rota já suportada agora com plano explícito no runtime Python
+    verificar: classificação da sequência, decisão e rota suportada sem drift
+    acoes_esperadas: 1
+    estados_esperados: [CONSISTENTE]
+    blocos_obrigatorios: [Plano da sequência, Entrada, Enquadramento, Entidades, Diagnostico, Acao prevista, Plano de execução, Observacoes]
+    espera: >-
+      aury dev deve expor que a busca de pacote já está suportada agora,
+      com decisão de executar no Python e rota explícita compatível com o
+      comportamento observado no modo normal.
 
   - id: F01
     ordem: 30

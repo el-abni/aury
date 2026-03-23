@@ -104,6 +104,17 @@ def main() -> int:
     ensure(not stderr, "bloqueio destrutivo não pode vazar stderr")
     ok("bloqueio destrutivo sai com 1")
 
+    direct_proc = run_python(["abra", "o", "arquivo", "relatorio.pdf"])
+    ensure(direct_proc.returncode == 120, "runtime Python direto precisa devolver 120 para pedido fora do recorte")
+    ensure(not direct_proc.stdout.strip(), "runtime Python direto não deve fingir fallback honesto para pedido fora do recorte")
+    ensure(not direct_proc.stderr.strip(), "runtime Python direto não deve vazar stderr para pedido fora do recorte")
+
+    direct_proc = run_python(["remover", "ela"])
+    ensure(direct_proc.returncode == 120, "runtime Python direto precisa devolver 120 para bloqueio destrutivo sem alvo seguro")
+    ensure(not direct_proc.stdout.strip(), "runtime Python direto não deve fingir bloqueio público quando a ação ainda depende do Fish")
+    ensure(not direct_proc.stderr.strip(), "runtime Python direto não deve vazar stderr para bloqueio destrutivo sem alvo seguro")
+    ok("rota Python não suportada permanece silenciosa para fora do recorte e bloqueio destrutivo")
+
     with tempfile.TemporaryDirectory() as tmp:
         workdir = Path(tmp)
         direct_proc = run_python(["criar", "arquivo", "teste.txt"], cwd=workdir)
@@ -217,6 +228,22 @@ def main() -> int:
         ensure("retornou erro operacional" in output, "falha operacional do speedtest precisa expor erro honesto")
         ensure(not stderr, "falha operacional do speedtest não pode vazar stderr")
     ok("erro operacional do speedtest sai com 1")
+
+    direct_proc = run_python(["procurar", "steam"], env={"PATH": ""})
+    ensure(direct_proc.returncode == 1, "backend ausente em rota Python suportada precisa sair com status 1")
+    ensure("backend 'pacman' não está disponível" in direct_proc.stdout, "backend ausente em rota Python suportada precisa expor erro honesto")
+    ensure(not direct_proc.stderr.strip(), "backend ausente em rota Python suportada não pode vazar stderr")
+    ok("backend ausente em rota Python suportada sai com 1")
+
+    with tempfile.TemporaryDirectory() as tmp:
+        bin_dir = Path(tmp) / "bin"
+        bin_dir.mkdir(parents=True, exist_ok=True)
+        write_stub(bin_dir, "pacman", f"#!{BASH_BIN}\nexit 12\n")
+        direct_proc = run_python(["procurar", "steam"], env={"PATH": str(bin_dir)})
+        ensure(direct_proc.returncode == 1, "falha operacional em rota Python suportada precisa sair com status 1")
+        ensure("backend 'pacman' retornou erro operacional" in direct_proc.stdout, "falha operacional em rota Python suportada precisa expor erro honesto")
+        ensure(not direct_proc.stderr.strip(), "falha operacional em rota Python suportada não pode vazar stderr")
+    ok("falha operacional em rota Python suportada sai com 1")
 
     with tempfile.TemporaryDirectory() as tmp:
         bin_dir = Path(tmp) / "bin"

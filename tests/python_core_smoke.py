@@ -674,6 +674,11 @@ def test_dev_compact_missing_output_blocks() -> None:
     assert_in(proc.stdout, "estado:                        BLOQUEADA")
     assert_in(proc.stdout, "lacunas:                       saída explícita obrigatória")
     assert_in(proc.stdout, "resumo:                        Compactação sem saída explícita; leitura bloqueada.")
+    assert_in(proc.stdout, "motivo:                        a ação 1 ficou bloqueada por lacuna explícita: saída explícita obrigatória.")
+    assert_in(
+        proc.stdout,
+        "motivo do plano:               a análise ficou bloqueada por lacuna explícita: saída explícita obrigatória.",
+    )
 
 
 def test_dev_compact_invalid_format_blocks() -> None:
@@ -839,6 +844,20 @@ def test_dev_search_inflected_alignment() -> None:
     assert_in(proc.stdout, "rota suportada:                package_search")
     assert_in(proc.stdout, "backend necessário:            pacman")
     assert_in(proc.stdout, "decisão:                       executar no Python")
+    assert_in(proc.stdout, "motivo:                        todas as ações têm rota explícita no runtime Python atual.")
+    assert_in(proc.stdout, "motivo do plano:               runtime Python já conhece uma rota explícita e segura para essa ação.")
+
+
+def test_dev_out_of_scope_plan_reason_alignment() -> None:
+    proc = run("dev", "abra", "o", "arquivo", "relatorio.pdf")
+    assert proc.returncode == 0
+    assert_in(proc.stdout, "estado:                        NAO_ENQUADRADA")
+    assert_in(proc.stdout, "lacunas:                       pedido fora do recorte")
+    assert_in(proc.stdout, "motivo:                        a ação 1 ficou fora do recorte reconhecido com segurança.")
+    assert_in(
+        proc.stdout,
+        "motivo do plano:               a ação ficou fora do recorte reconhecido com segurança para execução direta no runtime Python.",
+    )
 
 
 def test_runtime_gpu() -> None:
@@ -1230,6 +1249,15 @@ def test_action_execution_plan_future_migration_candidate() -> None:
         raise AssertionError("a ação candidata a migração futura ainda deve voltar ao Fish")
 
 
+def test_action_execution_plan_fish_fallback_reason_for_out_of_scope() -> None:
+    _phrase, _action, analysis = prepare_analysis("abra o arquivo relatorio.pdf")
+    action_plan = plan_action_execution(analysis)
+    if action_plan.status != "FISH_FALLBACK":
+        raise AssertionError(f"classificação inesperada: {action_plan.status!r}")
+    if action_plan.reason != "a ação ficou fora do recorte reconhecido com segurança para execução direta no runtime Python.":
+        raise AssertionError(f"motivo inesperado: {action_plan.reason!r}")
+
+
 def test_sequence_execution_plan_supported_now() -> None:
     _phrase, _actions, analyses = prepare_analyses("ver ip e status")
     sequence_plan = plan_sequence_execution(analyses)
@@ -1246,6 +1274,15 @@ def test_sequence_execution_plan_returns_to_fish() -> None:
         raise AssertionError(f"decisão inesperada: {sequence_plan.decision!r}")
     if sequence_plan.action_plans[1].status != "FUTURE_MIGRATION_CANDIDATE":
         raise AssertionError(f"classificação inesperada: {sequence_plan.action_plans[1].status!r}")
+
+
+def test_sequence_execution_plan_return_reason_for_blocked_gap() -> None:
+    _phrase, _actions, analyses = prepare_analyses("compactar arquivo teste.txt")
+    sequence_plan = plan_sequence_execution(analyses)
+    if sequence_plan.decision != "RETURN_TO_FISH":
+        raise AssertionError(f"decisão inesperada: {sequence_plan.decision!r}")
+    if sequence_plan.reason != "a ação 1 ficou bloqueada por lacuna explícita: saída explícita obrigatória.":
+        raise AssertionError(f"motivo inesperado: {sequence_plan.reason!r}")
 
 
 def test_dev_multiple_actions() -> None:
@@ -1272,6 +1309,8 @@ def test_dev_destructive_remove_without_safe_antecedent_blocks_local_reference()
     assert_in(proc.stdout, "resumo:                        Remoção sem alvo seguro; leitura bloqueada.")
     assert_in(proc.stdout, "não há antecedente seguro nesta ação destrutiva isolada")
     assert_in(proc.stdout, "decisão:                       voltar ao Fish")
+    assert_in(proc.stdout, "motivo:                        a ação 1 ficou bloqueada antes da execução direta no runtime Python.")
+    assert_in(proc.stdout, "motivo do plano:               a análise ficou bloqueada antes da execução direta no runtime Python.")
     if "domínio:                       pacote" in proc.stdout:
         raise AssertionError("remoção destrutiva anafórica isolada não pode continuar enquadrada como pacote")
 
@@ -1473,8 +1512,10 @@ def main() -> int:
         test_action_execution_plan_supported_now,
         test_action_execution_plan_supported_runtime_route_contract,
         test_action_execution_plan_future_migration_candidate,
+        test_action_execution_plan_fish_fallback_reason_for_out_of_scope,
         test_sequence_execution_plan_supported_now,
         test_sequence_execution_plan_returns_to_fish,
+        test_sequence_execution_plan_return_reason_for_blocked_gap,
         test_dev_multiple_actions,
         test_dev_destructive_remove_without_safe_antecedent_blocks_local_reference,
         test_dev_destructive_remove_chain_local_reference_alignment,
@@ -1482,6 +1523,7 @@ def main() -> int:
         test_dev_destructive_remove_with_previous_package_context_blocks_local_reference,
         test_dev_destructive_remove_with_previous_file_context_blocks_incompatible_local_reference,
         test_dev_destructive_remove_followup_reuses_safe_file_reference,
+        test_dev_out_of_scope_plan_reason_alignment,
     ]
     for test in tests:
         test()

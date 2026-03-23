@@ -56,6 +56,8 @@ def _lacunas_label(analysis: Analysis) -> str:
         return explicit_gap
     if analysis.status == "CONSISTENTE":
         return "-"
+    if analysis.reason == "faltou a frase para inspecionar.":
+        return "frase ausente"
     if analysis.status == "BLOQUEADA":
         return "alvo seguro"
     return "pedido fora do recorte"
