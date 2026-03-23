@@ -41,6 +41,8 @@ aury remove o arquivo teste.txt
 aury extrair teste.zip
 aury descompacte backup.tar.gz
 aury extraia teste.tar para a pasta que fica em /usr/steam
+aury compactar arquivo teste.txt para teste.zip
+aury compactar pasta projetos/ para projetos.tar.gz
 
 EXTRAS
 aury reload

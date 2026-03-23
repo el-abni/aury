@@ -131,6 +131,38 @@ def main() -> int:
             fail("modo normal não caiu no adaptador Fish para criar arquivo")
         ok("criar arquivo teste.txt alinhado em Fish")
 
+    with tempfile.TemporaryDirectory() as tmp:
+        workdir = Path(tmp)
+        bin_dir = workdir / "bin"
+        bin_dir.mkdir(parents=True, exist_ok=True)
+        (workdir / "teste.txt").write_text("ok\n", encoding="utf-8")
+        write_stub(
+            bin_dir,
+            "zip",
+            "#!/usr/bin/env bash\narchive=\"$2\"\n: > \"$archive\"\n",
+        )
+        path_env = {"PATH": f"{bin_dir}:{os.environ['PATH']}"}
+
+        assert_executor("compactar arquivo teste.txt para saida.zip", "fish")
+        output = run_fish(["compactar", "arquivo", "teste.txt", "para", "saida.zip"], env=path_env, cwd=workdir)
+        if "eu compactei 'teste.txt' em 'saida.zip'" not in output or not (workdir / "saida.zip").is_file():
+            fail("modo normal não caiu no adaptador Fish para compactar arquivo em zip")
+        ok("compactar arquivo teste.txt para saida.zip alinhado em Fish")
+
+    with tempfile.TemporaryDirectory() as tmp:
+        workdir = Path(tmp)
+        bin_dir = workdir / "bin"
+        bin_dir.mkdir(parents=True, exist_ok=True)
+        (workdir / "projetos").mkdir(parents=True, exist_ok=True)
+        write_stub(bin_dir, "tar", "#!/usr/bin/env bash\narchive=\"$2\"\n: > \"$archive\"\n")
+        path_env = {"PATH": f"{bin_dir}:{os.environ['PATH']}"}
+
+        assert_executor("compactar pasta projetos/ para saida.tar.gz", "fish")
+        output = run_fish(["compactar", "pasta", "projetos/", "para", "saida.tar.gz"], env=path_env, cwd=workdir)
+        if "eu compactei 'projetos/' em 'saida.tar.gz'" not in output or not (workdir / "saida.tar.gz").is_file():
+            fail("modo normal não caiu no adaptador Fish para compactar pasta em tar.gz")
+        ok("compactar pasta projetos/ para saida.tar.gz alinhado em Fish")
+
     print("audit_dev_parity: ok")
     return 0
 

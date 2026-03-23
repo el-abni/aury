@@ -182,6 +182,10 @@ function __aury_msg_file_failure --argument-names action kind path
     end
 end
 
+function __aury_msg_invalid_compact_output
+    __aury_msg_error "o arquivo de saída precisa ser um caminho válido terminado em .zip ou .tar.gz."
+end
+
 # -------------------------------------------------
 # dicionários
 # -------------------------------------------------
@@ -191,7 +195,7 @@ end
 # -------------------------------------------------
 
 function __aury_intents
-    printf '%s\n' ajuda reload dev atualizar otimizar status procurar instalar remover criar copiar mover renomear extrair ping ver internet
+    printf '%s\n' ajuda reload dev atualizar otimizar status procurar instalar remover criar copiar mover renomear extrair compactar ping ver internet
 end
 
 function __aury_internal_intents
@@ -199,7 +203,7 @@ function __aury_internal_intents
 end
 
 function __aury_file_intents
-    printf '%s\n' criar copiar mover renomear extrair
+    printf '%s\n' criar copiar mover renomear extrair compactar
 end
 
 function __aury_system_keywords
@@ -307,6 +311,9 @@ function __aury_apply_conservative_correction --argument-names tok
         case crar criaar crir
             echo criar
 
+        case compacte
+            echo compactar
+
         case '*'
             echo $tok
     end
@@ -371,6 +378,9 @@ function __aury_normalize_token --argument-names tok
 
         case extrair extraia extrai extraira extrairá descompactar descompacte descompacta descomprima descomprimir desarquivar
             echo extrair
+
+        case compactar compacte
+            echo compactar
 
         case status estado info infos informação informacoes informações situacao situação
             echo status
@@ -776,6 +786,14 @@ function __aury_dev_detect_diagnostic_state --argument-names intent domain sourc
             end
             return 0
 
+        case compactar
+            if test -z "$source"; or test -z "$dest"; or test -z "$__aury_arg_archive_type"
+                echo "PARCIAL"
+            else
+                echo "CONSISTENTE"
+            end
+            return 0
+
         case ver ping instalar procurar
             if test -z "$primary_target"
                 echo "PARCIAL"
@@ -858,6 +876,19 @@ function __aury_dev_collect_lacunas --argument-names state intent source dest ne
 
             if test -z "$__aury_arg_archive_type"
                 set -a gaps "tipo de arquivo"
+            end
+
+        case compactar
+            if test -z "$source"
+                set -a gaps "origem"
+            end
+
+            if test -z "$dest"
+                set -a gaps "saída"
+            end
+
+            if test -z "$__aury_arg_archive_type"
+                set -a gaps "formato de saída"
             end
 
         case ver ping instalar procurar
@@ -973,6 +1004,16 @@ function __aury_dev_predicted_action --argument-names state intent source dest n
                 echo "Extrair '$source', se houver um destino válido."
             else
                 echo "Extrair, se houver arquivo e destino válidos."
+            end
+            return 0
+
+        case compactar
+            if test -n "$source"; and test -n "$dest"
+                echo "Compactar '$source' em '$dest'."
+            else if test -n "$source"
+                echo "Compactar '$source', se houver uma saída válida."
+            else
+                echo "Compactar, se houver origem e saída válidas."
             end
             return 0
 
@@ -1166,6 +1207,7 @@ function __aury_dev_report_current_action --argument-names index original_action
     set -l domain (__aury_detect_domain $intent $norm_words_global)
     set -l normalized_action (__aury_dev_display_normalized_words norm_words_global orig_words_global)
     set -l type_detected ''
+    set -l source_type ''
     set -l source ''
     set -l dest ''
     set -l newname ''
@@ -1177,6 +1219,13 @@ function __aury_dev_report_current_action --argument-names index original_action
     if test "$intent" = "extrair"
         __aury_extract_archive_args $norm_words_global
         set type_detected $__aury_arg_archive_type
+        set source $__aury_arg_source
+        set dest $__aury_arg_dest
+        set semantic_target (__aury_file_semantic_target $intent "$source" '')
+    else if test "$intent" = "compactar"
+        __aury_extract_compact_args $norm_words_global
+        set type_detected $__aury_arg_archive_type
+        set source_type $__aury_arg_type
         set source $__aury_arg_source
         set dest $__aury_arg_dest
         set semantic_target (__aury_file_semantic_target $intent "$source" '')
@@ -1259,6 +1308,9 @@ function __aury_dev_report_current_action --argument-names index original_action
 
     echo "Entidades"
     __aury_dev_print_field "tipo" $type_detected
+    if test -n "$source_type"
+        __aury_dev_print_field "tipo de origem" $source_type
+    end
     __aury_dev_print_field "alvo principal" $primary_target
 
     if test -n "$source"
@@ -1266,7 +1318,11 @@ function __aury_dev_report_current_action --argument-names index original_action
     end
 
     if test -n "$dest"
-        __aury_dev_print_field "destino" $dest
+        if test "$intent" = "compactar"
+            __aury_dev_print_field "saída" $dest
+        else
+            __aury_dev_print_field "destino" $dest
+        end
     end
 
     if test -n "$newname"
@@ -1302,6 +1358,8 @@ function __aury_dev_sync_local_reference
     switch $intent
         case criar copiar mover renomear
             set ref_kind $__aury_arg_type
+        case compactar
+            set ref_kind arquivo
         case extrair
             set ref_kind pasta
     end
@@ -1836,7 +1894,7 @@ function __aury_interpret_action
     set -l domain_hint geral
     if contains -- $intent instalar procurar remover
         set domain_hint pacote
-    else if contains -- $intent criar copiar mover renomear extrair
+    else if contains -- $intent criar copiar mover renomear extrair compactar
         set domain_hint arquivo
     else if contains -- $intent ver atualizar otimizar status
         set domain_hint sistema
@@ -2153,7 +2211,7 @@ function __aury_detect_intent
 
     set -l norm_words $argv
 
-    for candidate in ajuda reload dev atualizar otimizar procurar instalar remover criar copiar mover renomear extrair ping internet ver status
+    for candidate in ajuda reload dev atualizar otimizar procurar instalar remover criar copiar mover renomear extrair compactar ping internet ver status
         if contains -- $candidate $norm_words
             echo $candidate
             return 0
@@ -2174,7 +2232,7 @@ function __aury_detect_domain --argument-names intent
     end
 
     if contains -- arquivo $norm_words
-        if not contains -- $intent criar copiar mover renomear extrair remover
+        if not contains -- $intent criar copiar mover renomear extrair compactar remover
             echo geral
             return 0
         end
@@ -2184,7 +2242,7 @@ function __aury_detect_domain --argument-names intent
     end
 
     if contains -- pasta $norm_words
-        if not contains -- $intent criar copiar mover renomear extrair remover
+        if not contains -- $intent criar copiar mover renomear extrair compactar remover
             echo geral
             return 0
         end
@@ -2266,6 +2324,21 @@ function __aury_detect_domain --argument-names intent
         end
 
         echo pacote
+        return 0
+    end
+
+    if test "$intent" = "compactar"
+        if contains -- pasta $norm_words
+            echo pasta
+            return 0
+        end
+
+        if contains -- arquivo $norm_words
+            echo arquivo
+            return 0
+        end
+
+        echo geral
         return 0
     end
 
@@ -2623,7 +2696,7 @@ function __aury_file_semantic_target --argument-names intent source target
                 return 0
             end
 
-        case copiar mover renomear extrair
+        case copiar mover renomear extrair compactar
             if test -n "$source"
                 echo $source
                 return 0
@@ -2654,6 +2727,12 @@ function __aury_file_result_target --argument-names intent source dest newname t
             end
 
         case extrair
+            if test -n "$dest"
+                echo $dest
+                return 0
+            end
+
+        case compactar
             if test -n "$dest"
                 echo $dest
                 return 0
@@ -2852,6 +2931,22 @@ function __aury_detect_archive_type --argument-names path
     return 1
 end
 
+function __aury_detect_compact_output_type --argument-names path
+    set -l lower (string lower -- $path)
+
+    if string match -rq '\.tar\.gz$' -- $lower
+        echo tar.gz
+        return 0
+    end
+
+    if string match -rq '\.zip$' -- $lower
+        echo zip
+        return 0
+    end
+
+    return 1
+end
+
 function __aury_archive_default_destination --argument-names archive_path
     set -l base (basename -- $archive_path)
     set -l lower (string lower -- $base)
@@ -2910,6 +3005,77 @@ function __aury_require_archive_backend --argument-names archive_type
     end
 
     return 1
+end
+
+function __aury_require_compact_backend --argument-names output_path archive_type
+    switch $archive_type
+        case zip
+            if type -q zip
+                return 0
+            end
+
+        case tar.gz
+            if type -q tar
+                return 0
+            end
+    end
+
+    __aury_msg_error "não encontrei o backend necessário para criar '$output_path'."
+    return 1
+end
+
+function __aury_output_parent_exists --argument-names path
+    set -l parent_dir (dirname -- $path)
+
+    if test -z "$parent_dir"; or test "$parent_dir" = "."
+        return 0
+    end
+
+    if test -d "$parent_dir"
+        return 0
+    end
+
+    return 1
+end
+
+function __aury_compact_output_inside_source_dir --argument-names source_path output_path
+    if not test -d "$source_path"
+        return 1
+    end
+
+    set -l source_resolved (realpath -- "$source_path" 2>/dev/null)
+    set -l output_parent (dirname -- "$output_path")
+
+    if test -z "$output_parent"; or test "$output_parent" = "."
+        set output_parent (pwd)
+    end
+
+    set -l output_parent_resolved (realpath -- "$output_parent" 2>/dev/null)
+
+    if test -z "$source_resolved"; or test -z "$output_parent_resolved"
+        return 1
+    end
+
+    if test "$output_parent_resolved" = "$source_resolved"
+        return 0
+    end
+
+    set -l escaped_source (string escape --style=regex -- "$source_resolved")
+    if string match -rq "^$escaped_source/" -- "$output_parent_resolved"
+        return 0
+    end
+
+    return 1
+end
+
+function __aury_compact_temp_dir --argument-names output_path
+    set -l output_dir (dirname -- $output_path)
+
+    if test -z "$output_dir"
+        set output_dir .
+    end
+
+    mktemp -d "$output_dir/.aury-compact.XXXXXX"
 end
 
 function __aury_list_archive_entries --argument-names archive_path archive_type
@@ -3038,6 +3204,69 @@ function __aury_extract_archive_args
 
     if test -n "$__aury_arg_source"
         set -g __aury_arg_archive_type (__aury_detect_archive_type $__aury_arg_source)
+    end
+
+    return 0
+end
+
+function __aury_extract_compact_args
+    set -l norm_words $argv
+    set -l orig_words $orig_words_global
+
+    set -g __aury_arg_type ''
+    set -g __aury_arg_source ''
+    set -g __aury_arg_dest ''
+    set -g __aury_arg_archive_type ''
+
+    set -l intent_idx (contains -i -- compactar $norm_words)
+
+    if test -z "$intent_idx"
+        set intent_idx 1
+    end
+
+    set -l type_idx (math $intent_idx + 1)
+
+    if test $type_idx -gt (count $norm_words)
+        return 1
+    end
+
+    if test "$norm_words[$type_idx]" != "arquivo"; and test "$norm_words[$type_idx]" != "pasta"
+        return 1
+    end
+
+    set -g __aury_arg_type $norm_words[$type_idx]
+    set -l start (math $type_idx + 1)
+
+    if test (count $orig_words) -lt $start
+        return 0
+    end
+
+    set -l conn_idx ''
+    set -l i $start
+
+    while test $i -le (count $norm_words)
+        if test "$norm_words[$i]" = "para"
+            set conn_idx $i
+            break
+        end
+
+        set i (math $i + 1)
+    end
+
+    if test -n "$conn_idx"
+        if test (math $conn_idx - 1) -ge $start
+            set -g __aury_arg_source (string join " " -- $orig_words[$start..(math $conn_idx - 1)])
+        end
+
+        if test (count $orig_words) -gt $conn_idx
+            set -g __aury_arg_dest (string join " " -- $orig_words[(math $conn_idx + 1)..-1])
+        end
+    else
+        set -g __aury_arg_source (string join " " -- $orig_words[$start..-1])
+    end
+
+    if test -n "$__aury_arg_dest"
+        set -g __aury_arg_archive_type (__aury_detect_compact_output_type "$__aury_arg_dest")
     end
 
     return 0
@@ -3677,7 +3906,11 @@ function __aury_exec_files
     set -e argv[1]
     set -l norm_words $argv
 
-    __aury_extract_file_args $intent $norm_words
+    if test "$intent" = "compactar"
+        __aury_extract_compact_args $norm_words
+    else
+        __aury_extract_file_args $intent $norm_words
+    end
 
     switch $intent
         case criar remover
@@ -3698,6 +3931,19 @@ function __aury_exec_files
             if __aury_has_competing_coordination "$__aury_arg_dest"
                 __aury_reset_local_reference_state
                 __aury_msg_ambiguous "novo nome" "$__aury_arg_dest"
+                return 0
+            end
+
+        case compactar
+            if __aury_has_competing_coordination "$__aury_arg_source"
+                __aury_reset_local_reference_state
+                __aury_msg_ambiguous alvo "$__aury_arg_source"
+                return 0
+            end
+
+            if __aury_has_competing_coordination "$__aury_arg_dest"
+                __aury_reset_local_reference_state
+                __aury_msg_ambiguous destino "$__aury_arg_dest"
                 return 0
             end
     end
@@ -3854,6 +4100,148 @@ function __aury_exec_files
                 __aury_msg_file_failure mover $move_type $__aury_arg_source
             end
 
+            return 0
+
+        case compactar
+            if test -z "$__aury_arg_source"
+                __aury_reset_local_reference_state
+                __aury_msg_error "alvo de compactação não especificado"
+                return 0
+            end
+
+            if test "$__aury_arg_type" = "arquivo"
+                if not test -e "$__aury_arg_source"
+                    __aury_reset_local_reference_state
+                    __aury_msg_error "não encontrei o arquivo '$__aury_arg_source' para compactar."
+                    return 0
+                end
+
+                if not test -f "$__aury_arg_source"
+                    __aury_reset_local_reference_state
+                    __aury_msg_error "esperei um arquivo para compactar, mas '$__aury_arg_source' é uma pasta."
+                    return 0
+                end
+            else if test "$__aury_arg_type" = "pasta"
+                if not test -e "$__aury_arg_source"
+                    __aury_reset_local_reference_state
+                    __aury_msg_error "não encontrei a pasta '$__aury_arg_source' para compactar."
+                    return 0
+                end
+
+                if not test -d "$__aury_arg_source"
+                    __aury_reset_local_reference_state
+                    __aury_msg_error "esperei uma pasta para compactar, mas '$__aury_arg_source' é um arquivo."
+                    return 0
+                end
+            else
+                __aury_reset_local_reference_state
+                __aury_msg_error "tipo de origem não especificado"
+                return 0
+            end
+
+            if test -z "$__aury_arg_dest"
+                __aury_reset_local_reference_state
+                __aury_msg_invalid_compact_output
+                return 0
+            end
+
+            if test -d "$__aury_arg_dest"; or string match -rq '/$' -- "$__aury_arg_dest"
+                __aury_reset_local_reference_state
+                __aury_msg_invalid_compact_output
+                return 0
+            end
+
+            if test -z "$__aury_arg_archive_type"
+                __aury_reset_local_reference_state
+                __aury_msg_error "nesta versão eu só aceito saída .zip ou .tar.gz."
+                return 0
+            end
+
+            if not __aury_output_parent_exists "$__aury_arg_dest"
+                __aury_reset_local_reference_state
+                __aury_msg_invalid_compact_output
+                return 0
+            end
+
+            if __aury_compact_output_inside_source_dir "$__aury_arg_source" "$__aury_arg_dest"
+                __aury_reset_local_reference_state
+                __aury_msg_invalid_compact_output
+                return 0
+            end
+
+            if test -e "$__aury_arg_dest"
+                __aury_reset_local_reference_state
+                __aury_msg_error "o arquivo de saída já existe: '$__aury_arg_dest'."
+                return 0
+            end
+
+            if not __aury_require_compact_backend "$__aury_arg_dest" "$__aury_arg_archive_type"
+                __aury_reset_local_reference_state
+                return 0
+            end
+
+            set -l previous_dir (pwd)
+            set -l temp_dir (__aury_compact_temp_dir "$__aury_arg_dest")
+            if test -z "$temp_dir"
+                __aury_reset_local_reference_state
+                __aury_msg_error "não consegui compactar '$__aury_arg_source' em '$__aury_arg_dest'."
+                return 0
+            end
+
+            set -l temp_dir_abs "$temp_dir"
+            if not string match -rq '^/' -- "$temp_dir_abs"
+                set temp_dir_abs "$previous_dir/$temp_dir_abs"
+            end
+            set -l temp_archive_abs "$temp_dir_abs/"(basename -- "$__aury_arg_dest")
+
+            set -l source_parent (dirname -- "$__aury_arg_source")
+            set -l source_basename (basename -- "$__aury_arg_source")
+
+            switch $__aury_arg_archive_type
+                case zip
+                    cd -- "$source_parent" >/dev/null 2>/dev/null
+                    if test $status -ne 0
+                        rm -rf -- "$temp_dir_abs"
+                        __aury_reset_local_reference_state
+                        __aury_msg_error "não consegui compactar '$__aury_arg_source' em '$__aury_arg_dest'."
+                        return 0
+                    end
+
+                    zip -qry "$temp_archive_abs" "$source_basename" >/dev/null 2>/dev/null
+                    set -l compact_status $status
+                    cd -- "$previous_dir" >/dev/null 2>/dev/null
+
+                    if test $compact_status -ne 0
+                        rm -rf -- "$temp_dir_abs"
+                        __aury_reset_local_reference_state
+                        __aury_msg_error "não consegui compactar '$__aury_arg_source' em '$__aury_arg_dest'."
+                        return 0
+                    end
+
+                case tar.gz
+                    tar -czf "$temp_archive_abs" -C "$source_parent" "$source_basename" >/dev/null 2>/dev/null
+
+                    if test $status -ne 0
+                        rm -rf -- "$temp_dir_abs"
+                        __aury_reset_local_reference_state
+                        __aury_msg_error "não consegui compactar '$__aury_arg_source' em '$__aury_arg_dest'."
+                        return 0
+                    end
+            end
+
+            mv -- "$temp_archive_abs" "$__aury_arg_dest" >/dev/null 2>/dev/null
+
+            if test $status -ne 0
+                rm -rf -- "$temp_dir_abs"
+                __aury_reset_local_reference_state
+                __aury_msg_error "não consegui compactar '$__aury_arg_source' em '$__aury_arg_dest'."
+                return 0
+            end
+
+            rm -rf -- "$temp_dir_abs"
+
+            __aury_update_local_reference "$__aury_arg_dest" arquivo
+            __aury_msg_ok "Pronto, eu compactei '$__aury_arg_source' em '$__aury_arg_dest'."
             return 0
 
         case extrair

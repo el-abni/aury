@@ -73,12 +73,15 @@ def _render_action_report(action: PreparedAction, analysis: Analysis, action_pla
         _field("domínio", analysis.domain),
         "Entidades",
         _field("tipo", entities.get("tipo", "-")),
+        _field("tipo de origem", entities.get("tipo_de_origem", "-")),
         _field("alvo principal", entities.get("alvo_principal", entities.get("destino", "-"))),
     ]
     if entities.get("arquivo_compactado"):
         lines.append(_field("arquivo compactado", entities["arquivo_compactado"]))
     if entities.get("origem"):
         lines.append(_field("origem", entities["origem"]))
+    if entities.get("saida"):
+        lines.append(_field("saída", entities["saida"]))
     if entities.get("referencia_local"):
         lines.append(_field("referência local", entities["referencia_local"]))
     if entities.get("destino"):

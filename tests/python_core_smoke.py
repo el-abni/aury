@@ -606,6 +606,86 @@ def test_dev_explicit_remove_short_located_folder_inflected_alignment() -> None:
     assert_in(proc.stdout, "confirmação no adaptador Fish")
 
 
+def test_dev_compact_zip_file_alignment() -> None:
+    proc = run("dev", "compactar", "arquivo", "teste.txt", "para", "teste.zip")
+    assert proc.returncode == 0
+    assert_in(proc.stdout, "intenção:                      compactar")
+    assert_in(proc.stdout, "domínio:                       arquivo")
+    assert_in(proc.stdout, "tipo:                          zip")
+    assert_in(proc.stdout, "tipo de origem:                arquivo")
+    assert_in(proc.stdout, "alvo principal:                teste.txt")
+    assert_in(proc.stdout, "origem:                        teste.txt")
+    assert_in(proc.stdout, "saída:                         teste.zip")
+    assert_in(proc.stdout, "resumo:                        Compactar 'teste.txt' em 'teste.zip'.")
+    assert_in(proc.stdout, "candidata a migração futura")
+    assert_in(proc.stdout, "decisão:                       voltar ao Fish")
+    assert_in(proc.stdout, "formato inferido exclusivamente pelo sufixo da saída 'teste.zip'")
+
+
+def test_dev_compact_zip_folder_alignment() -> None:
+    proc = run("dev", "compactar", "pasta", "projetos/", "para", "projetos.zip")
+    assert proc.returncode == 0
+    assert_in(proc.stdout, "intenção:                      compactar")
+    assert_in(proc.stdout, "domínio:                       arquivo")
+    assert_in(proc.stdout, "tipo:                          zip")
+    assert_in(proc.stdout, "tipo de origem:                pasta")
+    assert_in(proc.stdout, "alvo principal:                projetos/")
+    assert_in(proc.stdout, "origem:                        projetos/")
+    assert_in(proc.stdout, "saída:                         projetos.zip")
+    assert_in(proc.stdout, "resumo:                        Compactar 'projetos/' em 'projetos.zip'.")
+    assert_in(proc.stdout, "candidata a migração futura")
+    assert_in(proc.stdout, "decisão:                       voltar ao Fish")
+
+
+def test_dev_compact_tar_gz_file_alignment() -> None:
+    proc = run("dev", "compactar", "arquivo", "teste.txt", "para", "teste.tar.gz")
+    assert proc.returncode == 0
+    assert_in(proc.stdout, "intenção:                      compactar")
+    assert_in(proc.stdout, "domínio:                       arquivo")
+    assert_in(proc.stdout, "tipo:                          tar.gz")
+    assert_in(proc.stdout, "tipo de origem:                arquivo")
+    assert_in(proc.stdout, "alvo principal:                teste.txt")
+    assert_in(proc.stdout, "origem:                        teste.txt")
+    assert_in(proc.stdout, "saída:                         teste.tar.gz")
+    assert_in(proc.stdout, "resumo:                        Compactar 'teste.txt' em 'teste.tar.gz'.")
+    assert_in(proc.stdout, "candidata a migração futura")
+    assert_in(proc.stdout, "decisão:                       voltar ao Fish")
+
+
+def test_dev_compact_tar_gz_folder_alignment() -> None:
+    proc = run("dev", "compactar", "pasta", "projetos/", "para", "projetos.tar.gz")
+    assert proc.returncode == 0
+    assert_in(proc.stdout, "intenção:                      compactar")
+    assert_in(proc.stdout, "domínio:                       arquivo")
+    assert_in(proc.stdout, "tipo:                          tar.gz")
+    assert_in(proc.stdout, "tipo de origem:                pasta")
+    assert_in(proc.stdout, "alvo principal:                projetos/")
+    assert_in(proc.stdout, "origem:                        projetos/")
+    assert_in(proc.stdout, "saída:                         projetos.tar.gz")
+    assert_in(proc.stdout, "resumo:                        Compactar 'projetos/' em 'projetos.tar.gz'.")
+    assert_in(proc.stdout, "candidata a migração futura")
+    assert_in(proc.stdout, "decisão:                       voltar ao Fish")
+
+
+def test_dev_compact_missing_output_blocks() -> None:
+    proc = run("dev", "compactar", "arquivo", "teste.txt")
+    assert proc.returncode == 0
+    assert_in(proc.stdout, "intenção:                      compactar")
+    assert_in(proc.stdout, "estado:                        BLOQUEADA")
+    assert_in(proc.stdout, "lacunas:                       saída explícita obrigatória")
+    assert_in(proc.stdout, "resumo:                        Compactação sem saída explícita; leitura bloqueada.")
+
+
+def test_dev_compact_invalid_format_blocks() -> None:
+    proc = run("dev", "compactar", "arquivo", "teste.txt", "para", "teste.rar")
+    assert proc.returncode == 0
+    assert_in(proc.stdout, "intenção:                      compactar")
+    assert_in(proc.stdout, "estado:                        BLOQUEADA")
+    assert_in(proc.stdout, "lacunas:                       saída .zip ou .tar.gz")
+    assert_in(proc.stdout, "saída:                         teste.rar")
+    assert_in(proc.stdout, "resumo:                        Saída fora do recorte da compactação; leitura bloqueada.")
+
+
 def test_dev_extract_zip_alignment() -> None:
     proc = run("dev", "extrair", "pacote.zip")
     assert proc.returncode == 0
@@ -930,6 +1010,40 @@ def test_prepare_analysis_extract_explicit_real_path_destination_alignment() -> 
         raise AssertionError(f"observações inesperadas: {analysis.observations!r}")
     if not any("adaptador Fish" in item for item in analysis.observations):
         raise AssertionError(f"observações inesperadas: {analysis.observations!r}")
+
+
+def test_prepare_analysis_compact_alignment() -> None:
+    _phrase, _action, analysis = prepare_analysis("compacte pasta projetos/ para projetos.tar.gz")
+    if analysis.intent != "compactar":
+        raise AssertionError(f"intenção inesperada: {analysis.intent!r}")
+    if analysis.domain != "arquivo":
+        raise AssertionError(f"domínio inesperado: {analysis.domain!r}")
+    if analysis.status != "CONSISTENTE":
+        raise AssertionError(f"estado inesperado: {analysis.status!r}")
+    if analysis.entities.get("tipo") != "tar.gz":
+        raise AssertionError(f"tipo inesperado: {analysis.entities.get('tipo')!r}")
+    if analysis.entities.get("tipo_de_origem") != "pasta":
+        raise AssertionError(f"tipo de origem inesperado: {analysis.entities.get('tipo_de_origem')!r}")
+    if analysis.entities.get("origem") != "projetos/":
+        raise AssertionError(f"origem inesperada: {analysis.entities.get('origem')!r}")
+    if analysis.entities.get("saida") != "projetos.tar.gz":
+        raise AssertionError(f"saída inesperada: {analysis.entities.get('saida')!r}")
+    if analysis.summary != "Compactar 'projetos/' em 'projetos.tar.gz'.":
+        raise AssertionError(f"resumo inesperado: {analysis.summary!r}")
+
+
+def test_prepare_analysis_compact_invalid_format_blocks() -> None:
+    _phrase, _action, analysis = prepare_analysis("compactar arquivo teste.txt para teste.rar")
+    if analysis.intent != "compactar":
+        raise AssertionError(f"intenção inesperada: {analysis.intent!r}")
+    if analysis.status != "BLOQUEADA":
+        raise AssertionError(f"estado inesperado: {analysis.status!r}")
+    if analysis.entities.get("lacuna") != "saída .zip ou .tar.gz":
+        raise AssertionError(f"lacuna inesperada: {analysis.entities.get('lacuna')!r}")
+    if analysis.entities.get("saida") != "teste.rar":
+        raise AssertionError(f"saída inesperada: {analysis.entities.get('saida')!r}")
+    if analysis.summary != "Saída fora do recorte da compactação; leitura bloqueada.":
+        raise AssertionError(f"resumo inesperado: {analysis.summary!r}")
 
 
 def test_prepare_analyses_copy_rename_local_reference_alignment() -> None:
@@ -1323,6 +1437,12 @@ def main() -> int:
         test_dev_implicit_remove_located_folder_inflected_alignment,
         test_dev_explicit_remove_short_located_folder_alignment,
         test_dev_explicit_remove_short_located_folder_inflected_alignment,
+        test_dev_compact_zip_file_alignment,
+        test_dev_compact_zip_folder_alignment,
+        test_dev_compact_tar_gz_file_alignment,
+        test_dev_compact_tar_gz_folder_alignment,
+        test_dev_compact_missing_output_blocks,
+        test_dev_compact_invalid_format_blocks,
         test_dev_extract_zip_alignment,
         test_dev_extract_tar_gz_alignment,
         test_dev_extract_conversational_destination_alignment,
@@ -1342,6 +1462,8 @@ def main() -> int:
         test_prepare_analysis_isolated_destructive_remove_local_reference_blocks,
         test_prepare_analysis_extract_conversational_destination_alignment,
         test_prepare_analysis_extract_explicit_real_path_destination_alignment,
+        test_prepare_analysis_compact_alignment,
+        test_prepare_analysis_compact_invalid_format_blocks,
         test_prepare_analyses_copy_rename_local_reference_alignment,
         test_prepare_analyses_multiple_actions,
         test_prepare_analyses_destructive_remove_followup_reuses_safe_local_reference,

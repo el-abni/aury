@@ -74,6 +74,7 @@ Hoje ele cobre de forma executável:
 - confirmação destrutiva segura
 - ambiguidade mínima exposta no runtime
 - encadeamento pequeno com referência local
+- compactação local simples no recorte mínimo da v1.7.0
 - recorte público da medição de velocidade de rede
 - `help`, `version`, `ay` e o contrato mínimo do adaptador Fish
 
@@ -104,6 +105,7 @@ Este auditor pequeno verifica um recorte canônico de status de saída e superf�
 - fallback honesto
 - bloqueio destrutivo explícito
 - fronteira `120` do runtime Python direto contra `0` na entrada pública com fallback para o Fish
+- fronteira equivalente da compactação local simples ainda híbrida
 - falha operacional do speedtest
 - fallback técnico de `help`, `version` e `aury dev <frase>` quando o Python devolve `127`
 
@@ -165,6 +167,7 @@ Hoje ele protege:
 - `version`
 - `aury dev <frase>` no núcleo novo
 - alinhamento curto adicional de `aury dev` com fluxos já sustentados pelo modo normal
+- parser e contrato mínimo de `aury dev` para a compactação local simples da v1.7.0
 - leituras simples de rede no runtime Python
 - busca de pacote e leitura de GPU no runtime Python
 - preparação de frase, ações e tokens sensíveis

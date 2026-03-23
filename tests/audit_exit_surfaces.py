@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import os
 import shlex
+import shutil
 import stat
 import subprocess
 import sys
@@ -11,6 +12,9 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 CURRENT_VERSION = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
+FISH_BIN = shutil.which("fish") or "fish"
+BASH_BIN = shutil.which("bash") or "/usr/bin/bash"
+DIRNAME_BIN = shutil.which("dirname") or "/usr/bin/dirname"
 PYTHON_ENV = os.environ.copy()
 PYTHON_ENV["PYTHONPATH"] = str(ROOT / "python")
 PYTHON_ENV["AURY_SHARE_DIR"] = str(ROOT)
@@ -47,7 +51,7 @@ def run_public(args: list[str], *, env: dict[str, str] | None = None, cwd: Path 
         f"printf '\\n{STATUS_MARKER}%s\\n' $status"
     )
     proc = subprocess.run(
-        ["fish", "-c", script],
+        [FISH_BIN, "--no-config", "-c", script],
         cwd=cwd or ROOT,
         env=merged_env,
         text=True,
@@ -113,6 +117,96 @@ def main() -> int:
         ensure((workdir / "teste.txt").is_file(), "entrada pública precisa executar a criação do arquivo no fallback Fish")
         ensure(not stderr, "fallback estrutural para o Fish não pode vazar stderr")
     ok("fronteira Python 120 -> Fish 0 permanece explícita e auditável")
+
+    with tempfile.TemporaryDirectory() as tmp:
+        workdir = Path(tmp)
+        bin_dir = workdir / "bin"
+        bin_dir.mkdir(parents=True, exist_ok=True)
+        (workdir / "teste.txt").write_text("ok\n", encoding="utf-8")
+        write_stub(
+            bin_dir,
+            "zip",
+            "#!/usr/bin/env bash\narchive=\"$2\"\n: > \"$archive\"\n",
+        )
+        env = {"PATH": f"{bin_dir}:{os.environ['PATH']}"}
+
+        direct_proc = run_python(["compactar", "arquivo", "teste.txt", "para", "teste.zip"], cwd=workdir, env=env)
+        ensure(direct_proc.returncode == 120, "runtime Python direto precisa devolver 120 para compactação ainda híbrida")
+        ensure(not direct_proc.stdout.strip(), "runtime Python direto não deve fingir sucesso na compactação ainda híbrida")
+        ensure(not direct_proc.stderr.strip(), "runtime Python direto não deve vazar erro na compactação ainda híbrida")
+
+        status, output, stderr = run_public(["compactar", "arquivo", "teste.txt", "para", "teste.zip"], env=env, cwd=workdir)
+        ensure(status == 0, "entrada pública precisa sair com 0 quando a compactação fecha no Fish")
+        ensure("eu compactei 'teste.txt' em 'teste.zip'" in output, "compactação pública precisa materializar o sucesso no Fish")
+        ensure((workdir / "teste.zip").is_file(), "compactação pública precisa produzir o arquivo final esperado")
+        ensure(not stderr, "compactação pública bem-sucedida não pode vazar stderr")
+    ok("fronteira Python 120 -> Fish 0 também permanece explícita para compactação")
+
+    with tempfile.TemporaryDirectory() as tmp:
+        workdir = Path(tmp)
+        (workdir / "teste.txt").write_text("ok\n", encoding="utf-8")
+        (workdir / "projetos").mkdir(parents=True, exist_ok=True)
+
+        status, output, stderr = run_public(["compactar", "arquivo", "ausente.txt", "para", "teste.zip"], cwd=workdir)
+        ensure(status == 1, "compactação com arquivo inexistente precisa sair com status 1")
+        ensure("não encontrei o arquivo 'ausente.txt' para compactar." in output, "compactação com arquivo inexistente precisa expor erro honesto")
+        ensure(not stderr, "compactação com arquivo inexistente não pode vazar stderr")
+
+        status, output, stderr = run_public(["compactar", "arquivo", "projetos/", "para", "teste.zip"], cwd=workdir)
+        ensure(status == 1, "compactação com tipo de origem incompatível precisa sair com status 1")
+        ensure("esperei um arquivo para compactar, mas 'projetos/' é uma pasta." in output, "compactação com tipo incompatível precisa expor erro honesto")
+        ensure(not stderr, "compactação com tipo incompatível não pode vazar stderr")
+
+        status, output, stderr = run_public(["compactar", "arquivo", "teste.txt", "para", "saida/teste.zip"], cwd=workdir)
+        ensure(status == 1, "compactação com diretório-pai inexistente precisa sair com status 1")
+        ensure("o arquivo de saída precisa ser um caminho válido terminado em .zip ou .tar.gz." in output, "compactação com saída inválida precisa expor erro honesto")
+        ensure(not stderr, "compactação com saída inválida não pode vazar stderr")
+
+        (workdir / "teste.zip").write_text("old\n", encoding="utf-8")
+        status, output, stderr = run_public(["compactar", "arquivo", "teste.txt", "para", "teste.zip"], cwd=workdir)
+        ensure(status == 1, "compactação com conflito de saída precisa sair com status 1")
+        ensure("o arquivo de saída já existe: 'teste.zip'." in output, "compactação com conflito de saída precisa expor erro honesto")
+        ensure(not stderr, "compactação com conflito de saída não pode vazar stderr")
+    ok("bloqueios públicos mínimos da compactação saem com 1 e sem ruído")
+
+    with tempfile.TemporaryDirectory() as tmp:
+        workdir = Path(tmp)
+        bin_dir = workdir / "bin"
+        bin_dir.mkdir(parents=True, exist_ok=True)
+        (workdir / "teste.txt").write_text("ok\n", encoding="utf-8")
+        write_stub(bin_dir, "dirname", f"#!{BASH_BIN}\nexec {DIRNAME_BIN} \"$@\"\n")
+        status, output, stderr = run_public(
+            ["compactar", "arquivo", "teste.txt", "para", "teste.zip"],
+            env={"PATH": str(bin_dir)},
+            cwd=workdir,
+        )
+        ensure(status == 1, "compactação sem backend precisa sair com status 1")
+        ensure("não encontrei o backend necessário para criar 'teste.zip'." in output, "compactação sem backend precisa expor erro honesto")
+        ensure(not stderr, "compactação sem backend não pode vazar stderr")
+    ok("ausência do backend de compactação sai com 1")
+
+    with tempfile.TemporaryDirectory() as tmp:
+        workdir = Path(tmp)
+        bin_dir = workdir / "bin"
+        bin_dir.mkdir(parents=True, exist_ok=True)
+        (workdir / "teste.txt").write_text("ok\n", encoding="utf-8")
+        write_stub(
+            bin_dir,
+            "zip",
+            "#!/usr/bin/env bash\narchive=\"$2\"\nprintf 'partial\\n' > \"$archive\"\nexit 12\n",
+        )
+        env = {"PATH": f"{bin_dir}:{os.environ['PATH']}"}
+
+        status, output, stderr = run_public(["compactar", "arquivo", "teste.txt", "para", "teste.zip"], env=env, cwd=workdir)
+        ensure(status == 1, "falha operacional da compactação precisa sair com status 1")
+        ensure("não consegui compactar 'teste.txt' em 'teste.zip'." in output, "falha operacional da compactação precisa expor erro honesto")
+        ensure(not stderr, "falha operacional da compactação não pode vazar stderr")
+        ensure(not (workdir / "teste.zip").exists(), "falha operacional da compactação não pode deixar o arquivo final")
+        ensure(
+            not any(path.name.startswith(".aury-compact.") for path in workdir.iterdir()),
+            "falha operacional da compactação não pode deixar artefato temporário parcial",
+        )
+    ok("falha operacional da compactação limpa o artefato parcial")
 
     with tempfile.TemporaryDirectory() as tmp:
         bin_dir = Path(tmp) / "bin"

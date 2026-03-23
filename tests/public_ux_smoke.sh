@@ -426,6 +426,47 @@ chmod +x "$download_guard_tmp/bin/librespeed-cli"
 download_guard_output="$(ROOT="$ROOT" PATH="$download_guard_tmp/bin:$PATH" fish -c 'source $ROOT/bin/aury.fish; aury download da internet' 2>&1 || true)"
 require_not_in_output "$download_guard_output" "LIBRESPEED_DOWNLOAD_GUARD" "'download' sozinho não pode virar speedtest"
 
+compact_zip_tmp="$(mktemp -d /tmp/aury-public-ux-XXXXXX)"
+tmpdirs+=("$compact_zip_tmp")
+mkdir -p "$compact_zip_tmp/bin"
+printf 'abc\n' > "$compact_zip_tmp/teste.txt"
+
+cat > "$compact_zip_tmp/bin/zip" <<'EOF'
+#!/usr/bin/env bash
+archive="$2"
+printf 'zip\n' > "$archive"
+EOF
+chmod +x "$compact_zip_tmp/bin/zip"
+
+compact_zip_output="$(ROOT="$ROOT" TMP="$compact_zip_tmp" PATH="$compact_zip_tmp/bin:$PATH" fish -c 'source $ROOT/bin/aury.fish; cd $TMP; aury compactar arquivo teste.txt para teste.zip; if test -f teste.zip; echo ZIP_CREATED; else; echo ZIP_MISSING; end' 2>&1 || true)"
+require_in_output "$compact_zip_output" "Pronto, eu compactei 'teste.txt' em 'teste.zip'." "compactação simples em zip precisa materializar a mensagem pública de sucesso"
+require_in_output "$compact_zip_output" "ZIP_CREATED" "compactação simples em zip precisa criar o arquivo final"
+
+if compgen -G "$compact_zip_tmp/.aury-compact.*" >/dev/null; then
+    fail "compactação simples em zip não pode deixar artefato temporário aparente"
+fi
+
+compact_tar_tmp="$(mktemp -d /tmp/aury-public-ux-XXXXXX)"
+tmpdirs+=("$compact_tar_tmp")
+mkdir -p "$compact_tar_tmp/bin" "$compact_tar_tmp/projetos"
+
+cat > "$compact_tar_tmp/bin/tar" <<'EOF'
+#!/usr/bin/env bash
+archive="$2"
+printf 'tar\n' > "$archive"
+EOF
+chmod +x "$compact_tar_tmp/bin/tar"
+
+compact_tar_output="$(ROOT="$ROOT" TMP="$compact_tar_tmp" PATH="$compact_tar_tmp/bin:$PATH" fish -c 'source $ROOT/bin/aury.fish; cd $TMP; aury compactar pasta projetos/ para projetos.tar.gz; if test -f projetos.tar.gz; echo TAR_CREATED; else; echo TAR_MISSING; end' 2>&1 || true)"
+require_in_output "$compact_tar_output" "Pronto, eu compactei 'projetos/' em 'projetos.tar.gz'." "compactação simples em tar.gz precisa materializar a mensagem pública de sucesso"
+require_in_output "$compact_tar_output" "TAR_CREATED" "compactação simples em tar.gz precisa criar o arquivo final"
+
+compact_missing_output="$(ROOT="$ROOT" TMP="$compact_zip_tmp" fish -c 'source $ROOT/bin/aury.fish; cd $TMP; aury compactar arquivo ausente.txt para teste.zip' 2>&1 || true)"
+require_in_output "$compact_missing_output" "não encontrei o arquivo 'ausente.txt' para compactar." "compactação com origem inexistente precisa falhar com mensagem honesta"
+
+compact_invalid_output="$(ROOT="$ROOT" TMP="$compact_zip_tmp" fish -c 'source $ROOT/bin/aury.fish; cd $TMP; aury compactar arquivo teste.txt para saida/teste.zip' 2>&1 || true)"
+require_in_output "$compact_invalid_output" "o arquivo de saída precisa ser um caminho válido terminado em .zip ou .tar.gz." "compactação com saída inválida precisa falhar com mensagem honesta"
+
 
 help_output="$(fish -c "source '$ROOT/bin/aury.fish'; aury ajuda" 2>&1 || true)"
 require_in_output "$help_output" "💜 Aury" "ajuda precisa continuar disponível"

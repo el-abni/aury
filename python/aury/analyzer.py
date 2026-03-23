@@ -21,10 +21,12 @@ _EXTRACTION_INTENT_TOKENS = {
     "descomprimir",
     "desarquivar",
 }
+_COMPRESSION_INTENT_TOKENS = {"compactar", "compacte"}
 _COPY_INTENT_TOKENS = {"copiar", "copie", "copia"}
 _MOVE_INTENT_TOKENS = {"mover", "move", "mova"}
 _RENAME_INTENT_TOKENS = {"renomear", "renomeie", "renomeia", "renomea"}
 _EXTRACTION_CONNECTOR_TOKENS = {"para"}
+_COMPRESSION_CONNECTOR_TOKENS = {"para"}
 _EXTRACTION_LEADING_TYPE_TOKENS = {"arquivo", "pacote", "pasta"}
 _EXTRACTION_DESTINATION_NOISE_TOKENS = {
     "a",
@@ -139,6 +141,8 @@ def _normalized_intent_token(token: str) -> str:
         return "renomear"
     if token in _EXTRACTION_INTENT_TOKENS:
         return "extrair"
+    if token in _COMPRESSION_INTENT_TOKENS:
+        return "compactar"
     return token
 
 
@@ -227,6 +231,15 @@ def _detect_archive_type(path: str) -> str:
     return ""
 
 
+def _detect_compact_output_type(path: str) -> str:
+    lower = path.lower()
+    if lower.endswith(".tar.gz"):
+        return "tar.gz"
+    if lower.endswith(".zip"):
+        return "zip"
+    return ""
+
+
 def _archive_default_destination(archive_path: str) -> str:
     base = archive_path.rsplit("/", 1)[-1]
     lower = base.lower()
@@ -272,6 +285,147 @@ def _extract_destination_phrase(
         and any(token in {"em", "no", "na", "nos", "nas"} for token in skipped_tokens)
     )
     return destination, used_simple_location
+
+
+def _blocked_compact_action(
+    action: PreparedAction,
+    *,
+    source_type: str,
+    source: str = "",
+    output: str = "",
+    lacuna: str,
+    reason: str,
+    summary: str,
+    observations: list[str] | None = None,
+) -> Analysis:
+    entities = {"tipo_de_origem": source_type, "lacuna": lacuna}
+    if source:
+        entities["origem"] = source
+        entities["alvo_principal"] = source
+    if output:
+        entities["saida"] = output
+    return _analysis(
+        action,
+        intent="compactar",
+        domain="arquivo",
+        status="BLOQUEADA",
+        reason=reason,
+        summary=summary,
+        entities=entities,
+        observations=observations or [],
+    )
+
+
+def _match_compact_action(action: PreparedAction) -> Analysis | None:
+    normalized_tokens = action.normalized_tokens
+    original_tokens = action.original_tokens
+
+    if len(normalized_tokens) < 2:
+        return None
+
+    first_token = _normalized_intent_token(normalized_tokens[0])
+    if first_token != "compactar":
+        return None
+
+    if normalized_tokens[1] not in {"arquivo", "pasta"}:
+        return None
+
+    source_type = normalized_tokens[1]
+    source_start = 2
+
+    if source_start >= len(original_tokens):
+        return _blocked_compact_action(
+            action,
+            source_type=source_type,
+            lacuna="origem",
+            reason="o pedido de compactação foi reconhecido, mas faltou a origem explícita.",
+            summary="Compactação sem origem válida; leitura bloqueada.",
+            observations=["a compactação mínima da v1.7 exige um único arquivo ou uma única pasta como origem"],
+        )
+
+    connector_idx = next(
+        (index for index in range(source_start, len(normalized_tokens)) if normalized_tokens[index] in _COMPRESSION_CONNECTOR_TOKENS),
+        None,
+    )
+
+    if connector_idx is None:
+        source = _join_tokens(original_tokens[source_start:])
+        if not source:
+            return _blocked_compact_action(
+                action,
+                source_type=source_type,
+                lacuna="origem",
+                reason="o pedido de compactação foi reconhecido, mas faltou a origem explícita.",
+                summary="Compactação sem origem válida; leitura bloqueada.",
+                observations=["a compactação mínima da v1.7 exige um único arquivo ou uma única pasta como origem"],
+            )
+        return _blocked_compact_action(
+            action,
+            source_type=source_type,
+            source=source,
+            lacuna="saída explícita obrigatória",
+            reason="o pedido de compactação foi reconhecido, mas ainda falta a saída explícita obrigatória.",
+            summary="Compactação sem saída explícita; leitura bloqueada.",
+            observations=["o primeiro corte da compactação exige o conector 'para' com um arquivo de saída explícito"],
+        )
+
+    source = _join_tokens(original_tokens[source_start:connector_idx])
+    output = _join_tokens(original_tokens[connector_idx + 1 :])
+
+    if not source:
+        return _blocked_compact_action(
+            action,
+            source_type=source_type,
+            output=output,
+            lacuna="origem",
+            reason="o pedido de compactação foi reconhecido, mas faltou a origem explícita.",
+            summary="Compactação sem origem válida; leitura bloqueada.",
+            observations=["a compactação mínima da v1.7 exige um único arquivo ou uma única pasta como origem"],
+        )
+
+    if not output:
+        return _blocked_compact_action(
+            action,
+            source_type=source_type,
+            source=source,
+            lacuna="saída explícita obrigatória",
+            reason="o pedido de compactação foi reconhecido, mas ainda falta a saída explícita obrigatória.",
+            summary="Compactação sem saída explícita; leitura bloqueada.",
+            observations=["o primeiro corte da compactação exige o conector 'para' com um arquivo de saída explícito"],
+        )
+
+    output_type = _detect_compact_output_type(output)
+    if not output_type:
+        return _blocked_compact_action(
+            action,
+            source_type=source_type,
+            source=source,
+            output=output,
+            lacuna="saída .zip ou .tar.gz",
+            reason="o pedido de compactação foi reconhecido, mas a saída ficou fora do recorte mínimo de formatos.",
+            summary="Saída fora do recorte da compactação; leitura bloqueada.",
+            observations=["nesta v1.7, a compactação mínima aceita apenas '.zip' e '.tar.gz'"],
+        )
+
+    return _analysis(
+        action,
+        intent="compactar",
+        domain="arquivo",
+        status="CONSISTENTE",
+        reason=f"pedido de compactação de {source_type} com saída explícita reconhecido.",
+        summary=f"Compactar '{source}' em '{output}'.",
+        entities={
+            "tipo": output_type,
+            "tipo_de_origem": source_type,
+            "alvo_principal": source,
+            "origem": source,
+            "saida": output,
+        },
+        observations=[
+            f"formato inferido exclusivamente pelo sufixo da saída '{output}'",
+            "execução normal atual continua no adaptador Fish",
+        ],
+    )
 
 
 def _match_extract_action(action: PreparedAction) -> Analysis | None:
@@ -997,6 +1151,10 @@ def analyze_prepared_action(action: PreparedAction) -> Analysis:
     chain = _match_copy_rename(action)
     if chain is not None:
         return chain
+
+    compact_action = _match_compact_action(action)
+    if compact_action is not None:
+        return compact_action
 
     basic_file_action = _match_basic_file_action(action)
     if basic_file_action is not None:
