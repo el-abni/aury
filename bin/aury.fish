@@ -4119,8 +4119,8 @@ end
 function __aury_show_shared_version
     set -l root (__aury_share_root)
     if test -f "$root/VERSION"
-        set -l version (string trim -- (cat "$root/VERSION"))
-        echo "💜 Aury $version"
+        set -l aury_version (string trim -- (cat "$root/VERSION"))
+        echo "💜 Aury $aury_version"
         return 0
     end
 
@@ -4130,17 +4130,16 @@ end
 function __aury_show_shared_help
     set -l root (__aury_share_root)
     set -l help_file "$root/resources/help.txt"
-    set -l version "versão-indisponível"
+    set -l aury_version "versão-indisponível"
 
     if test -f "$root/VERSION"
-        set version (string trim -- (cat "$root/VERSION" | string collect))
+        set aury_version (string trim -- (cat "$root/VERSION" | string collect))
     end
 
     if test -f "$help_file"
         set -l template (cat "$help_file" | string collect)
-        set -l rendered (string replace -a "{version}" "$version" -- "$template")
-        printf '%s
-' "$rendered"
+        set -l rendered (string replace -a "{version}" "$aury_version" -- "$template")
+        printf '%s\n' "$rendered"
         return 0
     end
 

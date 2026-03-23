@@ -35,6 +35,13 @@ Na prática:
 - `public_ux_smoke.sh` protege a superfície pública do adaptador Fish
 - `python_core_smoke.py` protege o núcleo Python já canonizado
 
+Ferramentas de fechamento estrutural, quando houver stage explícita para release:
+
+```bash
+python3 tests/audit_exit_surfaces.py
+bash tests/release_gate_minimo.sh
+```
+
 ## Arquivos atuais
 
 ### `casos.yaml`
@@ -89,7 +96,28 @@ Este auditor pequeno verifica um recorte de paridade operacional entre:
 
 O foco é manter auditáveis as rotas já assumidas como Python e as que seguem canonicamente no adaptador Fish.
 
-Ele não substitui o `casos.yaml`. Os dois cumprem papéis diferentes:
+### `audit_exit_surfaces.py`
+
+Este auditor pequeno verifica um recorte canônico de status de saída e superfície de erro:
+
+- sucesso público simples
+- fallback honesto
+- bloqueio destrutivo explícito
+- fronteira `120` do runtime Python direto contra `0` na entrada pública com fallback para o Fish
+- falha operacional do speedtest
+- fallback técnico de `help`, `version` e `aury dev <frase>` quando o Python devolve `127`
+
+### `release_gate_minimo.sh`
+
+Este gate curto roda em cima da stage pública atual e bloqueia cedo:
+
+- stage vazia ou fora do recorte público esperado
+- arquivo privado/sensível staged
+- erro textual em `git diff --cached --check`
+- falha no preflight canônico
+- falha no auditor de exit status
+
+Esses auditores e o gate não substituem o `casos.yaml`. Os papéis continuam separados:
 
 - `casos.yaml` registra o contrato incremental
 - `public_ux_smoke.sh` valida a parte já estabilizada da UX pública
