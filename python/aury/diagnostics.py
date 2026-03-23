@@ -17,8 +17,8 @@ def _action_plan_status_label(action_plan: ActionExecutionPlan) -> str:
     if action_plan.status == "SUPPORTED_NOW":
         return "suportada agora"
     if action_plan.status == "FUTURE_MIGRATION_CANDIDATE":
-        return "candidata a migração futura"
-    return "deve voltar ao Fish"
+        return "atendida pelo adaptador Fish"
+    return "fora do recorte do núcleo Python"
 
 
 def _action_plan_decision(action_plan: ActionExecutionPlan) -> str:
@@ -31,8 +31,8 @@ def _sequence_plan_status_label(sequence_plan: SequenceExecutionPlan) -> str:
     if sequence_plan.executes_in_python:
         return "suportada agora"
     if any(action_plan.status == "FUTURE_MIGRATION_CANDIDATE" for action_plan in sequence_plan.action_plans):
-        return "candidata a migração futura"
-    return "deve voltar ao Fish"
+        return "atendida pelo adaptador Fish"
+    return "fora do recorte do núcleo Python"
 
 
 def _sequence_plan_decision(sequence_plan: SequenceExecutionPlan) -> str:

@@ -20,6 +20,7 @@ from aury.sensitive_tokens import protect_sensitive_tokens, restore_sensitive_to
 ENV = os.environ.copy()
 ENV["PYTHONPATH"] = str(ROOT / "python")
 ENV["AURY_SHARE_DIR"] = str(ROOT)
+FISH_ROUTED_LABEL = "atendida pelo adaptador Fish"
 
 
 def run(*args: str, env: dict[str, str] | None = None) -> subprocess.CompletedProcess[str]:
@@ -67,7 +68,7 @@ def test_dev_install_package_alignment() -> None:
     assert_in(proc.stdout, "domínio:                       pacote")
     assert_in(proc.stdout, "alvo principal:                firefox")
     assert_in(proc.stdout, "resumo:                        Instalar 'firefox'.")
-    assert_in(proc.stdout, "candidata a migração futura")
+    assert_in(proc.stdout, FISH_ROUTED_LABEL)
     assert_in(proc.stdout, "decisão:                       voltar ao Fish")
 
 
@@ -78,7 +79,7 @@ def test_dev_ping_host_alignment() -> None:
     assert_in(proc.stdout, "domínio:                       rede")
     assert_in(proc.stdout, "alvo principal:                google.com")
     assert_in(proc.stdout, "resumo:                        Pingar 'google.com'.")
-    assert_in(proc.stdout, "candidata a migração futura")
+    assert_in(proc.stdout, FISH_ROUTED_LABEL)
     assert_in(proc.stdout, "decisão:                       voltar ao Fish")
 
 
@@ -89,7 +90,7 @@ def test_dev_network_speed_rede_alignment() -> None:
     assert_in(proc.stdout, "domínio:                       rede")
     assert_in(proc.stdout, "alvo principal:                velocidade da rede")
     assert_in(proc.stdout, "resumo:                        Medir a velocidade da rede.")
-    assert_in(proc.stdout, "candidata a migração futura")
+    assert_in(proc.stdout, FISH_ROUTED_LABEL)
     assert_in(proc.stdout, "decisão:                       voltar ao Fish")
 
 
@@ -359,7 +360,7 @@ def test_dev_copy_file_alignment() -> None:
     assert_in(proc.stdout, "origem:                        origem/item.txt")
     assert_in(proc.stdout, "destino:                       destino/item-copia.txt")
     assert_in(proc.stdout, "resumo:                        Copiar 'origem/item.txt' para 'destino/item-copia.txt'.")
-    assert_in(proc.stdout, "candidata a migração futura")
+    assert_in(proc.stdout, FISH_ROUTED_LABEL)
     assert_in(proc.stdout, "decisão:                       voltar ao Fish")
 
 
@@ -373,7 +374,7 @@ def test_dev_move_file_alignment() -> None:
     assert_in(proc.stdout, "origem:                        destino/item-copia.txt")
     assert_in(proc.stdout, "destino:                       destino/item-movido.txt")
     assert_in(proc.stdout, "resumo:                        Mover 'destino/item-copia.txt' para 'destino/item-movido.txt'.")
-    assert_in(proc.stdout, "candidata a migração futura")
+    assert_in(proc.stdout, FISH_ROUTED_LABEL)
     assert_in(proc.stdout, "decisão:                       voltar ao Fish")
 
 
@@ -388,7 +389,7 @@ def test_dev_rename_file_alignment() -> None:
     assert_in(proc.stdout, "destino:                       destino/item-final.txt")
     assert_in(proc.stdout, "novo nome:                     item-final.txt")
     assert_in(proc.stdout, "resumo:                        Renomear 'destino/item-movido.txt' para 'destino/item-final.txt'.")
-    assert_in(proc.stdout, "candidata a migração futura")
+    assert_in(proc.stdout, FISH_ROUTED_LABEL)
     assert_in(proc.stdout, "decisão:                       voltar ao Fish")
 
 
@@ -400,7 +401,7 @@ def test_dev_explicit_remove_file_alignment() -> None:
     assert_in(proc.stdout, "tipo:                          arquivo")
     assert_in(proc.stdout, "alvo principal:                apagar.txt")
     assert_in(proc.stdout, "resumo:                        Remover 'apagar.txt'.")
-    assert_in(proc.stdout, "candidata a migração futura")
+    assert_in(proc.stdout, FISH_ROUTED_LABEL)
     assert_in(proc.stdout, "decisão:                       voltar ao Fish")
     assert_in(proc.stdout, "confirmação destrutiva no adaptador Fish")
 
@@ -413,7 +414,7 @@ def test_dev_explicit_remove_folder_alignment() -> None:
     assert_in(proc.stdout, "tipo:                          pasta")
     assert_in(proc.stdout, "alvo principal:                pasta_apagar")
     assert_in(proc.stdout, "resumo:                        Remover 'pasta_apagar'.")
-    assert_in(proc.stdout, "candidata a migração futura")
+    assert_in(proc.stdout, FISH_ROUTED_LABEL)
     assert_in(proc.stdout, "decisão:                       voltar ao Fish")
     assert_in(proc.stdout, "confirmação destrutiva no adaptador Fish")
 
@@ -427,7 +428,7 @@ def test_dev_explicit_remove_located_folder_alignment() -> None:
     assert_in(proc.stdout, "alvo principal:                Downloads/Aury")
     assert_in(proc.stdout, "origem:                        Downloads/Aury")
     assert_in(proc.stdout, "resumo:                        Remover 'Downloads/Aury'.")
-    assert_in(proc.stdout, "candidata a migração futura")
+    assert_in(proc.stdout, FISH_ROUTED_LABEL)
     assert_in(proc.stdout, "decisão:                       voltar ao Fish")
     assert_in(proc.stdout, "localização conversacional usada para recompor a base 'Downloads'")
     assert_in(proc.stdout, "confirmação destrutiva no adaptador Fish")
@@ -442,7 +443,7 @@ def test_dev_explicit_remove_located_file_alignment() -> None:
     assert_in(proc.stdout, "alvo principal:                destino/teste.txt")
     assert_in(proc.stdout, "origem:                        destino/teste.txt")
     assert_in(proc.stdout, "resumo:                        Remover 'destino/teste.txt'.")
-    assert_in(proc.stdout, "candidata a migração futura")
+    assert_in(proc.stdout, FISH_ROUTED_LABEL)
     assert_in(proc.stdout, "decisão:                       voltar ao Fish")
     assert_in(proc.stdout, "localização conversacional usada para recompor a base 'destino'")
     assert_in(proc.stdout, "confirmação destrutiva no adaptador Fish")
@@ -458,7 +459,7 @@ def test_dev_implicit_remove_file_alignment() -> None:
     assert_in(proc.stdout, "tipo:                          arquivo")
     assert_in(proc.stdout, "alvo principal:                teste.txt")
     assert_in(proc.stdout, "resumo:                        Remover 'teste.txt'.")
-    assert_in(proc.stdout, "candidata a migração futura")
+    assert_in(proc.stdout, FISH_ROUTED_LABEL)
     assert_in(proc.stdout, "decisão:                       voltar ao Fish")
     assert_in(proc.stdout, "confirmação no adaptador Fish")
 
@@ -473,7 +474,7 @@ def test_dev_implicit_remove_file_inflected_alignment() -> None:
     assert_in(proc.stdout, "tipo:                          arquivo")
     assert_in(proc.stdout, "alvo principal:                teste.txt")
     assert_in(proc.stdout, "resumo:                        Remover 'teste.txt'.")
-    assert_in(proc.stdout, "candidata a migração futura")
+    assert_in(proc.stdout, FISH_ROUTED_LABEL)
     assert_in(proc.stdout, "decisão:                       voltar ao Fish")
     assert_in(proc.stdout, "confirmação no adaptador Fish")
 
@@ -488,7 +489,7 @@ def test_dev_implicit_remove_folder_alignment() -> None:
     assert_in(proc.stdout, "tipo:                          pasta")
     assert_in(proc.stdout, "alvo principal:                projetos/")
     assert_in(proc.stdout, "resumo:                        Remover 'projetos/'.")
-    assert_in(proc.stdout, "candidata a migração futura")
+    assert_in(proc.stdout, FISH_ROUTED_LABEL)
     assert_in(proc.stdout, "decisão:                       voltar ao Fish")
     assert_in(proc.stdout, "confirmação no adaptador Fish")
 
@@ -503,7 +504,7 @@ def test_dev_implicit_remove_folder_inflected_alignment() -> None:
     assert_in(proc.stdout, "tipo:                          pasta")
     assert_in(proc.stdout, "alvo principal:                projetos/")
     assert_in(proc.stdout, "resumo:                        Remover 'projetos/'.")
-    assert_in(proc.stdout, "candidata a migração futura")
+    assert_in(proc.stdout, FISH_ROUTED_LABEL)
     assert_in(proc.stdout, "decisão:                       voltar ao Fish")
     assert_in(proc.stdout, "confirmação no adaptador Fish")
 
@@ -519,7 +520,7 @@ def test_dev_implicit_remove_located_file_alignment() -> None:
     assert_in(proc.stdout, "alvo principal:                Downloads/teste.txt")
     assert_in(proc.stdout, "origem:                        Downloads/teste.txt")
     assert_in(proc.stdout, "resumo:                        Remover 'Downloads/teste.txt'.")
-    assert_in(proc.stdout, "candidata a migração futura")
+    assert_in(proc.stdout, FISH_ROUTED_LABEL)
     assert_in(proc.stdout, "decisão:                       voltar ao Fish")
     assert_in(proc.stdout, "localização conversacional simples usada para recompor a base 'Downloads'")
     assert_in(proc.stdout, "confirmação no adaptador Fish")
@@ -536,7 +537,7 @@ def test_dev_implicit_remove_located_file_inflected_alignment() -> None:
     assert_in(proc.stdout, "alvo principal:                Downloads/teste.txt")
     assert_in(proc.stdout, "origem:                        Downloads/teste.txt")
     assert_in(proc.stdout, "resumo:                        Remover 'Downloads/teste.txt'.")
-    assert_in(proc.stdout, "candidata a migração futura")
+    assert_in(proc.stdout, FISH_ROUTED_LABEL)
     assert_in(proc.stdout, "decisão:                       voltar ao Fish")
     assert_in(proc.stdout, "localização conversacional simples usada para recompor a base 'Downloads'")
     assert_in(proc.stdout, "confirmação no adaptador Fish")
@@ -553,7 +554,7 @@ def test_dev_implicit_remove_located_folder_alignment() -> None:
     assert_in(proc.stdout, "alvo principal:                Downloads/projetos/")
     assert_in(proc.stdout, "origem:                        Downloads/projetos/")
     assert_in(proc.stdout, "resumo:                        Remover 'Downloads/projetos/'.")
-    assert_in(proc.stdout, "candidata a migração futura")
+    assert_in(proc.stdout, FISH_ROUTED_LABEL)
     assert_in(proc.stdout, "decisão:                       voltar ao Fish")
     assert_in(proc.stdout, "localização conversacional simples usada para recompor a base 'Downloads'")
     assert_in(proc.stdout, "confirmação no adaptador Fish")
@@ -570,7 +571,7 @@ def test_dev_implicit_remove_located_folder_inflected_alignment() -> None:
     assert_in(proc.stdout, "alvo principal:                Downloads/projetos/")
     assert_in(proc.stdout, "origem:                        Downloads/projetos/")
     assert_in(proc.stdout, "resumo:                        Remover 'Downloads/projetos/'.")
-    assert_in(proc.stdout, "candidata a migração futura")
+    assert_in(proc.stdout, FISH_ROUTED_LABEL)
     assert_in(proc.stdout, "decisão:                       voltar ao Fish")
     assert_in(proc.stdout, "localização conversacional simples usada para recompor a base 'Downloads'")
     assert_in(proc.stdout, "confirmação no adaptador Fish")
@@ -587,7 +588,7 @@ def test_dev_explicit_remove_short_located_folder_alignment() -> None:
     assert_in(proc.stdout, "alvo principal:                Downloads/projetos/")
     assert_in(proc.stdout, "origem:                        Downloads/projetos/")
     assert_in(proc.stdout, "resumo:                        Remover 'Downloads/projetos/'.")
-    assert_in(proc.stdout, "candidata a migração futura")
+    assert_in(proc.stdout, FISH_ROUTED_LABEL)
     assert_in(proc.stdout, "decisão:                       voltar ao Fish")
     assert_in(proc.stdout, "localização conversacional simples usada para recompor a base 'Downloads'")
     assert_in(proc.stdout, "confirmação no adaptador Fish")
@@ -604,7 +605,7 @@ def test_dev_explicit_remove_short_located_folder_inflected_alignment() -> None:
     assert_in(proc.stdout, "alvo principal:                Downloads/projetos/")
     assert_in(proc.stdout, "origem:                        Downloads/projetos/")
     assert_in(proc.stdout, "resumo:                        Remover 'Downloads/projetos/'.")
-    assert_in(proc.stdout, "candidata a migração futura")
+    assert_in(proc.stdout, FISH_ROUTED_LABEL)
     assert_in(proc.stdout, "decisão:                       voltar ao Fish")
     assert_in(proc.stdout, "localização conversacional simples usada para recompor a base 'Downloads'")
     assert_in(proc.stdout, "confirmação no adaptador Fish")
@@ -621,7 +622,7 @@ def test_dev_compact_zip_file_alignment() -> None:
     assert_in(proc.stdout, "origem:                        teste.txt")
     assert_in(proc.stdout, "saída:                         teste.zip")
     assert_in(proc.stdout, "resumo:                        Compactar 'teste.txt' em 'teste.zip'.")
-    assert_in(proc.stdout, "candidata a migração futura")
+    assert_in(proc.stdout, FISH_ROUTED_LABEL)
     assert_in(proc.stdout, "decisão:                       voltar ao Fish")
     assert_in(proc.stdout, "formato inferido exclusivamente pelo sufixo da saída 'teste.zip'")
 
@@ -637,7 +638,7 @@ def test_dev_compact_zip_folder_alignment() -> None:
     assert_in(proc.stdout, "origem:                        projetos/")
     assert_in(proc.stdout, "saída:                         projetos.zip")
     assert_in(proc.stdout, "resumo:                        Compactar 'projetos/' em 'projetos.zip'.")
-    assert_in(proc.stdout, "candidata a migração futura")
+    assert_in(proc.stdout, FISH_ROUTED_LABEL)
     assert_in(proc.stdout, "decisão:                       voltar ao Fish")
 
 
@@ -652,7 +653,7 @@ def test_dev_compact_tar_gz_file_alignment() -> None:
     assert_in(proc.stdout, "origem:                        teste.txt")
     assert_in(proc.stdout, "saída:                         teste.tar.gz")
     assert_in(proc.stdout, "resumo:                        Compactar 'teste.txt' em 'teste.tar.gz'.")
-    assert_in(proc.stdout, "candidata a migração futura")
+    assert_in(proc.stdout, FISH_ROUTED_LABEL)
     assert_in(proc.stdout, "decisão:                       voltar ao Fish")
 
 
@@ -667,7 +668,7 @@ def test_dev_compact_tar_gz_folder_alignment() -> None:
     assert_in(proc.stdout, "origem:                        projetos/")
     assert_in(proc.stdout, "saída:                         projetos.tar.gz")
     assert_in(proc.stdout, "resumo:                        Compactar 'projetos/' em 'projetos.tar.gz'.")
-    assert_in(proc.stdout, "candidata a migração futura")
+    assert_in(proc.stdout, FISH_ROUTED_LABEL)
     assert_in(proc.stdout, "decisão:                       voltar ao Fish")
 
 
@@ -705,7 +706,7 @@ def test_dev_extract_zip_alignment() -> None:
     assert_in(proc.stdout, "arquivo compactado:            pacote.zip")
     assert_in(proc.stdout, "destino:                       ./pacote")
     assert_in(proc.stdout, "resumo:                        Extrair 'pacote.zip' para './pacote'.")
-    assert_in(proc.stdout, "candidata a migração futura")
+    assert_in(proc.stdout, FISH_ROUTED_LABEL)
     assert_in(proc.stdout, "decisão:                       voltar ao Fish")
     assert_in(proc.stdout, "destino padrão de extração derivado como './pacote'")
 
@@ -720,7 +721,7 @@ def test_dev_extract_tar_gz_alignment() -> None:
     assert_in(proc.stdout, "arquivo compactado:            pacote.tar.gz")
     assert_in(proc.stdout, "destino:                       ./pacote")
     assert_in(proc.stdout, "resumo:                        Extrair 'pacote.tar.gz' para './pacote'.")
-    assert_in(proc.stdout, "candidata a migração futura")
+    assert_in(proc.stdout, FISH_ROUTED_LABEL)
     assert_in(proc.stdout, "decisão:                       voltar ao Fish")
     assert_in(proc.stdout, "destino padrão de extração derivado como './pacote'")
 
@@ -737,7 +738,7 @@ def test_dev_extract_conversational_destination_alignment() -> None:
     assert_in(proc.stdout, "localização conversacional")
     assert_in(proc.stdout, "destino simples: extracao")
     assert_in(proc.stdout, "resumo:                        Extrair 'pacote.tar.gz' para 'extracao'.")
-    assert_in(proc.stdout, "candidata a migração futura")
+    assert_in(proc.stdout, FISH_ROUTED_LABEL)
     assert_in(proc.stdout, "decisão:                       voltar ao Fish")
     assert_in(proc.stdout, "localização conversacional simples usada para fechar o destino 'extracao'")
 
@@ -752,7 +753,7 @@ def test_dev_extract_explicit_real_path_destination_alignment() -> None:
     assert_in(proc.stdout, "arquivo compactado:            pacote.tar.gz")
     assert_in(proc.stdout, "destino:                       /usr/steam")
     assert_in(proc.stdout, "resumo:                        Extrair 'pacote.tar.gz' para '/usr/steam'.")
-    assert_in(proc.stdout, "candidata a migração futura")
+    assert_in(proc.stdout, FISH_ROUTED_LABEL)
     assert_in(proc.stdout, "decisão:                       voltar ao Fish")
     assert_in(proc.stdout, "destino explícito em caminho real preservado como '/usr/steam'")
 
@@ -784,7 +785,7 @@ def test_dev_copy_rename_local_reference_alignment() -> None:
     assert_in(proc.stdout, "referência local:              destino/Aury")
     assert_in(proc.stdout, "resumo:                        Renomear 'destino/Aury' para 'destino/Aury-backup'.")
     assert_in(proc.stdout, "referência local 'ela' resolvida com segurança como 'destino/Aury'")
-    assert_in(proc.stdout, "candidata a migração futura")
+    assert_in(proc.stdout, FISH_ROUTED_LABEL)
     assert_in(proc.stdout, "decisão:                       voltar ao Fish")
 
 
@@ -1308,7 +1309,7 @@ def test_action_execution_plan_future_migration_candidate() -> None:
     if action_plan.backend is not None:
         raise AssertionError(f"backend não deveria existir: {action_plan.backend!r}")
     if action_plan.executes_in_python:
-        raise AssertionError("a ação candidata a migração futura ainda deve voltar ao Fish")
+        raise AssertionError("a ação atendida pelo adaptador Fish ainda deve voltar ao Fish")
 
 
 def test_action_execution_plan_fish_fallback_reason_for_out_of_scope() -> None:
@@ -1354,7 +1355,7 @@ def test_dev_multiple_actions() -> None:
     assert_in(proc.stdout, "Plano da sequência")
     assert_in(proc.stdout, "Ação 1")
     assert_in(proc.stdout, "Ação 2")
-    assert_in(proc.stdout, "candidata a migração futura")
+    assert_in(proc.stdout, FISH_ROUTED_LABEL)
     assert_in(proc.stdout, "voltar ao Fish")
     assert_in(proc.stdout, "resumo:                        Procurar 'steam'.")
     assert_in(proc.stdout, "resumo:                        Remover 'vlc'.")

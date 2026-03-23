@@ -52,7 +52,7 @@ def _fish_fallback_reason(analysis: Analysis) -> str:
 
 def _sequence_return_reason(index: int, analysis: Analysis, action_plan: ActionExecutionPlan) -> str:
     if action_plan.status == "FUTURE_MIGRATION_CANDIDATE":
-        return f"a ação {index} ainda depende do adaptador Fish."
+        return f"a ação {index} é atendida pelo adaptador Fish nesta linha."
 
     gap = _analysis_gap(analysis)
     if analysis.status == "BLOQUEADA":
@@ -349,7 +349,7 @@ def plan_action_execution(analysis: Analysis) -> ActionExecutionPlan:
 
     if analysis.status == "CONSISTENTE":
         return ActionExecutionPlan.future_migration_candidate(
-            reason="a análise fechou com segurança, mas essa ação ainda depende do adaptador Fish.",
+            reason="a análise fechou com segurança, e essa ação é atendida pelo adaptador Fish nesta linha.",
         )
 
     return ActionExecutionPlan.fish_fallback(

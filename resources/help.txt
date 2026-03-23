@@ -50,9 +50,9 @@ aury compactar pasta projetos/ para projetos.tar.gz
 
 EXTRAS
 aury reload
-aury dev
 aury dev <frase>
+aury dev
 
 NOTA
-aury dev sem frase faz checagem rápida do adaptador Fish.
-o relatório canônico continua em aury dev <frase>.
+aury dev <frase> continua como relatório canônico da linha 1.x.
+aury dev sem frase fica como verificação local curta do adaptador Fish, em uso secundário nesta linha.

@@ -1,12 +1,12 @@
 # Arquitetura da 💜 Aury
 
-Este documento descreve o estado público real sustentado pela **💜 Aury v1.8.0** no repositório canônico local.
+Este documento descreve o estado público real sustentado pela **💜 Aury v1.9.0** no repositório canônico local.
 
-A proposta do projeto não mudou: Aury continua recebendo frases humanas, fechando uma leitura segura e escolhendo entre executar, bloquear ou cair em fallback honesto. O que a linha 1.6.x consolidou foi a distribuição de responsabilidade entre o adaptador Fish e o núcleo Python. A v1.7.0 abriu e estabilizou a superfície pública híbrida atual; a v1.8.0 fecha o endurecimento incremental dessa mesma base sem reabrir arquitetura. Os ganhos centrais da release são: contrato observável mais forte em `aury dev <frase>`, regressão pública mínima mais auditável e a micro-migração operacional de `criar arquivo` / `criar pasta` para o runtime Python.
+A proposta do projeto não mudou: Aury continua recebendo frases humanas, fechando uma leitura segura e escolhendo entre executar, bloquear ou cair em fallback honesto. O que a linha 1.6.x consolidou foi a distribuição de responsabilidade entre o adaptador Fish e o núcleo Python. A v1.7.0 abriu e estabilizou a superfície pública híbrida atual; a v1.8.0 endureceu o contrato observável dessa mesma base; e a v1.9.0 fecha publicamente a linha 1.x sem reabrir arquitetura. Os ganhos centrais deste fechamento são: linguagem pública final de `aury dev`, gate final mínimo canônico explícito e narrativa pública coerente com o estado híbrido que termina aqui.
 
 ## Entrada pública e base instalada
 
-Na v1.8.0, a entrada pública continua sendo Fish:
+Na v1.9.0, a entrada pública continua sendo Fish:
 
 - `aury` é exposto por `bin/aury.fish`
 - `ay` continua sendo um atalho fino para `aury`
@@ -29,7 +29,8 @@ Quando o adaptador é carregado direto do checkout com `source bin/aury.fish`, e
 - `aury ajuda` e `ay ajuda` renderizam `resources/help.txt` com a `VERSION` da base ativa.
 - `aury --version` e `ay --version` imprimem `💜 Aury <VERSION>` a partir da mesma base.
 - `aury dev <frase>` usa o núcleo Python e já expõe plano da sequência, enquadramento por ação, plano de execução e decisão de sequência.
-- `aury dev` sem frase continua sendo um utilitário mínimo do adaptador Fish e ainda deve ser tratado como provisório.
+- `aury dev` sem frase fica mantido como verificação local curta e utilitário secundário do adaptador Fish.
+- o gate final mínimo canônico da linha 1.x é `bash tests/release_gate_minimo.sh`.
 - `reload` continua sendo responsabilidade do adaptador Fish.
 
 ## Fluxo real de execução
@@ -52,19 +53,19 @@ Se faltar interpretador: fallback local de help/version ou execução Fish
 Se o Python devolver erro operacional próprio: erro exposto ao usuário
 ```
 
-Na prática, o adaptador Fish deixou de ser a única implementação da Aury. Ele agora coordena a execução pública, preserva compatibilidade e segura o que ainda não migrou.
+Na prática, o adaptador Fish deixou de ser a única implementação da Aury. Ele agora coordena a execução pública, preserva compatibilidade e atende o recorte que permanece nele nesta linha.
 
 ## Escopo Python atual
 
-No recorte atual da v1.8.0, o núcleo Python já cobre `help`, `version`, `dev`, preparação/análise interna, múltiplas ações no diagnóstico e um conjunto explícito de execuções normais já migradas.
+No recorte final da v1.9.0, o núcleo Python já cobre `help`, `version`, `dev`, preparação/análise interna, múltiplas ações no diagnóstico e um conjunto explícito de execuções normais já sustentadas diretamente.
 Entre elas estão busca de pacote, IP, teste simples de internet, velocidade da internet, algumas leituras simples de sistema e, agora, `criar arquivo` / `criar pasta`.
-Na leitura diagnóstica de `aury dev`, a v1.8.0 endurece a estrutura pública do relatório, o plano por ação, os motivos de fallback/bloqueio e a regressão mínima associada.
+Na leitura diagnóstica de `aury dev`, a v1.9.0 fecha a linguagem pública do relatório, o enquadramento por ação e a régua mínima associada sem reabrir promessa de migração estrutural.
 Compactação local simples continua sendo uma rota híbrida: o relatório `dev` a observa com honestidade, mas a execução normal permanece no adaptador Fish.
-Casos fora desse recorte ainda podem retornar integralmente ao adaptador Fish, de forma explícita e sem execução parcial obscura.
+Casos fora desse recorte podem retornar integralmente ao adaptador Fish, de forma explícita e sem execução parcial obscura.
 
 ## O que continua no Fish
 
-Neste ponto da v1.8.0, continuam no adaptador Fish:
+No fechamento público da v1.9.0, continuam no adaptador Fish:
 
 - atualização e otimização
 - instalação e remoção operacionais de pacotes
@@ -74,24 +75,25 @@ Neste ponto da v1.8.0, continuam no adaptador Fish:
 - bloqueios e ambiguidades públicas do legado
 - fallback honesto fora do recorte atual
 
-Isso é deliberado. A v1.8.0 não promete migração ampla do domínio de arquivos; ela fecha a superfície pública da release sem empurrar o runtime além do necessário.
+Isso é deliberado. A v1.9.0 encerra a linha 1.x sem prometer migração ampla do domínio de arquivos e sem empurrar o runtime além do necessário.
 
 A compactação herdada da v1.7.0 também permanece com recorte curto de propósito: um único arquivo ou uma única pasta, saída explícita obrigatória e apenas `.zip` ou `.tar.gz`.
 
 ## Limites honestos
 
 - a linha pública 1.6.x já é híbrida; documentá-la como “só Fish” ficou incorreto
-- `aury dev <frase>` já é o relatório canônico da transição, mas não deve ser tratado como garantia de paridade total com toda formulação conversacional histórica do legado
-- `aury dev` sem frase permanece provisório
+- `aury dev <frase>` já é o relatório canônico do recorte híbrido atual, mas não deve ser tratado como garantia de paridade total com toda formulação conversacional histórica do legado
+- `aury dev` sem frase fica restrito a verificação local curta e secundária do adaptador Fish
 - a instalação pública precisa manter `~/.local/share/aury` coerente com o conteúdo canônico do repositório
 - dependências operacionais como `pacman`, `ping`, `ip`, `lscpu`, `free`, `df`, `uptime`, `lspci` e `librespeed-cli` continuam sendo responsabilidades do host
 
 ## Resumo
 
-A **💜 Aury v1.8.0** continua tendo entrada pública em Fish, mas já não pode ser descrita como uma base exclusivamente Fish. O estado real agora é:
+A **💜 Aury v1.9.0** encerra a linha 1.x com entrada pública em Fish, mas já não pode ser descrita como uma base exclusivamente Fish. O estado real final é:
 
 - Fish como adaptador e camada de compatibilidade
 - Python como núcleo rastreado para `help`, `version`, `dev` e rotas explícitas de runtime
 - micro-recorte de criação simples (`criar arquivo` / `criar pasta`) já executando no runtime Python
 - share root instalado como fonte pública de versão e recursos
-- fallback controlado para o que ainda não migrou
+- fallback controlado para o que permanece fora do núcleo Python nesta linha
+- gate final mínimo canônico explicitado em `bash tests/release_gate_minimo.sh`

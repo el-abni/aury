@@ -1,6 +1,6 @@
 # tests/
 
-Esta pasta guarda a base pública mínima de regressão auditável herdada do fechamento da **💜 Aury v1.6.3**.
+Esta pasta guarda a base pública mínima de regressão auditável que sustenta o fechamento público final da linha **1.x** da **💜 Aury**.
 
 Ela nasceu como **Fase 0** na linha 1.6.x e continua pequena de propósito. Na abertura operacional da v1.7.0, essa mesma base ganhou um tooling inicial curto de preflight e auditoria para blindar melhor o chão público já herdado, sem virar framework.
 
@@ -21,7 +21,7 @@ Ela **não** existe para:
 
 ## Execução mínima hoje
 
-Os comandos mínimos validados nesta fase são:
+Para iteração local curta, os comandos mínimos continuam sendo:
 
 ```bash
 bash tests/preflight_canonico.sh
@@ -35,12 +35,28 @@ Na prática:
 - `public_ux_smoke.sh` protege a superfície pública do adaptador Fish
 - `python_core_smoke.py` protege o núcleo Python já canonizado
 
-Ferramentas de fechamento estrutural, quando houver stage explícita para release:
+## Gate final canônico da linha 1.x
+
+O gate final mínimo canônico da linha 1.x é:
 
 ```bash
-python3 tests/audit_exit_surfaces.py
 bash tests/release_gate_minimo.sh
 ```
+
+Esse wrapper é o gate final porque ele já reúne, em cima da stage pública explícita:
+
+- higiene da stage pública
+- `preflight_canonico.sh`
+- `audit_exit_surfaces.py`
+
+Ferramentas de suporte do gate final, úteis quando houver iteração direta no contrato de saída ou na superfície pública:
+
+```bash
+bash tests/preflight_canonico.sh
+python3 tests/audit_exit_surfaces.py
+```
+
+Esses dois checks continuam importantes, mas não entram como itens separados da régua final quando `release_gate_minimo.sh` já está sendo usado.
 
 ## Arquivos atuais
 
@@ -80,11 +96,11 @@ Hoje ele cobre de forma executável:
 
 ### `audit_public_coherence.py`
 
-Este auditor pequeno verifica o chão público mínimo que o fechamento público da v1.7.0 precisa manter coerente:
+Este auditor pequeno verifica o chão público mínimo que o fechamento público da v1.9.0 precisa manter coerente:
 
 - `VERSION` preenchida
 - `resources/help.txt` com placeholder de versão e nota honesta sobre `aury dev`
-- `README.md` e `CHANGELOG.md` alinhados à versão pública atual e ao fechamento público contido da v1.7.0
+- `README.md` e `CHANGELOG.md` alinhados à versão pública atual e ao fechamento público contido da v1.9.0
 - ausência de hardcode de versão no runtime público e nos scripts de instalação
 - renderização real de `help` e `version` via entrada pública Fish
 
@@ -111,13 +127,21 @@ Este auditor pequeno verifica um recorte canônico de status de saída e superf�
 
 ### `release_gate_minimo.sh`
 
-Este gate curto roda em cima da stage pública atual e bloqueia cedo:
+Este é o gate final mínimo canônico da linha 1.x. Ele roda em cima da stage pública atual e bloqueia cedo:
 
 - stage vazia ou fora do recorte público esperado
 - arquivo privado/sensível staged
 - erro textual em `git diff --cached --check`
 - falha no preflight canônico
 - falha no auditor de exit status
+
+Os checks abaixo continuam existindo, mas entram no gate final por composição e não como itens paralelos da régua canônica:
+
+- `audit_public_coherence.py`
+- `audit_dev_parity.py`
+- `public_ux_smoke.sh`
+- `python_core_smoke.py`
+- `audit_exit_surfaces.py`
 
 Esses auditores e o gate não substituem o `casos.yaml`. Os papéis continuam separados:
 

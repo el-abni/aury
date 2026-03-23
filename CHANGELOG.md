@@ -2,7 +2,27 @@
 
 Todas as mudanças importantes da **💜 Aury** são documentadas neste arquivo.
 
-A linha principal pública da **💜 Aury** está planejada até a **v1.9**. Este changelog continua registrando apenas versões lançadas.
+A linha principal pública da **💜 Aury** foi encerrada na **v1.9.0**. Este changelog continua registrando apenas versões lançadas.
+
+---
+
+## v1.9.0
+
+### Consolidado
+- fechamento público final da linha **1.x** da **💜 Aury** no repositório canônico
+- versão, narrativa, arquitetura e metadados passam a refletir a **v1.9.0** como encerramento deliberado da linha
+
+### Linguagem pública e enquadramento final
+- `aury dev <frase>` deixa de insinuar roadmap implícito de migração e passa a expor, no presente, quando uma rota é sustentada pelo núcleo Python, atendida pelo adaptador Fish ou fica fora do recorte do runtime Python
+- `aury dev` sem frase permanece disponível apenas como verificação local curta e utilitário secundário do adaptador Fish
+
+### Gate e fechamento estrutural
+- `tests/release_gate_minimo.sh` fica explicitado como gate final mínimo canônico da linha 1.x
+- `README.md`, `docs/ARCHITECTURE.md` e `tests/README.md` passam a contar a mesma história final da superfície pública já endurecida
+
+### Compatibilidade e limites
+- a entrada pública continua em Fish e o núcleo Python permanece rastreando `help`, `version`, `aury dev <frase>` e o subconjunto explícito de rotas normais já sustentadas diretamente
+- o restante do híbrido permanece no adaptador Fish por decisão final da linha 1.x, sem abrir nova migração estrutural nesta release
 
 ---
 

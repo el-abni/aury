@@ -28,7 +28,7 @@ command -v python3 >/dev/null 2>&1 || fail "python3 não está disponível"
 cd "$ROOT"
 
 staged="$(git diff --cached --name-only)"
-[[ -n "$staged" ]] || fail "nenhum arquivo staged; rode o gate depois do staging explícito"
+[[ -n "$staged" ]] || fail "nenhum arquivo staged; o gate final canônico roda depois do staging público explícito"
 
 blocked_regex='^(\.aury-private/|README_V15_PREP\.md|V15_CODEX_PROMPT\.md|PROJETO_TRIPLE_A\.md|TRIPLE_A_RESUMO\.md|ROADMAP_ESTRATEGICO_PRIVADO_AURY_V1\.6_A_V1\.9\.md|DIRECAO_SEGURANCA_FUTURA_AURY\.md|docs/V1\.5_MEGA_DICIONARIO_INICIAL\.md|docs/V1\.5_CORPUS_CONVERSACIONAL_INICIAL\.md)$'
 blocked="$(printf '%s\n' "$staged" | grep -E "$blocked_regex" || true)"
@@ -56,4 +56,4 @@ git diff --cached --check >/dev/null || fail "stage pública contém erros de wh
 bash "$ROOT/tests/preflight_canonico.sh"
 python3 "$ROOT/tests/audit_exit_surfaces.py"
 
-printf 'release_gate_minimo: ok\n'
+printf 'release_gate_minimo: ok (gate final canônico da linha 1.x)\n'

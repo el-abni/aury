@@ -470,16 +470,19 @@ require_in_output "$compact_invalid_output" "o arquivo de saída precisa ser um 
 
 help_output="$(fish -c "source '$ROOT/bin/aury.fish'; aury ajuda" 2>&1 || true)"
 require_in_output "$help_output" "💜 Aury" "ajuda precisa continuar disponível"
-require_in_output "$help_output" "aury dev sem frase faz checagem rápida do adaptador Fish." "ajuda precisa declarar o escopo estreito de 'aury dev' sem frase"
+require_in_output "$help_output" "aury dev <frase> continua como relatório canônico da linha 1.x." "ajuda precisa manter 'aury dev <frase>' como relatório principal"
+require_in_output "$help_output" "aury dev sem frase fica como verificação local curta do adaptador Fish, em uso secundário nesta linha." "ajuda precisa declarar o enquadramento final de 'aury dev' sem frase"
+require_not_in_output "$help_output" "provisório" "ajuda não deve mais tratar 'aury dev' sem frase como provisório"
 
 version_expected="$(cat "$ROOT/VERSION")"
 version_output="$(fish -c "source '$ROOT/bin/aury.fish'; aury --version" 2>&1 || true)"
 require_in_output "$version_output" "$version_expected" "version precisa refletir VERSION"
 
 dev_usage_output="$(fish -c "source '$ROOT/bin/aury.fish'; aury dev" 2>&1 || true)"
-require_in_output "$dev_usage_output" "🛠 modo dev da Aury" "'aury dev' sem frase precisa continuar disponível"
-require_in_output "$dev_usage_output" "Escopo: checagem rápida do adaptador Fish; o relatório canônico exige uma frase." "'aury dev' sem frase precisa declarar o escopo real do adaptador"
+require_in_output "$dev_usage_output" "🛠 verificação local do adaptador Fish" "'aury dev' sem frase precisa continuar disponível como verificação local"
+require_in_output "$dev_usage_output" "Escopo: verificação local curta do adaptador Fish, em uso secundário nesta linha. O relatório canônico exige uma frase." "'aury dev' sem frase precisa declarar o escopo real do adaptador"
 require_in_output "$dev_usage_output" "Use: aury dev <frase>" "'aury dev' sem frase precisa orientar o uso correto"
+require_not_in_output "$dev_usage_output" "provisório" "'aury dev' sem frase não deve soar provisório"
 
 ay_help_output="$(fish -c "source '$ROOT/bin/aury.fish'; source '$ROOT/bin/ay.fish'; ay ajuda" 2>&1 || true)"
 require_in_output "$ay_help_output" "💜 Aury" "ay ajuda precisa continuar disponível"

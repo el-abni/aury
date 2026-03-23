@@ -1164,7 +1164,7 @@ function __aury_dev_show_syntax_status
 
     set -l result (fish --no-execute $file 2>&1)
 
-    echo "🛠 modo dev da Aury"
+    echo "🛠 verificação local do adaptador Fish"
     __aury_dev_print_field "arquivo" $file
 
     if test $status -eq 0
@@ -1185,7 +1185,7 @@ function __aury_dev_show_syntax_status
 end
 
 function __aury_dev_show_usage_hint
-    echo "Escopo: checagem rápida do adaptador Fish; o relatório canônico exige uma frase."
+    echo "Escopo: verificação local curta do adaptador Fish, em uso secundário nesta linha. O relatório canônico exige uma frase."
     echo "Use: aury dev <frase>"
 end
 

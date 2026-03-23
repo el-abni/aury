@@ -71,14 +71,20 @@ def assert_help_dev_note(text: str, source: str) -> None:
     ensure("aury dev <frase>" in normalized, f"{source} precisa apontar para 'aury dev <frase>' como relatório principal")
     ensure_any(
         normalized,
-        ("checagem rapida", "verificacao rapida", "uso rapido"),
+        ("checagem rapida", "verificacao rapida", "verificacao local", "verificacao local curta", "uso rapido"),
         f"{source} precisa tratar 'aury dev' sem frase como checagem curta, sem exigir frase exata",
+    )
+    ensure_any(
+        normalized,
+        ("uso secundario", "utilitario secundario", "secundaria do adaptador fish", "secundario nesta linha"),
+        f"{source} precisa enquadrar 'aury dev' sem frase como uso secundário da linha 1.x",
     )
     ensure_any(
         normalized,
         ("relatorio canonico", "relatorio principal"),
         f"{source} precisa preservar que o relatório canônico segue em 'aury dev <frase>'",
     )
+    ensure("provisorio" not in normalized, f"{source} não deve mais tratar 'aury dev' sem frase como provisório")
 
 
 def assert_readme_state(readme: str) -> None:
@@ -123,8 +129,13 @@ def assert_dev_output(text: str, source: str) -> None:
     ensure("adaptador fish" in normalized, f"{source} precisa declarar o escopo estreito do adaptador Fish")
     ensure_any(
         normalized,
-        ("checagem rapida", "verificacao rapida", "sintaxe"),
+        ("checagem rapida", "verificacao rapida", "verificacao local", "verificacao local curta", "sintaxe"),
         f"{source} precisa deixar claro que sem frase o recorte é curto",
+    )
+    ensure_any(
+        normalized,
+        ("uso secundario", "utilitario secundario", "secundario nesta linha"),
+        f"{source} precisa enquadrar 'aury dev' sem frase como uso secundário",
     )
     ensure_any(
         normalized,
@@ -132,6 +143,7 @@ def assert_dev_output(text: str, source: str) -> None:
         f"{source} precisa direcionar o relatório canônico para uma frase explícita",
     )
     ensure("relatorio" in normalized and "canonico" in normalized, f"{source} precisa preservar a ideia de relatório canônico")
+    ensure("provisorio" not in normalized, f"{source} não deve mais tratar 'aury dev' sem frase como provisório")
 
 
 def main() -> int:
