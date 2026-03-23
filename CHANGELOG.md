@@ -6,6 +6,26 @@ A linha principal pública da **💜 Aury** está planejada até a **v1.9**. Est
 
 ---
 
+## v1.8.0
+
+### Consolidado
+- fechamento público da **💜 Aury v1.8.0** como versão de congelamento semântico e endurecimento incremental
+- narrativa pública, arquitetura e metadados passam a refletir o estado real alcançado pela base após as Fases 2 e 3
+
+### Observabilidade e regressão
+- `aury dev <frase>` fica mais contratual: plano da sequência, decisão por ação, motivos de fallback/bloqueio e lacunas explícitas ficam mais auditáveis
+- a regressão pública mínima é fortalecida para blindar melhor paridade, superfícies de saída e o contrato observável da transição Fish → Python
+
+### Micro-migração madura
+- `criar arquivo` e `criar pasta` deixam de ser apenas leitura diagnóstica consistente e passam a executar no runtime Python
+- a entrada pública continua em Fish e o restante do híbrido segue explícito no adaptador
+
+### Compatibilidade e limites
+- compactação local simples permanece no Fish, com o mesmo recorte curto herdado da v1.7.0
+- extração, fluxos destrutivos e o restante do domínio de arquivos não ganham migração ampla nesta release
+
+---
+
 ## v1.7.0
 
 ### Consolidado

@@ -104,6 +104,20 @@ def assert_readme_state(readme: str) -> None:
     ensure(scope_hits >= 2, f"README.md precisa manter o estado da {CURRENT_VERSION} descrito por conceitos centrais, sem depender de uma frase única")
 
 
+def assert_architecture_state(architecture: str) -> None:
+    normalized = normalize(architecture)
+    ensure(CURRENT_VERSION in architecture, "docs/ARCHITECTURE.md precisa citar a versão pública atual")
+    ensure("adaptador fish" in normalized, "docs/ARCHITECTURE.md precisa manter o papel público do adaptador Fish")
+    ensure("runtime python" in normalized, "docs/ARCHITECTURE.md precisa explicitar o runtime Python atual")
+    ensure("criar arquivo" in normalized, "docs/ARCHITECTURE.md precisa registrar a micro-migração de criar arquivo")
+    ensure("criar pasta" in normalized, "docs/ARCHITECTURE.md precisa registrar a micro-migração de criar pasta")
+    ensure_any(
+        normalized,
+        ("hibrida", "fronteira fish/python", "camada de compatibilidade"),
+        "docs/ARCHITECTURE.md precisa preservar a honestidade da fronteira híbrida",
+    )
+
+
 def assert_dev_output(text: str, source: str) -> None:
     normalized = normalize(text)
     ensure("adaptador fish" in normalized, f"{source} precisa declarar o escopo estreito do adaptador Fish")
@@ -131,11 +145,15 @@ def main() -> int:
 
     readme = read("README.md")
     assert_readme_state(readme)
-    ok("README.md alinhado à versão atual e ao fechamento público da v1.7.0")
+    ok(f"README.md alinhado à versão atual e ao fechamento público de {CURRENT_VERSION}")
 
     changelog = read("CHANGELOG.md")
     ensure(f"## {CURRENT_VERSION}" in changelog, "CHANGELOG.md precisa expor a versão pública atual")
     ok("CHANGELOG.md alinhado à versão pública atual")
+
+    architecture = read("docs/ARCHITECTURE.md")
+    assert_architecture_state(architecture)
+    ok("docs/ARCHITECTURE.md alinhado ao estado público atual")
 
     for runtime_file in ("bin/aury.fish", "python/aury/resources.py", "install.sh", "uninstall.sh"):
         assert_no_runtime_hardcode(runtime_file)

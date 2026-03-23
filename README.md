@@ -1,6 +1,6 @@
 # 💜 Aury
 
-![version](https://img.shields.io/badge/version-v1.7.0-purple)
+![version](https://img.shields.io/badge/version-v1.8.0-purple)
 ![shell](https://img.shields.io/badge/shell-fish-blue)
 ![platform](https://img.shields.io/badge/platform-CachyOS-orange)
 ![license](https://img.shields.io/badge/license-MIT-green)
@@ -11,7 +11,7 @@ Ela permite executar tarefas do sistema usando **linguagem natural**, traduzindo
 
 ---
 
-> Estado público real da **v1.7.0**: a linha 1.6.x ficou fechada como base herdada. A entrada continua em Fish, mas `help`, `version`, `dev <frase>` e as rotas Python já suportadas passam por um núcleo Python. O único corte funcional novo da v1.7.0 é a compactação local simples: um único arquivo ou uma única pasta, saída explícita e apenas `.zip` ou `.tar.gz`.
+> Estado público real da **v1.8.0**: a linha 1.6.x ficou fechada como base herdada e a abertura operacional da v1.7.0 já foi absorvida como etapa anterior. A entrada continua em Fish, mas `help`, `version`, `dev <frase>` e um subconjunto explícito de rotas já vivem no núcleo Python. Na v1.8.0, o ganho principal é de consolidação: o contrato observável de `aury dev <frase>` ficou mais auditável e `criar arquivo` / `criar pasta` deixaram de ser apenas leitura diagnóstica para virar um micro-recorte operacional no runtime Python. O restante do híbrido continua explícito.
 
 ## O que é a Aury
 
@@ -116,14 +116,15 @@ A versão atual da **💜 Aury** já oferece:
 - fallback honesto com dica de ajuda quando o pedido sai do recorte atual
 - confirmação destrutiva explícita para remoção e bloqueio de alvo anafórico inseguro
 - ambiguidade pública de alvo/destino em vez de execução silenciosa
-- observabilidade expandida com `aury dev <frase>`
+- observabilidade mais contratual com `aury dev <frase>`
+- micro-recorte operacional em Python para `criar arquivo` e `criar pasta`
 - medição explícita de velocidade da internet via `librespeed-cli`
 
 ---
 
 ## Instalação
 
-A instalação pública atual da v1.7.0 usa o script do próprio repositório:
+A instalação pública atual da v1.8.0 usa o script do próprio repositório:
 
 ```fish
 git clone https://github.com/el-abni/aury.git
@@ -171,7 +172,7 @@ No código, a identidade visual da assistente é:
 No comando de ajuda, a versão deve aparecer no formato:
 
 ```text
-💜 Aury v1.7.0
+💜 Aury v1.8.0
 ```
 
 A Aury entende tanto comandos diretos quanto frases mais naturais, como:
@@ -192,24 +193,25 @@ aury dev ver cpu e memória
 aury dev copiar arquivo teste.txt para backup.txt
 ```
 
-## Contrato público mínimo da v1.7.0
+## Contrato público mínimo da v1.8.0
 
 - `aury ajuda` e `ay ajuda` renderizam `resources/help.txt` usando a `VERSION` da base ativa.
 - `aury --version` e `ay --version` imprimem `💜 Aury <VERSION>` a partir da mesma base ativa.
-- `aury dev <frase>` usa o núcleo Python e expõe plano da sequência, leitura por ação e decisão de execução.
-- na v1.7.0, `aury dev` preserva o alinhamento diagnóstico curto já fechado na linha 1.6.x e também expõe a compactação local simples como rota ainda híbrida, sem prometer paridade total nem migração equivalente de runtime.
+- `aury dev <frase>` usa o núcleo Python e expõe plano da sequência, leitura por ação, plano de execução e decisão de sequência de forma mais auditável.
+- na v1.8.0, `aury dev` endurece o contrato observável do relatório público e da regressão mínima associada, sem prometer paridade total com toda formulação histórica do legado.
+- na v1.8.0, `criar arquivo` e `criar pasta` passam a ter rota Python explícita no modo normal, inclusive quando a leitura `dev` já fecha esse mesmo micro-recorte como suportado agora.
 - `aury dev` sem frase continua disponível como utilitário mínimo do adaptador Fish; hoje ele serve para checagem rápida e deve ser tratado como provisório.
 - `bin/aury.fish` é o ponto de entrada público: ele tenta o runtime Python primeiro e volta ao Fish quando a ação ainda não tem rota Python explícita.
-- a compactação local simples da v1.7.0 cobre um único arquivo ou uma única pasta, com saída explícita e apenas `.zip` ou `.tar.gz`.
+- a compactação local simples herdada da v1.7.0 continua cobrindo um único arquivo ou uma única pasta, com saída explícita e apenas `.zip` ou `.tar.gz`.
 - Em desenvolvimento, ao fazer `source bin/aury.fish`, a base ativa é o próprio root do repositório. Na instalação, a base ativa é `~/.local/share/aury`.
 
 ## Limites honestos
 
 - pedidos fora do recorte atual, como `abrir arquivo`, continuam em fallback honesto
-- o runtime Python atual cobre `help`, `version`, `dev <frase>` e um subconjunto explícito de ações; o restante continua voltando ao adaptador Fish
+- o runtime Python atual cobre `help`, `version`, `dev <frase>`, algumas leituras simples de pacote/rede/sistema e o micro-recorte de `criar arquivo` / `criar pasta`; o restante continua voltando ao adaptador Fish
 - `aury dev` sem frase continua provisório e não deve ser tratado como relatório canônico completo
 - `aury velocidade da internet` depende de `librespeed-cli` e `python3` disponíveis no ambiente
-- a compactação da v1.7.0 não cobre lote, overwrite automático, nome derivado automaticamente nem formatos extras
+- a compactação herdada da v1.7.0 não cobre lote, overwrite automático, nome derivado automaticamente nem formatos extras
 
 ---
 
@@ -219,21 +221,17 @@ aury dev copiar arquivo teste.txt para backup.txt
 - `v1.6.2`: alinhamento diagnóstico curto extra de `aury dev` com fluxos já sustentados pelo modo normal
 - `v1.6.3`: fechamento público da linha 1.6.x, sem ampliar o escopo funcional da Aury
 
-## Estado público da v1.7.0
+## Estado público da v1.8.0
 
-- abertura operacional e fechamento estrutural da superfície pública já entraram no main
-- a compactação local simples entra como único corte funcional novo da versão
-- o recorte da compactação continua curto: um único arquivo ou uma única pasta, saída explícita e apenas `.zip` ou `.tar.gz`
-- a fronteira híbrida segue explícita: Fish continua como entrada pública e camada de execução compatível; Python sustenta `help`, `version`, `dev <frase>` e as rotas já migradas
+- a v1.8.0 fecha a linha de congelamento semântico e endurecimento incremental sem reabrir expansão estrutural
+- `aury dev <frase>` fica mais contratual e auditável, com regressão pública mínima mais forte sobre plano, decisão, fallback e superfícies de saída
+- `criar arquivo` e `criar pasta` deixam de ser apenas leitura diagnóstica consistente e passam a executar no runtime Python
+- a fronteira híbrida segue explícita: Fish continua como entrada pública e camada de compatibilidade; Python sustenta `help`, `version`, `dev <frase>` e um subconjunto explícito de rotas normais já migradas
+- compactação local simples, extração, fluxos destrutivos e o restante do domínio de arquivos continuam fora de uma migração ampla nesta release
 
 ## Roadmap
 
-O roadmap abaixo mostra **apenas versões futuras ainda não lançadas**. A linha 1.6.x já foi fechada e a **v1.7.0** já está lançada.
-
-### v1.8
-
-- consolidação semântica e endurecimento incremental depois da abertura operacional
-- observabilidade e previsibilidade mais fortes sobre a base já saneada
+O roadmap abaixo mostra **apenas versões futuras ainda não lançadas**. A linha 1.6.x, a **v1.7.0** e a **v1.8.0** já foram fechadas publicamente.
 
 ### v1.9
 

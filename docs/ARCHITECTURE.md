@@ -1,12 +1,12 @@
 # Arquitetura da 💜 Aury
 
-Este documento descreve o estado público real sustentado pela **💜 Aury v1.7.0** no repositório canônico local.
+Este documento descreve o estado público real sustentado pela **💜 Aury v1.8.0** no repositório canônico local.
 
-A proposta do projeto não mudou: Aury continua recebendo frases humanas, fechando uma leitura segura e escolhendo entre executar, bloquear ou cair em fallback honesto. O que a linha 1.6.x consolidou foi a distribuição de responsabilidade entre o adaptador Fish e o núcleo Python, com um alinhamento curto extra de `aury dev` ao que o modo normal já sustenta. A `v1.7.0` fecha publicamente a abertura operacional e o bloco estrutural remanescente sem reabrir arquitetura; o único corte funcional novo da versão é a compactação local simples.
+A proposta do projeto não mudou: Aury continua recebendo frases humanas, fechando uma leitura segura e escolhendo entre executar, bloquear ou cair em fallback honesto. O que a linha 1.6.x consolidou foi a distribuição de responsabilidade entre o adaptador Fish e o núcleo Python. A v1.7.0 abriu e estabilizou a superfície pública híbrida atual; a v1.8.0 fecha o endurecimento incremental dessa mesma base sem reabrir arquitetura. Os ganhos centrais da release são: contrato observável mais forte em `aury dev <frase>`, regressão pública mínima mais auditável e a micro-migração operacional de `criar arquivo` / `criar pasta` para o runtime Python.
 
 ## Entrada pública e base instalada
 
-Na v1.7.0, a entrada pública continua sendo Fish:
+Na v1.8.0, a entrada pública continua sendo Fish:
 
 - `aury` é exposto por `bin/aury.fish`
 - `ay` continua sendo um atalho fino para `aury`
@@ -28,7 +28,7 @@ Quando o adaptador é carregado direto do checkout com `source bin/aury.fish`, e
 
 - `aury ajuda` e `ay ajuda` renderizam `resources/help.txt` com a `VERSION` da base ativa.
 - `aury --version` e `ay --version` imprimem `💜 Aury <VERSION>` a partir da mesma base.
-- `aury dev <frase>` usa o núcleo Python e já expõe plano da sequência, enquadramento por ação e decisão de execução.
+- `aury dev <frase>` usa o núcleo Python e já expõe plano da sequência, enquadramento por ação, plano de execução e decisão de sequência.
 - `aury dev` sem frase continua sendo um utilitário mínimo do adaptador Fish e ainda deve ser tratado como provisório.
 - `reload` continua sendo responsabilidade do adaptador Fish.
 
@@ -56,25 +56,27 @@ Na prática, o adaptador Fish deixou de ser a única implementação da Aury. El
 
 ## Escopo Python atual
 
-No recorte atual da v1.7.0, o núcleo Python já cobre `help`, `version`, `dev`, preparação/análise interna, múltiplas ações no diagnóstico e um conjunto inicial de execuções normais já migradas.
-Entre elas estão, por exemplo, busca de pacote, IP, teste simples de internet, velocidade da internet e algumas leituras simples de sistema.
-Na leitura diagnóstica de `aury dev`, a v1.7.0 preserva esse alinhamento curto e também expõe a compactação local simples como rota ainda híbrida, sem implicar migração operacional equivalente de runtime.
+No recorte atual da v1.8.0, o núcleo Python já cobre `help`, `version`, `dev`, preparação/análise interna, múltiplas ações no diagnóstico e um conjunto explícito de execuções normais já migradas.
+Entre elas estão busca de pacote, IP, teste simples de internet, velocidade da internet, algumas leituras simples de sistema e, agora, `criar arquivo` / `criar pasta`.
+Na leitura diagnóstica de `aury dev`, a v1.8.0 endurece a estrutura pública do relatório, o plano por ação, os motivos de fallback/bloqueio e a regressão mínima associada.
+Compactação local simples continua sendo uma rota híbrida: o relatório `dev` a observa com honestidade, mas a execução normal permanece no adaptador Fish.
 Casos fora desse recorte ainda podem retornar integralmente ao adaptador Fish, de forma explícita e sem execução parcial obscura.
 
 ## O que continua no Fish
 
-Neste ponto da v1.7.0, continuam no adaptador Fish:
+Neste ponto da v1.8.0, continuam no adaptador Fish:
 
 - atualização e otimização
 - instalação e remoção operacionais de pacotes
-- arquivos, extração e compactação local simples
+- copiar, mover, renomear, remover e a maior parte do domínio de arquivos
+- extração e compactação local simples
 - confirmação destrutiva
 - bloqueios e ambiguidades públicas do legado
 - fallback honesto fora do recorte atual
 
-Isso é deliberado. A v1.7.0 não promete rewrite total; ela fecha a superfície pública da release sem empurrar o runtime além do necessário.
+Isso é deliberado. A v1.8.0 não promete migração ampla do domínio de arquivos; ela fecha a superfície pública da release sem empurrar o runtime além do necessário.
 
-A compactação da v1.7.0 também nasce com recorte curto de propósito: um único arquivo ou uma única pasta, saída explícita obrigatória e apenas `.zip` ou `.tar.gz`.
+A compactação herdada da v1.7.0 também permanece com recorte curto de propósito: um único arquivo ou uma única pasta, saída explícita obrigatória e apenas `.zip` ou `.tar.gz`.
 
 ## Limites honestos
 
@@ -86,9 +88,10 @@ A compactação da v1.7.0 também nasce com recorte curto de propósito: um úni
 
 ## Resumo
 
-A **💜 Aury v1.7.0** continua tendo entrada pública em Fish, mas já não pode ser descrita como uma base exclusivamente Fish. O estado real agora é:
+A **💜 Aury v1.8.0** continua tendo entrada pública em Fish, mas já não pode ser descrita como uma base exclusivamente Fish. O estado real agora é:
 
 - Fish como adaptador e camada de compatibilidade
 - Python como núcleo rastreado para `help`, `version`, `dev` e rotas explícitas de runtime
+- micro-recorte de criação simples (`criar arquivo` / `criar pasta`) já executando no runtime Python
 - share root instalado como fonte pública de versão e recursos
 - fallback controlado para o que ainda não migrou
