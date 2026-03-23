@@ -1,12 +1,12 @@
 # Arquitetura da 💜 Aury
 
-Este documento descreve o estado público real sustentado pela **💜 Aury v1.6.3** no repositório canônico local.
+Este documento descreve o estado público real sustentado pela **💜 Aury v1.7.0** no repositório canônico local.
 
-A proposta do projeto não mudou: Aury continua recebendo frases humanas, fechando uma leitura segura e escolhendo entre executar, bloquear ou cair em fallback honesto. O que a linha 1.6.x consolidou foi a distribuição de responsabilidade entre o adaptador Fish e o núcleo Python, com um alinhamento curto extra de `aury dev` ao que o modo normal já sustenta. A `v1.6.3` fecha publicamente essa linha sem ampliar o escopo funcional.
+A proposta do projeto não mudou: Aury continua recebendo frases humanas, fechando uma leitura segura e escolhendo entre executar, bloquear ou cair em fallback honesto. O que a linha 1.6.x consolidou foi a distribuição de responsabilidade entre o adaptador Fish e o núcleo Python, com um alinhamento curto extra de `aury dev` ao que o modo normal já sustenta. A `v1.7.0` fecha publicamente a abertura operacional e o bloco estrutural remanescente sem reabrir arquitetura; o único corte funcional novo da versão é a compactação local simples.
 
 ## Entrada pública e base instalada
 
-Na v1.6.3, a entrada pública continua sendo Fish:
+Na v1.7.0, a entrada pública continua sendo Fish:
 
 - `aury` é exposto por `bin/aury.fish`
 - `ay` continua sendo um atalho fino para `aury`
@@ -56,23 +56,25 @@ Na prática, o adaptador Fish deixou de ser a única implementação da Aury. El
 
 ## Escopo Python atual
 
-No recorte atual da v1.6.3, o núcleo Python já cobre `help`, `version`, `dev`, preparação/análise interna, múltiplas ações no diagnóstico e um conjunto inicial de execuções normais já migradas.
+No recorte atual da v1.7.0, o núcleo Python já cobre `help`, `version`, `dev`, preparação/análise interna, múltiplas ações no diagnóstico e um conjunto inicial de execuções normais já migradas.
 Entre elas estão, por exemplo, busca de pacote, IP, teste simples de internet, velocidade da internet e algumas leituras simples de sistema.
-Na leitura diagnóstica de `aury dev`, a linha 1.6.x também amplia o alinhamento com um conjunto curto de fluxos já sustentados pelo modo normal, sem implicar migração operacional equivalente de runtime.
+Na leitura diagnóstica de `aury dev`, a v1.7.0 preserva esse alinhamento curto e também expõe a compactação local simples como rota ainda híbrida, sem implicar migração operacional equivalente de runtime.
 Casos fora desse recorte ainda podem retornar integralmente ao adaptador Fish, de forma explícita e sem execução parcial obscura.
 
 ## O que continua no Fish
 
-Neste ponto da v1.6.3, continuam no adaptador Fish:
+Neste ponto da v1.7.0, continuam no adaptador Fish:
 
 - atualização e otimização
 - instalação e remoção operacionais de pacotes
-- arquivos e extração
+- arquivos, extração e compactação local simples
 - confirmação destrutiva
 - bloqueios e ambiguidades públicas do legado
 - fallback honesto fora do recorte atual
 
-Isso é deliberado. A v1.6.3 não promete rewrite total; ela fecha publicamente a linha 1.6.x sem empurrar o runtime além do necessário.
+Isso é deliberado. A v1.7.0 não promete rewrite total; ela fecha a superfície pública da release sem empurrar o runtime além do necessário.
+
+A compactação da v1.7.0 também nasce com recorte curto de propósito: um único arquivo ou uma única pasta, saída explícita obrigatória e apenas `.zip` ou `.tar.gz`.
 
 ## Limites honestos
 
@@ -84,7 +86,7 @@ Isso é deliberado. A v1.6.3 não promete rewrite total; ela fecha publicamente 
 
 ## Resumo
 
-A **💜 Aury v1.6.3** continua tendo entrada pública em Fish, mas já não pode ser descrita como uma base exclusivamente Fish. O estado real agora é:
+A **💜 Aury v1.7.0** continua tendo entrada pública em Fish, mas já não pode ser descrita como uma base exclusivamente Fish. O estado real agora é:
 
 - Fish como adaptador e camada de compatibilidade
 - Python como núcleo rastreado para `help`, `version`, `dev` e rotas explícitas de runtime

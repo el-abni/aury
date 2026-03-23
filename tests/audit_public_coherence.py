@@ -81,7 +81,7 @@ def assert_help_dev_note(text: str, source: str) -> None:
     )
 
 
-def assert_readme_opening(readme: str) -> None:
+def assert_readme_state(readme: str) -> None:
     normalized = normalize(readme)
     ensure(CURRENT_VERSION in readme, "README.md precisa citar a versão pública atual")
     ensure("linha 1.6" in normalized, "README.md precisa manter a linha 1.6.x como referência já entregue")
@@ -90,18 +90,18 @@ def assert_readme_opening(readme: str) -> None:
         ("fechada", "encerrada"),
         "README.md precisa tratar a linha 1.6.x como fechada/encerrada",
     )
-    v17_section = readme.partition("### v1.7")[2].partition("### v1.8")[0]
-    ensure(v17_section.strip(), "README.md precisa manter a seção pública da abertura da v1.7")
+    state_section = readme.partition(f"## Estado público da {CURRENT_VERSION}")[2].partition("## Roadmap")[0]
+    ensure(state_section.strip(), f"README.md precisa manter a seção pública do estado da {CURRENT_VERSION}")
     scope_hits = concept_hits(
-        normalize(v17_section),
+        normalize(state_section),
         (
-            ("coerencia publica", "higiene publica", "superficie publica"),
-            ("workflow canonico", "fluxo canonico"),
-            ("fronteira fish/python", "fronteira hibrida fish/python", "fish/python"),
-            ("tooling minimo", "auditoria minima", "tooling inicial"),
+            ("abertura operacional", "fechamento estrutural", "superficie publica"),
+            ("compactacao local simples", ".zip", ".tar.gz"),
+            ("fronteira fish/python", "fronteira hibrida", "adaptador fish", "nucleo python"),
+            ("workflow canonico", "auditoria publica", "auditoria minima"),
         ),
     )
-    ensure(scope_hits >= 2, "README.md precisa manter a abertura da v1.7 descrita por conceitos centrais, sem depender de uma frase única")
+    ensure(scope_hits >= 2, f"README.md precisa manter o estado da {CURRENT_VERSION} descrito por conceitos centrais, sem depender de uma frase única")
 
 
 def assert_dev_output(text: str, source: str) -> None:
@@ -130,8 +130,8 @@ def main() -> int:
     ok("help público mantém placeholder e nota honesta sobre aury dev")
 
     readme = read("README.md")
-    assert_readme_opening(readme)
-    ok("README.md alinhado à versão atual e à abertura operacional contida da v1.7")
+    assert_readme_state(readme)
+    ok("README.md alinhado à versão atual e ao fechamento público da v1.7.0")
 
     changelog = read("CHANGELOG.md")
     ensure(f"## {CURRENT_VERSION}" in changelog, "CHANGELOG.md precisa expor a versão pública atual")

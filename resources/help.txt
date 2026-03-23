@@ -38,9 +38,13 @@ aury cria a pasta projetos
 aury apaga o arquivo teste.txt
 aury deleta backup.txt
 aury remove o arquivo teste.txt
+
+EXTRAÇÃO
 aury extrair teste.zip
 aury descompacte backup.tar.gz
 aury extraia teste.tar para a pasta que fica em /usr/steam
+
+COMPACTAÇÃO
 aury compactar arquivo teste.txt para teste.zip
 aury compactar pasta projetos/ para projetos.tar.gz
 

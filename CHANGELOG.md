@@ -6,6 +6,27 @@ A linha principal pública da **💜 Aury** está planejada até a **v1.9**. Est
 
 ---
 
+## v1.7.0
+
+### Consolidado
+- fechamento público canônico da **💜 Aury v1.7.0** no repositório principal
+- abertura operacional e fechamento estrutural da superfície pública agora contam a mesma história da base ativa
+
+### Melhorado
+- `VERSION`, `README.md`, `resources/help.txt`, `docs/ARCHITECTURE.md` e os scripts públicos de instalação passam a refletir a versão pública `v1.7.0`
+- coerência mínima de workflow, auditoria pública, paridade de `aury dev` e superfícies de saída fica registrada como parte do fechamento estrutural da release
+
+### Compactação local simples
+- entra como o único corte funcional novo da v1.7.0
+- cobre um único arquivo ou uma única pasta, com saída explícita obrigatória
+- aceita apenas `.zip` e `.tar.gz`, inferidos pelo sufixo da saída
+
+### Compatibilidade e limites
+- a entrada pública continua em Fish, com `help`, `version`, `dev <frase>` e as rotas Python já suportadas no núcleo Python
+- a execução real da compactação continua no adaptador Fish, sem lote, overwrite automático, formatos extras ou integração com rede
+
+---
+
 ## v1.6.3
 
 ### Consolidado

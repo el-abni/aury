@@ -2,7 +2,7 @@
 
 Esta pasta guarda a base pública mínima de regressão auditável herdada do fechamento da **💜 Aury v1.6.3**.
 
-Ela nasceu como **Fase 0** na linha 1.6.x e continua pequena de propósito. Na abertura operacional da v1.7, essa mesma base ganhou um tooling inicial curto de preflight e auditoria para blindar melhor o chão público já herdado, sem virar framework.
+Ela nasceu como **Fase 0** na linha 1.6.x e continua pequena de propósito. Na abertura operacional da v1.7.0, essa mesma base ganhou um tooling inicial curto de preflight e auditoria para blindar melhor o chão público já herdado, sem virar framework.
 
 ## Papel atual
 
@@ -80,11 +80,11 @@ Hoje ele cobre de forma executável:
 
 ### `audit_public_coherence.py`
 
-Este auditor pequeno verifica o chão público mínimo que a abertura da v1.7 precisa manter coerente:
+Este auditor pequeno verifica o chão público mínimo que o fechamento público da v1.7.0 precisa manter coerente:
 
 - `VERSION` preenchida
 - `resources/help.txt` com placeholder de versão e nota honesta sobre `aury dev`
-- `README.md` e `CHANGELOG.md` alinhados à versão pública atual e à abertura operacional contida da v1.7
+- `README.md` e `CHANGELOG.md` alinhados à versão pública atual e ao fechamento público contido da v1.7.0
 - ausência de hardcode de versão no runtime público e nos scripts de instalação
 - renderização real de `help` e `version` via entrada pública Fish
 
