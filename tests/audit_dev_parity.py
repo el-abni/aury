@@ -164,11 +164,20 @@ def main() -> int:
 
     with tempfile.TemporaryDirectory() as tmp:
         workdir = Path(tmp)
-        assert_executor("criar arquivo teste.txt", "fish")
+        assert_executor("criar arquivo teste.txt", "python")
         output = run_fish(["criar", "arquivo", "teste.txt"], cwd=workdir)
         if "eu criei o arquivo 'teste.txt'" not in output or not (workdir / "teste.txt").is_file():
-            fail("modo normal não caiu no adaptador Fish para criar arquivo")
-        ok("criar arquivo teste.txt alinhado em Fish")
+            fail("modo normal não observou a rota Python esperada para criar arquivo")
+        ok("criar arquivo teste.txt alinhado em Python")
+
+    with tempfile.TemporaryDirectory() as tmp:
+        workdir = Path(tmp)
+        (workdir / "Downloads").mkdir(parents=True, exist_ok=True)
+        assert_executor("criar pasta Relatorios em Downloads", "python")
+        output = run_fish(["criar", "pasta", "Relatorios", "em", "Downloads"], cwd=workdir)
+        if "eu criei a pasta 'Downloads/Relatorios'" not in output or not (workdir / "Downloads" / "Relatorios").is_dir():
+            fail("modo normal não observou a rota Python esperada para criar pasta localizada")
+        ok("criar pasta Relatorios em Downloads alinhado em Python")
 
     with tempfile.TemporaryDirectory() as tmp:
         workdir = Path(tmp)

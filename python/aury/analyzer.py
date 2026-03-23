@@ -736,7 +736,7 @@ def _match_basic_file_action(action: PreparedAction) -> Analysis | None:
                 },
                 observations=[
                     f"localização conversacional simples usada para recompor a base '{target_base}'",
-                    "execução normal atual continua no adaptador Fish",
+                    "execução normal atual já pode seguir no runtime Python",
                 ],
             )
         if _has_out_of_scope_location(normalized_tokens[target_start:]):
@@ -752,7 +752,7 @@ def _match_basic_file_action(action: PreparedAction) -> Analysis | None:
             reason=f"pedido básico de criação de {target_type} reconhecido.",
             summary=f"Criar '{target}'.",
             entities={"tipo": target_type, "alvo_principal": target},
-            observations=["execução normal atual continua no adaptador Fish"],
+            observations=["execução normal atual já pode seguir no runtime Python"],
         )
 
     if first_token == "remover" and len(normalized_tokens) == 2:

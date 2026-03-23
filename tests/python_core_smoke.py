@@ -101,8 +101,10 @@ def test_dev_create_file_alignment() -> None:
     assert_in(proc.stdout, "tipo:                          arquivo")
     assert_in(proc.stdout, "alvo principal:                abc.txt")
     assert_in(proc.stdout, "resumo:                        Criar 'abc.txt'.")
-    assert_in(proc.stdout, "candidata a migração futura")
-    assert_in(proc.stdout, "decisão:                       voltar ao Fish")
+    assert_in(proc.stdout, "suportada agora")
+    assert_in(proc.stdout, "rota suportada:                file_create")
+    assert_in(proc.stdout, "backend necessário:            runtime Python")
+    assert_in(proc.stdout, "decisão:                       executar no Python")
 
 
 def test_dev_create_folder_alignment() -> None:
@@ -113,8 +115,10 @@ def test_dev_create_folder_alignment() -> None:
     assert_in(proc.stdout, "tipo:                          pasta")
     assert_in(proc.stdout, "alvo principal:                pasta_teste")
     assert_in(proc.stdout, "resumo:                        Criar 'pasta_teste'.")
-    assert_in(proc.stdout, "candidata a migração futura")
-    assert_in(proc.stdout, "decisão:                       voltar ao Fish")
+    assert_in(proc.stdout, "suportada agora")
+    assert_in(proc.stdout, "rota suportada:                folder_create")
+    assert_in(proc.stdout, "backend necessário:            runtime Python")
+    assert_in(proc.stdout, "decisão:                       executar no Python")
 
 
 def test_dev_create_folder_inflected_alignment() -> None:
@@ -127,8 +131,8 @@ def test_dev_create_folder_inflected_alignment() -> None:
     assert_in(proc.stdout, "tipo:                          pasta")
     assert_in(proc.stdout, "alvo principal:                Aury")
     assert_in(proc.stdout, "resumo:                        Criar 'Aury'.")
-    assert_in(proc.stdout, "candidata a migração futura")
-    assert_in(proc.stdout, "decisão:                       voltar ao Fish")
+    assert_in(proc.stdout, "suportada agora")
+    assert_in(proc.stdout, "decisão:                       executar no Python")
 
 
 def test_dev_create_file_inflected_alignment() -> None:
@@ -141,8 +145,8 @@ def test_dev_create_file_inflected_alignment() -> None:
     assert_in(proc.stdout, "tipo:                          arquivo")
     assert_in(proc.stdout, "alvo principal:                teste.txt")
     assert_in(proc.stdout, "resumo:                        Criar 'teste.txt'.")
-    assert_in(proc.stdout, "candidata a migração futura")
-    assert_in(proc.stdout, "decisão:                       voltar ao Fish")
+    assert_in(proc.stdout, "suportada agora")
+    assert_in(proc.stdout, "decisão:                       executar no Python")
 
 
 def test_dev_create_folder_located_alignment() -> None:
@@ -156,8 +160,8 @@ def test_dev_create_folder_located_alignment() -> None:
     assert_in(proc.stdout, "destino:                       Downloads")
     assert_in(proc.stdout, "localização conversacional:    nome: Relatorios | base: Downloads | conector: em")
     assert_in(proc.stdout, "resumo:                        Criar 'Downloads/Relatorios'.")
-    assert_in(proc.stdout, "candidata a migração futura")
-    assert_in(proc.stdout, "decisão:                       voltar ao Fish")
+    assert_in(proc.stdout, "suportada agora")
+    assert_in(proc.stdout, "decisão:                       executar no Python")
     assert_in(proc.stdout, "localização conversacional simples usada para recompor a base 'Downloads'")
 
 
@@ -172,8 +176,8 @@ def test_dev_create_folder_located_inflected_alignment() -> None:
     assert_in(proc.stdout, "destino:                       Downloads")
     assert_in(proc.stdout, "localização conversacional:    nome: Relatorios | base: Downloads | conector: em")
     assert_in(proc.stdout, "resumo:                        Criar 'Downloads/Relatorios'.")
-    assert_in(proc.stdout, "candidata a migração futura")
-    assert_in(proc.stdout, "decisão:                       voltar ao Fish")
+    assert_in(proc.stdout, "suportada agora")
+    assert_in(proc.stdout, "decisão:                       executar no Python")
 
 
 def test_dev_create_file_located_alignment() -> None:
@@ -187,8 +191,8 @@ def test_dev_create_file_located_alignment() -> None:
     assert_in(proc.stdout, "destino:                       Downloads")
     assert_in(proc.stdout, "localização conversacional:    nome: teste.txt | base: Downloads | conector: em")
     assert_in(proc.stdout, "resumo:                        Criar 'Downloads/teste.txt'.")
-    assert_in(proc.stdout, "candidata a migração futura")
-    assert_in(proc.stdout, "decisão:                       voltar ao Fish")
+    assert_in(proc.stdout, "suportada agora")
+    assert_in(proc.stdout, "decisão:                       executar no Python")
     assert_in(proc.stdout, "localização conversacional simples usada para recompor a base 'Downloads'")
 
 
@@ -203,8 +207,8 @@ def test_dev_create_file_located_inflected_alignment() -> None:
     assert_in(proc.stdout, "destino:                       Downloads")
     assert_in(proc.stdout, "localização conversacional:    nome: teste.txt | base: Downloads | conector: em")
     assert_in(proc.stdout, "resumo:                        Criar 'Downloads/teste.txt'.")
-    assert_in(proc.stdout, "candidata a migração futura")
-    assert_in(proc.stdout, "decisão:                       voltar ao Fish")
+    assert_in(proc.stdout, "suportada agora")
+    assert_in(proc.stdout, "decisão:                       executar no Python")
 
 
 def test_dev_create_implicit_file_alignment() -> None:
@@ -217,8 +221,8 @@ def test_dev_create_implicit_file_alignment() -> None:
     assert_in(proc.stdout, "tipo:                          arquivo")
     assert_in(proc.stdout, "alvo principal:                teste.txt")
     assert_in(proc.stdout, "resumo:                        Criar 'teste.txt'.")
-    assert_in(proc.stdout, "candidata a migração futura")
-    assert_in(proc.stdout, "decisão:                       voltar ao Fish")
+    assert_in(proc.stdout, "suportada agora")
+    assert_in(proc.stdout, "decisão:                       executar no Python")
 
 
 def test_dev_create_implicit_file_inflected_alignment() -> None:
@@ -231,8 +235,8 @@ def test_dev_create_implicit_file_inflected_alignment() -> None:
     assert_in(proc.stdout, "tipo:                          arquivo")
     assert_in(proc.stdout, "alvo principal:                teste.txt")
     assert_in(proc.stdout, "resumo:                        Criar 'teste.txt'.")
-    assert_in(proc.stdout, "candidata a migração futura")
-    assert_in(proc.stdout, "decisão:                       voltar ao Fish")
+    assert_in(proc.stdout, "suportada agora")
+    assert_in(proc.stdout, "decisão:                       executar no Python")
 
 
 def test_dev_create_implicit_file_located_alignment() -> None:
@@ -247,8 +251,8 @@ def test_dev_create_implicit_file_located_alignment() -> None:
     assert_in(proc.stdout, "destino:                       Downloads")
     assert_in(proc.stdout, "localização conversacional:    nome: teste.txt | base: Downloads | conector: em")
     assert_in(proc.stdout, "resumo:                        Criar 'Downloads/teste.txt'.")
-    assert_in(proc.stdout, "candidata a migração futura")
-    assert_in(proc.stdout, "decisão:                       voltar ao Fish")
+    assert_in(proc.stdout, "suportada agora")
+    assert_in(proc.stdout, "decisão:                       executar no Python")
     assert_in(proc.stdout, "localização conversacional simples usada para recompor a base 'Downloads'")
 
 
@@ -264,8 +268,8 @@ def test_dev_create_implicit_file_located_inflected_alignment() -> None:
     assert_in(proc.stdout, "destino:                       Downloads")
     assert_in(proc.stdout, "localização conversacional:    nome: teste.txt | base: Downloads | conector: em")
     assert_in(proc.stdout, "resumo:                        Criar 'Downloads/teste.txt'.")
-    assert_in(proc.stdout, "candidata a migração futura")
-    assert_in(proc.stdout, "decisão:                       voltar ao Fish")
+    assert_in(proc.stdout, "suportada agora")
+    assert_in(proc.stdout, "decisão:                       executar no Python")
 
 
 def test_dev_create_implicit_folder_alignment() -> None:
@@ -278,8 +282,8 @@ def test_dev_create_implicit_folder_alignment() -> None:
     assert_in(proc.stdout, "tipo:                          pasta")
     assert_in(proc.stdout, "alvo principal:                projetos/")
     assert_in(proc.stdout, "resumo:                        Criar 'projetos/'.")
-    assert_in(proc.stdout, "candidata a migração futura")
-    assert_in(proc.stdout, "decisão:                       voltar ao Fish")
+    assert_in(proc.stdout, "suportada agora")
+    assert_in(proc.stdout, "decisão:                       executar no Python")
 
 
 def test_dev_create_implicit_folder_inflected_alignment() -> None:
@@ -292,8 +296,8 @@ def test_dev_create_implicit_folder_inflected_alignment() -> None:
     assert_in(proc.stdout, "tipo:                          pasta")
     assert_in(proc.stdout, "alvo principal:                projetos/")
     assert_in(proc.stdout, "resumo:                        Criar 'projetos/'.")
-    assert_in(proc.stdout, "candidata a migração futura")
-    assert_in(proc.stdout, "decisão:                       voltar ao Fish")
+    assert_in(proc.stdout, "suportada agora")
+    assert_in(proc.stdout, "decisão:                       executar no Python")
 
 
 def test_dev_create_implicit_folder_located_alignment() -> None:
@@ -308,8 +312,8 @@ def test_dev_create_implicit_folder_located_alignment() -> None:
     assert_in(proc.stdout, "destino:                       Downloads")
     assert_in(proc.stdout, "localização conversacional:    nome: projetos/ | base: Downloads | conector: em")
     assert_in(proc.stdout, "resumo:                        Criar 'Downloads/projetos/'.")
-    assert_in(proc.stdout, "candidata a migração futura")
-    assert_in(proc.stdout, "decisão:                       voltar ao Fish")
+    assert_in(proc.stdout, "suportada agora")
+    assert_in(proc.stdout, "decisão:                       executar no Python")
     assert_in(proc.stdout, "localização conversacional simples usada para recompor a base 'Downloads'")
 
 
@@ -325,8 +329,8 @@ def test_dev_create_implicit_folder_located_inflected_alignment() -> None:
     assert_in(proc.stdout, "destino:                       Downloads")
     assert_in(proc.stdout, "localização conversacional:    nome: projetos/ | base: Downloads | conector: em")
     assert_in(proc.stdout, "resumo:                        Criar 'Downloads/projetos/'.")
-    assert_in(proc.stdout, "candidata a migração futura")
-    assert_in(proc.stdout, "decisão:                       voltar ao Fish")
+    assert_in(proc.stdout, "suportada agora")
+    assert_in(proc.stdout, "decisão:                       executar no Python")
 
 
 def test_dev_create_explicit_folder_slash_located_alignment() -> None:
@@ -341,8 +345,8 @@ def test_dev_create_explicit_folder_slash_located_alignment() -> None:
     assert_in(proc.stdout, "destino:                       Downloads")
     assert_in(proc.stdout, "localização conversacional:    nome: projetos/ | base: Downloads | conector: em")
     assert_in(proc.stdout, "resumo:                        Criar 'Downloads/projetos/'.")
-    assert_in(proc.stdout, "candidata a migração futura")
-    assert_in(proc.stdout, "decisão:                       voltar ao Fish")
+    assert_in(proc.stdout, "suportada agora")
+    assert_in(proc.stdout, "decisão:                       executar no Python")
 
 
 def test_dev_copy_file_alignment() -> None:
@@ -831,6 +835,42 @@ def test_runtime_package_search() -> None:
         assert_in(proc.stdout, "PACMAN_SEARCH_STUB")
 
 
+def test_runtime_create_file() -> None:
+    with tempfile.TemporaryDirectory() as tmp:
+        workdir = Path(tmp)
+        proc = subprocess.run(
+            [sys.executable, "-m", "aury", "criar", "arquivo", "teste.txt"],
+            cwd=workdir,
+            env=ENV,
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+        if proc.returncode != 0:
+            raise AssertionError(f"retorno inesperado: {proc.returncode!r} stdout={proc.stdout!r} stderr={proc.stderr!r}")
+        assert_in(proc.stdout, "eu criei o arquivo 'teste.txt'")
+        if not (workdir / "teste.txt").is_file():
+            raise AssertionError("runtime Python não materializou o arquivo simples")
+
+
+def test_runtime_create_folder_located() -> None:
+    with tempfile.TemporaryDirectory() as tmp:
+        workdir = Path(tmp)
+        proc = subprocess.run(
+            [sys.executable, "-m", "aury", "criar", "pasta", "Relatorios", "em", "Downloads"],
+            cwd=workdir,
+            env=ENV,
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+        if proc.returncode != 0:
+            raise AssertionError(f"retorno inesperado: {proc.returncode!r} stdout={proc.stdout!r} stderr={proc.stderr!r}")
+        assert_in(proc.stdout, "eu criei a pasta 'Downloads/Relatorios'")
+        if not (workdir / "Downloads" / "Relatorios").is_dir():
+            raise AssertionError("runtime Python não materializou a pasta localizada")
+
+
 def test_dev_search_inflected_alignment() -> None:
     proc = run("dev", "procure", "steam")
     assert proc.returncode == 0
@@ -1222,6 +1262,28 @@ def test_action_execution_plan_supported_now() -> None:
         raise AssertionError("a ação suportada deveria executar no runtime Python")
 
 
+def test_action_execution_plan_supported_now_for_create_file() -> None:
+    _phrase, _action, analysis = prepare_analysis("criar arquivo teste.txt")
+    action_plan = plan_action_execution(analysis)
+    if action_plan.status != "SUPPORTED_NOW":
+        raise AssertionError(f"classificação inesperada: {action_plan.status!r}")
+    if action_plan.route != "file_create":
+        raise AssertionError(f"rota inesperada: {action_plan.route!r}")
+    if action_plan.backend != "runtime Python":
+        raise AssertionError(f"backend inesperado: {action_plan.backend!r}")
+
+
+def test_action_execution_plan_supported_now_for_create_folder() -> None:
+    _phrase, _action, analysis = prepare_analysis("criar pasta projetos/")
+    action_plan = plan_action_execution(analysis)
+    if action_plan.status != "SUPPORTED_NOW":
+        raise AssertionError(f"classificação inesperada: {action_plan.status!r}")
+    if action_plan.route != "folder_create":
+        raise AssertionError(f"rota inesperada: {action_plan.route!r}")
+    if action_plan.backend != "runtime Python":
+        raise AssertionError(f"backend inesperado: {action_plan.backend!r}")
+
+
 def test_action_execution_plan_supported_runtime_route_contract() -> None:
     supported_runtime_route = SupportedRuntimeRoute(route="network_ip", backend="ip")
     action_plan = ActionExecutionPlan.supported_now(
@@ -1491,6 +1553,8 @@ def main() -> int:
         test_runtime_speedtest,
         test_runtime_ping,
         test_runtime_package_search,
+        test_runtime_create_file,
+        test_runtime_create_folder_located,
         test_dev_search_inflected_alignment,
         test_runtime_gpu,
         test_runtime_multi_action_supported,
@@ -1510,6 +1574,8 @@ def main() -> int:
         test_prepare_analyses_destructive_remove_with_previous_file_context_blocks_incompatible_local_reference,
         test_prepare_analyses_destructive_remove_followup_reuses_safe_file_reference,
         test_action_execution_plan_supported_now,
+        test_action_execution_plan_supported_now_for_create_file,
+        test_action_execution_plan_supported_now_for_create_folder,
         test_action_execution_plan_supported_runtime_route_contract,
         test_action_execution_plan_future_migration_candidate,
         test_action_execution_plan_fish_fallback_reason_for_out_of_scope,

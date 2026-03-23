@@ -118,16 +118,33 @@ def main() -> int:
     with tempfile.TemporaryDirectory() as tmp:
         workdir = Path(tmp)
         direct_proc = run_python(["criar", "arquivo", "teste.txt"], cwd=workdir)
-        ensure(direct_proc.returncode == 120, "runtime Python direto precisa devolver 120 quando a ação ainda depende do Fish")
-        ensure(not direct_proc.stdout.strip(), "runtime Python direto não deve fingir sucesso em ação ainda híbrida")
-        ensure(not direct_proc.stderr.strip(), "runtime Python direto não deve vazar erro para ação ainda híbrida")
+        ensure(direct_proc.returncode == 0, "runtime Python direto precisa sair com 0 para criar arquivo suportado agora")
+        ensure("eu criei o arquivo 'teste.txt'" in direct_proc.stdout, "runtime Python direto precisa materializar a criação simples de arquivo")
+        ensure((workdir / "teste.txt").is_file(), "runtime Python direto precisa criar o arquivo simples")
+        ensure(not direct_proc.stderr.strip(), "runtime Python direto não pode vazar stderr em criação simples de arquivo")
 
         status, output, stderr = run_public(["criar", "arquivo", "teste.txt"], cwd=workdir)
-        ensure(status == 0, "entrada pública precisa sair com 0 quando o fallback para o Fish fecha a ação")
-        ensure("eu criei o arquivo 'teste.txt'" in output, "entrada pública precisa materializar o sucesso no Fish")
-        ensure((workdir / "teste.txt").is_file(), "entrada pública precisa executar a criação do arquivo no fallback Fish")
-        ensure(not stderr, "fallback estrutural para o Fish não pode vazar stderr")
-    ok("fronteira Python 120 -> Fish 0 permanece explícita e auditável")
+        ensure(status == 0, "entrada pública precisa sair com 0 para criar arquivo suportado agora")
+        ensure("eu criei o arquivo 'teste.txt'" in output, "entrada pública precisa preservar a mensagem canônica de criação de arquivo")
+        ensure((workdir / "teste.txt").is_file(), "entrada pública precisa manter o arquivo criado")
+        ensure(not stderr, "criação pública de arquivo não pode vazar stderr")
+    ok("criação simples de arquivo já fecha direto em Python com superfície pública preservada")
+
+    with tempfile.TemporaryDirectory() as tmp:
+        workdir = Path(tmp)
+        (workdir / "Downloads").mkdir(parents=True, exist_ok=True)
+        direct_proc = run_python(["criar", "pasta", "Relatorios", "em", "Downloads"], cwd=workdir)
+        ensure(direct_proc.returncode == 0, "runtime Python direto precisa sair com 0 para criar pasta localizada suportada agora")
+        ensure("eu criei a pasta 'Downloads/Relatorios'" in direct_proc.stdout, "runtime Python direto precisa materializar a criação localizada de pasta")
+        ensure((workdir / "Downloads" / "Relatorios").is_dir(), "runtime Python direto precisa criar a pasta localizada")
+        ensure(not direct_proc.stderr.strip(), "runtime Python direto não pode vazar stderr em criação localizada de pasta")
+
+        status, output, stderr = run_public(["criar", "pasta", "Relatorios", "em", "Downloads"], cwd=workdir)
+        ensure(status == 0, "entrada pública precisa sair com 0 para criar pasta localizada suportada agora")
+        ensure("eu criei a pasta 'Downloads/Relatorios'" in output, "entrada pública precisa preservar a mensagem canônica de criação localizada de pasta")
+        ensure((workdir / "Downloads" / "Relatorios").is_dir(), "entrada pública precisa manter a pasta localizada criada")
+        ensure(not stderr, "criação pública localizada de pasta não pode vazar stderr")
+    ok("criação localizada de pasta já fecha direto em Python com superfície pública preservada")
 
     with tempfile.TemporaryDirectory() as tmp:
         workdir = Path(tmp)

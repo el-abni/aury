@@ -1,16 +1,19 @@
 from __future__ import annotations
 
 import json
+import os
 import shutil
 import subprocess
 from collections.abc import Callable
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Sequence
 
 from .analyzer import prepare_analyses
 from .contracts import ActionExecutionPlan, Analysis, SequenceExecutionPlan, SupportedRuntimeRoute
 
 UNSUPPORTED_EXIT = 120
+_PYTHON_RUNTIME_BACKEND = "runtime Python"
 RouteHandler = Callable[[Analysis, ActionExecutionPlan], int]
 
 
@@ -67,6 +70,55 @@ def _run_and_print(backend: str, args: Sequence[str]) -> int:
         return _backend_failed(backend)
     print(proc.stdout.rstrip())
     return 0
+
+
+def _file_kind_label(kind: str) -> str:
+    if kind == "pasta":
+        return "a pasta"
+    return "o arquivo"
+
+
+def _created_path_success(kind: str, target: str) -> int:
+    print(f"✅ Pronto, eu criei {_file_kind_label(kind)} '{target}'.")
+    return 0
+
+
+def _created_path_failure(kind: str, target: str) -> int:
+    print(f"❌ não consegui criar {_file_kind_label(kind)} '{target}'")
+    return 1
+
+
+def _handle_file_create(analysis: Analysis, _action_plan: ActionExecutionPlan) -> int:
+    target = _analysis_target(analysis)
+    if not target or target == "-":
+        return UNSUPPORTED_EXIT
+
+    path = Path(target)
+    try:
+        parent = path.parent
+        if str(parent) not in {"", "."}:
+            parent.mkdir(parents=True, exist_ok=True)
+        if path.exists():
+            os.utime(path, None)
+        else:
+            path.touch()
+    except OSError:
+        return _created_path_failure("arquivo", target)
+
+    return _created_path_success("arquivo", target)
+
+
+def _handle_folder_create(analysis: Analysis, _action_plan: ActionExecutionPlan) -> int:
+    target = _analysis_target(analysis)
+    if not target or target == "-":
+        return UNSUPPORTED_EXIT
+
+    try:
+        Path(target).mkdir(parents=True, exist_ok=True)
+    except OSError:
+        return _created_path_failure("pasta", target)
+
+    return _created_path_success("pasta", target)
 
 
 def _handle_package_search(analysis: Analysis, action_plan: ActionExecutionPlan) -> int:
@@ -154,8 +206,10 @@ class _RuntimeRouteSpec:
     handler: RouteHandler
     domain: str
     intent: str | None = None
+    entity_type: str | None = None
     target: str | None = None
     requires_target: bool = False
+    requires_backend: bool = True
 
     @property
     def route(self) -> str:
@@ -173,6 +227,9 @@ class _RuntimeRouteSpec:
             return False
 
         if self.intent is not None and analysis.intent != self.intent:
+            return False
+
+        if self.entity_type is not None and analysis.entities.get("tipo") != self.entity_type:
             return False
 
         action_target = _analysis_target(analysis)
@@ -195,6 +252,24 @@ class _RuntimeRouteSpec:
 
 
 _RUNTIME_ROUTE_SPECS = (
+    _RuntimeRouteSpec(
+        supported_runtime_route=SupportedRuntimeRoute(route="file_create", backend=_PYTHON_RUNTIME_BACKEND),
+        handler=_handle_file_create,
+        domain="arquivo",
+        intent="criar",
+        entity_type="arquivo",
+        requires_target=True,
+        requires_backend=False,
+    ),
+    _RuntimeRouteSpec(
+        supported_runtime_route=SupportedRuntimeRoute(route="folder_create", backend=_PYTHON_RUNTIME_BACKEND),
+        handler=_handle_folder_create,
+        domain="arquivo",
+        intent="criar",
+        entity_type="pasta",
+        requires_target=True,
+        requires_backend=False,
+    ),
     _RuntimeRouteSpec(
         supported_runtime_route=SupportedRuntimeRoute(route="package_search", backend="pacman"),
         handler=_handle_package_search,
@@ -304,6 +379,8 @@ def plan_sequence_execution(analyses: list[Analysis]) -> SequenceExecutionPlan:
 
 
 def _ensure_route_backend(route_spec: _RuntimeRouteSpec) -> int:
+    if not route_spec.requires_backend:
+        return 0
     if shutil.which(route_spec.backend) is None:
         return _backend_missing(route_spec.backend)
     return 0
