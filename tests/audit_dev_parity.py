@@ -6,6 +6,7 @@ import stat
 import subprocess
 import sys
 import tempfile
+from contextlib import contextmanager
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -29,13 +30,52 @@ def write_stub(bin_dir: Path, name: str, body: str) -> None:
     path.chmod(path.stat().st_mode | stat.S_IXUSR)
 
 
-def dev_executor(phrase: str) -> tuple[str, str]:
+def write_os_release(
+    root: Path,
+    *,
+    distro_id: str,
+    distro_like: str = "",
+    variant_id: str = "",
+    name: str = "",
+) -> Path:
+    path = root / "os-release"
+    lines = [f"ID={distro_id}"]
+    if distro_like:
+        lines.append(f'ID_LIKE="{distro_like}"')
+    if variant_id:
+        lines.append(f'VARIANT_ID="{variant_id}"')
+    if name:
+        lines.append(f'NAME="{name}"')
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    return path
+
+
+@contextmanager
+def temporary_env(overrides: dict[str, str]):
+    sentinel = object()
+    previous: dict[str, object] = {}
+    for key, value in overrides.items():
+        previous[key] = os.environ.get(key, sentinel)
+        os.environ[key] = value
+    try:
+        yield
+    finally:
+        for key, old_value in previous.items():
+            if old_value is sentinel:
+                os.environ.pop(key, None)
+            else:
+                os.environ[key] = str(old_value)
+
+
+def dev_executor(phrase: str, *, env: dict[str, str] | None = None) -> tuple[str, str]:
     _phrase, _actions, analyses = prepare_analyses(phrase)
-    sequence_plan = plan_sequence_execution(analyses)
-    action_plan = sequence_plan.action_plans[0]
-    executor = "python" if sequence_plan.executes_in_python else "fish"
-    route = action_plan.route or "-"
-    return executor, route
+    env_overrides = env or {}
+    with temporary_env(env_overrides):
+        sequence_plan = plan_sequence_execution(analyses)
+        action_plan = sequence_plan.action_plans[0]
+        executor = "python" if sequence_plan.executes_in_python else "fish"
+        route = action_plan.route or "-"
+        return executor, route
 
 
 def run_fish(args: list[str], *, env: dict[str, str] | None = None, cwd: Path | None = None) -> str:
@@ -82,8 +122,8 @@ def run_fish_public_error(args: list[str], *, env: dict[str, str] | None = None,
     fail(f"execução Fish deveria falhar publicamente para {args!r}, mas saiu com 0")
 
 
-def assert_executor(phrase: str, expected_executor: str) -> str:
-    actual_executor, route = dev_executor(phrase)
+def assert_executor(phrase: str, expected_executor: str, *, env: dict[str, str] | None = None) -> str:
+    actual_executor, route = dev_executor(phrase, env=env)
     if actual_executor != expected_executor:
         fail(f"plano de 'aury dev' para {phrase!r} deveria usar {expected_executor}, mas retornou {actual_executor}")
     return route
@@ -102,27 +142,28 @@ def main() -> int:
             "librespeed-cli",
             "#!/usr/bin/env bash\nprintf '{\"ping\":11.2,\"download\":123.4,\"upload\":56.7,\"jitter\":1.8}'\n",
         )
-        path_env = {"PATH": f"{bin_dir}:{os.environ['PATH']}"}
+        os_release = write_os_release(Path(tmp), distro_id="cachyos", distro_like="arch", name="CachyOS")
+        path_env = {"PATH": f"{bin_dir}:{os.environ['PATH']}", "AURY_OS_RELEASE_PATH": str(os_release)}
 
-        route = assert_executor("procurar steam", "python")
+        route = assert_executor("procurar steam", "python", env=path_env)
         output = run_fish(["procurar", "steam"], env=path_env)
         if "PACMAN_STUB -Ss -- steam" not in output:
             fail("modo normal não observou a rota Python esperada para procurar pacote")
         ok(f"procurar steam alinhado em Python ({route})")
 
-        route = assert_executor("ver ip", "python")
+        route = assert_executor("ver ip", "python", env=path_env)
         output = run_fish(["ver", "ip"], env=path_env)
         if "IP_STUB -brief address" not in output:
             fail("modo normal não observou a rota Python esperada para ver ip")
         ok(f"ver ip alinhado em Python ({route})")
 
-        route = assert_executor("testar internet", "python")
+        route = assert_executor("testar internet", "python", env=path_env)
         output = run_fish(["testar", "internet"], env=path_env)
         if "PING_STUB -c 2 -- 8.8.8.8" not in output:
             fail("modo normal não observou a rota Python esperada para testar internet")
         ok(f"testar internet alinhado em Python ({route})")
 
-        route = assert_executor("velocidade da internet", "python")
+        route = assert_executor("velocidade da internet", "python", env=path_env)
         output = run_fish(["velocidade", "da", "internet"], env=path_env)
         if "download: 123.4 Mbps" not in output:
             fail("modo normal não observou a rota Python esperada para velocidade da internet")
@@ -141,26 +182,51 @@ def main() -> int:
         ok("remover ela alinhado em Fish")
 
     with tempfile.TemporaryDirectory() as tmp:
-        bin_dir = Path(tmp) / "bin"
+        root = Path(tmp)
+        bin_dir = root / "bin"
         bin_dir.mkdir(parents=True, exist_ok=True)
         write_stub(bin_dir, "sudo", "#!/usr/bin/env bash\n\"$@\"\n")
         write_stub(
             bin_dir,
             "pacman",
-            "#!/usr/bin/env bash\nif [ \"$1\" = \"-Si\" ]; then\n  exit 1\nfi\nprintf 'PACMAN_FALLBACK %s\\n' \"$*\"\n",
+            "#!/usr/bin/env bash\n"
+            f"firefox_state={root / 'firefox.installed'!s}\n"
+            f"vlc_state={root / 'vlc.removed'!s}\n"
+            "if [ \"$1\" = \"-Q\" ] && [ \"$3\" = \"firefox\" ]; then\n"
+            "  if [ -f \"$firefox_state\" ]; then\n"
+            "    exit 0\n"
+            "  fi\n"
+            "  touch \"$firefox_state\"\n"
+            "  exit 1\n"
+            "fi\n"
+            "if [ \"$1\" = \"-Q\" ] && [ \"$3\" = \"vlc\" ]; then\n"
+            "  if [ -f \"$vlc_state\" ]; then\n"
+            "    exit 1\n"
+            "  fi\n"
+            "  touch \"$vlc_state\"\n"
+            "  exit 0\n"
+            "fi\n"
+            "printf 'PACMAN_FALLBACK %s\\n' \"$*\"\n",
         )
         write_stub(
             bin_dir,
             "paru",
-            "#!/usr/bin/env bash\nif [ \"$1\" = \"-Si\" ]; then\n  exit 0\nfi\nprintf 'PARU_FALLBACK %s\\n' \"$*\"\n",
+            "#!/usr/bin/env bash\nprintf 'PARU_FALLBACK %s\\n' \"$*\"\n",
         )
-        path_env = {"PATH": f"{bin_dir}:{os.environ['PATH']}"}
+        os_release = write_os_release(root, distro_id="cachyos", distro_like="arch", name="CachyOS")
+        path_env = {"PATH": f"{bin_dir}:{os.environ['PATH']}", "AURY_OS_RELEASE_PATH": str(os_release)}
 
-        assert_executor("instalar firefox", "fish")
+        assert_executor("instalar firefox", "python", env=path_env)
         output = run_fish(["instalar", "firefox"], env=path_env)
         if "PARU_FALLBACK -S --needed -- firefox" not in output:
-            fail("modo normal não caiu no adaptador Fish para instalar firefox")
-        ok("instalar firefox alinhado em Fish")
+            fail("modo normal não observou a rota Python esperada para instalar firefox")
+        ok("instalar firefox alinhado em Python")
+
+        assert_executor("remover vlc", "python", env=path_env)
+        output = run_fish(["remover", "vlc"], env=path_env)
+        if "PACMAN_FALLBACK -Rns -- vlc" not in output:
+            fail("modo normal não observou a rota Python esperada para remover vlc")
+        ok("remover vlc alinhado em Python")
 
     with tempfile.TemporaryDirectory() as tmp:
         workdir = Path(tmp)

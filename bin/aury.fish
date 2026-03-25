@@ -1,6 +1,6 @@
 # ==========================================================
 # 💜 Aury
-# Terminal Assistant for CachyOS
+# Terminal Assistant for Linux
 # Shell: fish
 # ==========================================================
 
@@ -3815,85 +3815,13 @@ end
 # -------------------------------------------------
 
 function __aury_exec_packages
-    set -l intent $argv[1]
-    set -e argv[1]
-
-    switch $intent
-        case procurar
-            set -l search (__aury_package_text_after_intent procurar)
-
-            if test -z "$search"
-                __aury_msg_error "termo não especificado"
-                return 0
-            end
-
-            pacman -Ss -- $search
-            return 0
-
-        case instalar
-            set -l pkg_text (__aury_package_text_after_intent instalar)
-
-            if test -z "$pkg_text"
-                __aury_msg_error "pacote não especificado"
-                return 0
-            end
-
-            set -l pkg_words (string split " " -- $pkg_text)
-            set -l pkg (string join "-" -- $pkg_words)
-
-            echo "📦 instalando $pkg"
-
-            if pacman -Si -- $pkg >/dev/null 2>/dev/null
-                sudo pacman -S --needed -- $pkg
-                return 0
-            end
-
-            if type -q paru
-                if paru -Si -- $pkg >/dev/null 2>/dev/null
-                    __aury_msg_info "tentando via paru..."
-                    paru -S --needed -- $pkg
-                    return 0
-                end
-            end
-
-            if type -q flatpak
-                __aury_msg_info "tentando via flatpak..."
-                flatpak install -y --system flathub $pkg
-
-                if test $status -ne 0
-                    flatpak install -y --user flathub $pkg
-                end
-
-                return 0
-            end
-
-            __aury_msg_error "pacote não encontrado: $pkg"
-            return 0
-
-        case remover
-            set -l pkg_text (__aury_package_text_after_intent remover)
-
-            if test -z "$pkg_text"
-                __aury_msg_error "pacote não especificado"
-                return 0
-            end
-
-            set -l pkg_words (string split " " -- $pkg_text)
-            set -l pkg (string join "-" -- $pkg_words)
-
-            echo "🗑 removendo $pkg"
-
-            sudo pacman -Rns -- $pkg
-
-            if test $status -ne 0
-                if type -q paru
-                    paru -Rns -- $pkg
-                end
-            end
-
-            return 0
+    __aury_run_python --version >/dev/null 2>/dev/null
+    if test $status -ne 0
+        __aury_msg_error "não consegui aplicar a política canônica de pacote porque o runtime Python não está disponível."
+        return 1
     end
 
+    __aury_msg_error "não consegui aplicar a política canônica de pacote fora do runtime Python. Nada foi feito."
     return 1
 end
 

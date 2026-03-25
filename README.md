@@ -1,17 +1,17 @@
 # 💜 Aury
 
-![version](https://img.shields.io/badge/version-v1.9.0-purple)
+![version](https://img.shields.io/badge/version-v1.9.1-purple)
 ![shell](https://img.shields.io/badge/shell-fish-blue)
-![platform](https://img.shields.io/badge/platform-CachyOS-orange)
+![platform](https://img.shields.io/badge/platform-Linux-orange)
 ![license](https://img.shields.io/badge/license-MIT-green)
 
-**Aury** é uma assistente de terminal feita especificamente para **CachyOS**.
+**Aury** é uma assistente de terminal para **Linux**, com foco inicial em **Arch**, **Debian/Ubuntu** e **Fedora mutável**.
 
 Ela permite executar tarefas do sistema usando **linguagem natural**, traduzindo frases humanas em ações reais no terminal. A proposta do projeto é reduzir fricção, acelerar tarefas comuns e tornar o uso do terminal mais natural sem perder o poder das ferramentas tradicionais.
 
 ---
 
-> Estado público real da **v1.9.0**: a linha **1.x** da Aury é encerrada publicamente aqui como uma base híbrida deliberadamente contida. A entrada continua em Fish; `help`, `version`, `dev <frase>` e um subconjunto explícito de rotas normais seguem sustentados pelo núcleo Python; `criar arquivo` / `criar pasta` permanecem como o micro-recorte operacional já fechado no runtime Python; e o restante do híbrido fica explicitamente no adaptador Fish por decisão final desta linha. O gate final mínimo canônico da linha 1.x é `bash tests/release_gate_minimo.sh`.
+> Estado público real da **v1.9.1**: a linha **1.x** continua incremental como base híbrida deliberadamente contida. Esta release fecha a primeira frente pública de compatibilidade Linux da Aury: a entrada continua em Fish; `help`, `version`, `dev <frase>` e um subconjunto explícito de rotas normais seguem sustentados pelo núcleo Python; `criar arquivo` / `criar pasta` permanecem no runtime Python; e o domínio de pacote agora usa perfil mínimo de host e política por família Linux para `procurar`, `instalar` e `remover`, com Tier 1 inicial em Arch, Debian/Ubuntu e Fedora mutável, OpenSUSE contido e Atomic bloqueado honestamente. O gate final mínimo canônico da linha 1.x continua sendo `bash tests/release_gate_minimo.sh`.
 
 ## O que é a Aury
 
@@ -117,6 +117,7 @@ A versão atual da **💜 Aury** já oferece:
 - confirmação destrutiva explícita para remoção e bloqueio de alvo anafórico inseguro
 - ambiguidade pública de alvo/destino em vez de execução silenciosa
 - observabilidade mais contratual com `aury dev <frase>`
+- perfil mínimo de host Linux para política inicial de pacote por família
 - micro-recorte operacional em Python para `criar arquivo` e `criar pasta`
 - medição explícita de velocidade da internet via `librespeed-cli`
 
@@ -124,7 +125,7 @@ A versão atual da **💜 Aury** já oferece:
 
 ## Instalação
 
-A instalação pública atual da v1.9.0 usa o script do próprio repositório:
+A instalação pública atual da v1.9.1 usa o script do próprio repositório:
 
 ```fish
 git clone https://github.com/el-abni/aury.git
@@ -172,7 +173,7 @@ No código, a identidade visual da assistente é:
 No comando de ajuda, a versão deve aparecer no formato:
 
 ```text
-💜 Aury v1.9.0
+💜 Aury v1.9.1
 ```
 
 A Aury entende tanto comandos diretos quanto frases mais naturais, como:
@@ -193,25 +194,36 @@ aury dev ver cpu e memória
 aury dev copiar arquivo teste.txt para backup.txt
 ```
 
-## Contrato público mínimo da v1.9.0
+## Contrato público mínimo da v1.9.1
 
 - `aury ajuda` e `ay ajuda` renderizam `resources/help.txt` usando a `VERSION` da base ativa.
 - `aury --version` e `ay --version` imprimem `💜 Aury <VERSION>` a partir da mesma base ativa.
 - `aury dev <frase>` usa o núcleo Python e expõe plano da sequência, leitura por ação, plano de execução e decisão de sequência de forma mais auditável.
-- na v1.9.0, `aury dev <frase>` fecha o contrato observável final da linha 1.x sem prometer paridade total com toda formulação histórica do legado.
-- na v1.9.0, `criar arquivo` e `criar pasta` seguem com rota Python explícita no modo normal, inclusive quando a leitura `dev` fecha esse mesmo micro-recorte como suportado agora.
+- na v1.9.1, `aury dev <frase>` continua sendo o relatório canônico da linha 1.x sem prometer paridade total com toda formulação histórica do legado.
+- na v1.9.1, `criar arquivo` e `criar pasta` seguem com rota Python explícita no modo normal, inclusive quando a leitura `dev` fecha esse mesmo micro-recorte como suportado agora.
+- na v1.9.1, `procurar`, `instalar` e `remover` no domínio de pacote passam a depender do perfil mínimo do host Linux e de um backend explícito por família.
+- na v1.9.1, o recorte inicial útil de pacote cobre Arch e derivadas, Debian/Ubuntu e derivadas, e Fedora mutável; OpenSUSE entra apenas com detecção e bloqueio honesto; Atomic permanece bloqueado com honestidade.
+- na v1.9.1, a política canônica de pacote fica no núcleo Python; a entrada pública continua em Fish, mas pacote não volta a improvisar fallback localista fora desse contrato.
 - `aury dev` sem frase fica mantido como verificação local curta e utilitário secundário do adaptador Fish; ele não substitui o relatório canônico da linha 1.x.
 - `bin/aury.fish` é o ponto de entrada público: ele tenta o runtime Python primeiro e volta ao Fish quando a ação não fecha numa rota Python explícita desta linha.
 - o gate final mínimo canônico da linha 1.x é `bash tests/release_gate_minimo.sh`.
 - a compactação local simples herdada da v1.7.0 continua cobrindo um único arquivo ou uma única pasta, com saída explícita e apenas `.zip` ou `.tar.gz`.
 - Em desenvolvimento, ao fazer `source bin/aury.fish`, a base ativa é o próprio root do repositório. Na instalação, a base ativa é `~/.local/share/aury`.
 
+## Compatibilidade Linux inicial da v1.9.1
+
+- Tier 1 inicial de pacote: Arch e derivadas mutáveis, Debian/Ubuntu e derivadas mutáveis, Fedora e derivadas mutáveis.
+- Tier 2 contido: OpenSUSE entra só com detecção e bloqueio honesto nesta release.
+- Suporte limitado: Atomic Fedora, Universal Blue e perfis equivalentes permanecem bloqueados honestamente para pacote do host.
+- O recorte portátil desta release fica em `procurar`, `instalar` e `remover`; `atualizar` e `otimizar` continuam fora da compatibilidade multi-distro.
+- A v1.9.1 não promete tradução de nomes de pacote, paridade total entre famílias nem suporte cross-distro amplo.
+
 ## Limites honestos
 
 - pedidos fora do recorte atual, como `abrir arquivo`, continuam em fallback honesto
-- o runtime Python atual cobre `help`, `version`, `dev <frase>`, algumas leituras simples de pacote/rede/sistema e o micro-recorte de `criar arquivo` / `criar pasta`; o restante continua voltando ao adaptador Fish
+- o runtime Python atual cobre `help`, `version`, `dev <frase>`, algumas leituras simples de rede/sistema, o micro-recorte de `criar arquivo` / `criar pasta` e a política inicial de pacote por host Linux; o restante continua voltando ao adaptador Fish
 - `aury dev` sem frase fica restrito à verificação local curta do adaptador Fish e não deve ser tratado como relatório canônico amplo
-- a v1.9.0 encerra a linha 1.x sem ampliar o recorte funcional da Aury
+- a v1.9.1 não promete compatibilidade simétrica entre famílias Linux nem update/optimize multi-distro
 - `aury velocidade da internet` depende de `librespeed-cli` e `python3` disponíveis no ambiente
 - a compactação herdada da v1.7.0 não cobre lote, overwrite automático, nome derivado automaticamente nem formatos extras
 
@@ -219,25 +231,29 @@ aury dev copiar arquivo teste.txt para backup.txt
 
 ## Estado da linha 1.6.x
 
+- a linha 1.6.x permanece fechada publicamente como etapa já entregue
 - `v1.6.1`: base pública híbrida entre adaptador Fish e núcleo Python
 - `v1.6.2`: alinhamento diagnóstico curto extra de `aury dev` com fluxos já sustentados pelo modo normal
 - `v1.6.3`: fechamento público da linha 1.6.x, sem ampliar o escopo funcional da Aury
 
-## Estado público da v1.9.0
+## Estado público da v1.9.1
 
 - a v1.8.0 fechou a etapa de congelamento semântico e endurecimento incremental sem reabrir expansão estrutural
-- a v1.9.0 encerra publicamente a linha 1.x com hardening final de superfície pública, gate e narrativa
-- `aury dev <frase>` fica com linguagem pública final: rotas sustentadas pelo núcleo Python, atendidas pelo adaptador Fish ou fora do recorte do runtime Python
+- a v1.9.0 fechou a base híbrida pública contida; a v1.9.1 fecha a primeira release pública de compatibilidade Linux sem reescrever a Aury
+- `aury dev <frase>` continua com linguagem pública auditável: rotas sustentadas pelo núcleo Python, atendidas pelo adaptador Fish, bloqueadas honestamente por política de host ou fora do recorte do runtime Python
 - `aury dev` sem frase permanece apenas como verificação local curta e secundária do adaptador Fish
 - `criar arquivo` e `criar pasta` permanecem como o micro-recorte operacional já fechado no runtime Python
+- a política de pacote agora parte de um perfil mínimo de host Linux: família, mutabilidade e backends centrais detectados
 - a fronteira híbrida segue explícita: Fish continua como entrada pública e camada de compatibilidade; Python sustenta `help`, `version`, `dev <frase>` e o subconjunto explícito de rotas normais já sustentadas diretamente
+- o domínio de pacote foi endurecido no recorte atual: busca sem resultado, no-op e bloqueios fora do suporte saem com superfície pública honesta; o Fish não volta a concentrar política de pacote
+- Arch, Debian/Ubuntu e Fedora mutável entram como Tier 1 inicial de pacote; OpenSUSE fica em Tier 2 apenas com detecção/bloqueio honesto; Atomic continua em suporte limitado com bloqueio honesto
 - o workflow canônico de auditoria pública mínima da linha 1.x fica explicitado como `bash tests/release_gate_minimo.sh`
 
-## Fechamento da linha 1.x
+## Continuidade da linha 1.x
 
-- a v1.9.0 fecha a linha 1.x como produto contido e publicamente honesto
-- não há nova migração estrutural nesta release
-- o que permanece no adaptador Fish termina ali por decisão final desta linha, não como promessa de continuação implícita
+- a v1.9.0 fechou a base híbrida pública contida da linha 1.x
+- a v1.9.1 continua a mesma linha com expansão estrutural mínima e controlada no domínio de pacote
+- não existe v2.0 pública da Aury neste momento
 
 ---
 
@@ -250,7 +266,7 @@ Ela existe para:
 - reduzir a fricção do uso diário
 - acelerar tarefas comuns
 - permitir comandos mais humanos
-- tornar o terminal mais acessível para quem está começando no CachyOS
+- tornar o terminal mais acessível para quem está começando no Linux
 
 O terminal continua poderoso. Aury apenas adiciona uma camada de conforto e interpretação.
 

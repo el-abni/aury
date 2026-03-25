@@ -2,15 +2,43 @@
 
 Todas as mudanças importantes da **💜 Aury** são documentadas neste arquivo.
 
-A linha principal pública da **💜 Aury** foi encerrada na **v1.9.0**. Este changelog continua registrando apenas versões lançadas.
+A linha pública da **💜 Aury** continua incremental na série **v1.9.x**. Este changelog registra apenas versões lançadas.
+
+---
+
+## v1.9.1
+
+### Consolidado
+- fechamento público da **v1.9.1** como primeira release incremental de compatibilidade Linux da linha **1.x**
+- versão, narrativa, arquitetura, ajuda e metadados passam a refletir a **v1.9.1** como continuidade incremental da base híbrida pública, sem sugerir encerramento na **v1.9.0**
+
+### Perfil mínimo de host
+- entra um contrato mínimo de host Linux no núcleo Python com família, mutabilidade e backends centrais de pacote detectados
+- `aury dev <frase>` passa a expor esse perfil quando a ação entra no domínio de pacote
+
+### Pacote por família Linux
+- `procurar`, `instalar` e `remover` deixam de depender do hardcode puro de `pacman` e passam a usar política explícita por família Linux
+- Arch e derivadas, Debian/Ubuntu e derivadas, e Fedora mutável entram como Tier 1 inicial
+- OpenSUSE entra apenas com detecção e bloqueio honesto nesta fase
+- Atomic permanece em suporte limitado com bloqueio honesto de pacote do host
+- a entrada pública continua em Fish, mas a política canônica de pacote deixa de voltar a fallback localista fora do runtime Python
+
+### Endurecimento operacional
+- busca sem resultado, backend ausente, host fora do recorte e host Atomic passam a sair com superfície pública mais previsível e honesta
+- `instalar` e `remover` passam a verificar estado antes de agir e a confirmar o resultado quando o backend Tier 1 permite isso
+- `aury dev <frase>` permanece alinhado ao comportamento real desse domínio, sem prometer compatibilidade total entre famílias
+
+### Compatibilidade e limites
+- `atualizar` e `otimizar` continuam fora da compatibilidade multi-distro nesta release
+- não entra toolbox, distrobox, rpm-ostree, tradução de nomes de pacote nem paridade total entre famílias
 
 ---
 
 ## v1.9.0
 
 ### Consolidado
-- fechamento público final da linha **1.x** da **💜 Aury** no repositório canônico
-- versão, narrativa, arquitetura e metadados passam a refletir a **v1.9.0** como encerramento deliberado da linha
+- fechamento público da base híbrida contida da linha **1.x** da **💜 Aury** no repositório canônico
+- versão, narrativa, arquitetura e metadados passam a refletir a **v1.9.0** como fechamento deliberado dessa base antes da abertura incremental da v1.9.1
 
 ### Linguagem pública e enquadramento final
 - `aury dev <frase>` deixa de insinuar roadmap implícito de migração e passa a expor, no presente, quando uma rota é sustentada pelo núcleo Python, atendida pelo adaptador Fish ou fica fora do recorte do runtime Python

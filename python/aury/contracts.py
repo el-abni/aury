@@ -98,6 +98,20 @@ class ActionExecutionPlan:
         )
 
     @classmethod
+    def supported_with_policy_block(
+        cls,
+        supported_runtime_route: SupportedRuntimeRoute,
+        *,
+        reason: str,
+    ) -> ActionExecutionPlan:
+        return cls(
+            status="SUPPORTED_WITH_POLICY_BLOCK",
+            supported_runtime_route=supported_runtime_route,
+            executor="python",
+            reason=reason,
+        )
+
+    @classmethod
     def fish_fallback(cls, *, reason: str) -> ActionExecutionPlan:
         return cls(
             status="FISH_FALLBACK",

@@ -70,6 +70,7 @@ _CREATE_LOCATION_BASE_NOISE_TOKENS = {
     "diretorio",
     "diretório",
 }
+_PACKAGE_DOMAIN_NOISE_TOKENS = {"pacote", "pacotes", "app", "aplicativo", "aplicativos", "programa", "programas"}
 
 
 def _unsupported(action: PreparedAction) -> Analysis:
@@ -115,6 +116,17 @@ def _first_action(actions: list[PreparedAction]) -> PreparedAction:
 
 def _action_target(action: PreparedAction) -> str:
     target = " ".join(action.original_tokens[1:]).strip()
+    return target or "-"
+
+
+def _package_target(action: PreparedAction) -> str:
+    start = 1
+    while start < len(action.normalized_tokens):
+        token = action.normalized_tokens[start]
+        if token not in _PACKAGE_DOMAIN_NOISE_TOKENS:
+            break
+        start += 1
+    target = " ".join(action.original_tokens[start:]).strip()
     return target or "-"
 
 
@@ -1169,7 +1181,7 @@ def analyze_prepared_action(action: PreparedAction) -> Analysis:
         return extract_action
 
     if first_token == "remover":
-        target = _action_target(action)
+        target = _package_target(action)
         return _analysis(
             action,
             intent="remover",
@@ -1182,7 +1194,7 @@ def analyze_prepared_action(action: PreparedAction) -> Analysis:
         )
 
     if first_token in {"instalar", "instala", "instale"} and _has_explicit_target(action):
-        target = _action_target(action)
+        target = _package_target(action)
         return _analysis(
             action,
             intent="instalar",
@@ -1191,7 +1203,7 @@ def analyze_prepared_action(action: PreparedAction) -> Analysis:
             reason="pedido de instalação de pacote reconhecido.",
             summary=f"Instalar '{target}'.",
             entities={"alvo_principal": target},
-            observations=["execução normal atual continua no adaptador Fish"],
+            observations=["política de pacote agora depende do perfil mínimo do host Linux"],
         )
 
     if "velocidade" in action.normalized_tokens and "internet" in action.normalized_tokens:
@@ -1222,7 +1234,7 @@ def analyze_prepared_action(action: PreparedAction) -> Analysis:
         )
 
     if first_token in {"procurar", "buscar"}:
-        target = _action_target(action)
+        target = _package_target(action)
         return _analysis(
             action,
             intent="procurar",
@@ -1231,6 +1243,7 @@ def analyze_prepared_action(action: PreparedAction) -> Analysis:
             reason="pedido de busca de pacote reconhecido.",
             summary=f"Procurar '{target}'.",
             entities={"alvo_principal": target},
+            observations=["política de pacote agora depende do perfil mínimo do host Linux"],
         )
 
     if first_token == "ping" and _has_explicit_target(action):

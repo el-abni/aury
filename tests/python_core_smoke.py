@@ -6,6 +6,7 @@ import stat
 import subprocess
 import sys
 import tempfile
+from contextlib import contextmanager
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -13,6 +14,7 @@ sys.path.insert(0, str(ROOT / "python"))
 
 from aury.analyzer import prepare_analyses, prepare_analysis
 from aury.contracts import ActionExecutionPlan, SupportedRuntimeRoute
+from aury.host import detect_host_profile
 from aury.pipeline import prepare_text
 from aury.runtime import plan_action_execution, plan_sequence_execution
 from aury.sensitive_tokens import protect_sensitive_tokens, restore_sensitive_tokens
@@ -41,6 +43,43 @@ def write_stub(bin_dir: Path, name: str, body: str) -> None:
     path.chmod(path.stat().st_mode | stat.S_IXUSR)
 
 
+def write_os_release(
+    root: Path,
+    *,
+    distro_id: str,
+    distro_like: str = "",
+    variant_id: str = "",
+    name: str = "",
+) -> Path:
+    path = root / "os-release"
+    lines = [f"ID={distro_id}"]
+    if distro_like:
+        lines.append(f'ID_LIKE="{distro_like}"')
+    if variant_id:
+        lines.append(f'VARIANT_ID="{variant_id}"')
+    if name:
+        lines.append(f'NAME="{name}"')
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    return path
+
+
+@contextmanager
+def temporary_env(overrides: dict[str, str]):
+    sentinel = object()
+    previous: dict[str, object] = {}
+    for key, value in overrides.items():
+        previous[key] = os.environ.get(key, sentinel)
+        os.environ[key] = value
+    try:
+        yield
+    finally:
+        for key, old_value in previous.items():
+            if old_value is sentinel:
+                os.environ.pop(key, None)
+            else:
+                os.environ[key] = str(old_value)
+
+
 def test_help() -> None:
     proc = run("ajuda")
     assert proc.returncode == 0
@@ -54,22 +93,66 @@ def test_version() -> None:
 
 
 def test_dev_remove_pkg() -> None:
-    proc = run("dev", "remover", "vlc")
-    assert proc.returncode == 0
-    assert_in(proc.stdout, "domínio:")
-    assert_in(proc.stdout, "pacote")
-    assert_in(proc.stdout, "Remover 'vlc'.")
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        bin_dir = root / "bin"
+        bin_dir.mkdir(parents=True, exist_ok=True)
+        write_stub(bin_dir, "pacman", "#!/usr/bin/env bash\nexit 0\n")
+        os_release = write_os_release(root, distro_id="cachyos", distro_like="arch", name="CachyOS")
+        env = {"PATH": f"{bin_dir}:{os.environ['PATH']}", "AURY_OS_RELEASE_PATH": str(os_release)}
+        proc = run("dev", "remover", "vlc", env=env)
+        assert proc.returncode == 0
+        assert_in(proc.stdout, "domínio:                       pacote")
+        assert_in(proc.stdout, "Remover 'vlc'.")
+        assert_in(proc.stdout, "Perfil do host")
+        assert_in(proc.stdout, "família linux:                 arch")
+        assert_in(proc.stdout, "rota suportada:                package_remove")
+        assert_in(proc.stdout, "backend necessário:            sudo + pacman")
+        assert_in(proc.stdout, "decisão:                       executar no Python")
 
 
 def test_dev_install_package_alignment() -> None:
-    proc = run("dev", "instalar", "firefox")
-    assert proc.returncode == 0
-    assert_in(proc.stdout, "intenção:                      instalar")
-    assert_in(proc.stdout, "domínio:                       pacote")
-    assert_in(proc.stdout, "alvo principal:                firefox")
-    assert_in(proc.stdout, "resumo:                        Instalar 'firefox'.")
-    assert_in(proc.stdout, FISH_ROUTED_LABEL)
-    assert_in(proc.stdout, "decisão:                       voltar ao Fish")
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        bin_dir = root / "bin"
+        bin_dir.mkdir(parents=True, exist_ok=True)
+        write_stub(bin_dir, "apt-cache", "#!/usr/bin/env bash\nexit 0\n")
+        write_stub(bin_dir, "apt-get", "#!/usr/bin/env bash\nexit 0\n")
+        write_stub(bin_dir, "sudo", "#!/usr/bin/env bash\nexit 0\n")
+        os_release = write_os_release(root, distro_id="ubuntu", distro_like="debian", name="Ubuntu")
+        env = {"PATH": f"{bin_dir}:{os.environ['PATH']}", "AURY_OS_RELEASE_PATH": str(os_release)}
+        proc = run("dev", "instalar", "firefox", env=env)
+        assert proc.returncode == 0
+        assert_in(proc.stdout, "intenção:                      instalar")
+        assert_in(proc.stdout, "domínio:                       pacote")
+        assert_in(proc.stdout, "alvo principal:                firefox")
+        assert_in(proc.stdout, "resumo:                        Instalar 'firefox'.")
+        assert_in(proc.stdout, "família linux:                 debian")
+        assert_in(proc.stdout, "tier de suporte:               Tier 1 inicial")
+        assert_in(proc.stdout, "suportada agora")
+        assert_in(proc.stdout, "rota suportada:                package_install")
+        assert_in(proc.stdout, "backend necessário:            sudo + apt-get")
+        assert_in(proc.stdout, "decisão:                       executar no Python")
+
+
+def test_dev_package_atomic_block_alignment() -> None:
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        bin_dir = root / "bin"
+        bin_dir.mkdir(parents=True, exist_ok=True)
+        write_stub(bin_dir, "dnf", "#!/usr/bin/env bash\nexit 0\n")
+        os_release = write_os_release(root, distro_id="bazzite", distro_like="fedora", name="Bazzite")
+        env = {"PATH": f"{bin_dir}:{os.environ['PATH']}", "AURY_OS_RELEASE_PATH": str(os_release)}
+        proc = run("dev", "instalar", "firefox", env=env)
+        assert proc.returncode == 0
+        assert_in(proc.stdout, "Perfil do host")
+        assert_in(proc.stdout, "família linux:                 fedora")
+        assert_in(proc.stdout, "mutabilidade:                  Atomic")
+        assert_in(proc.stdout, "classificação:                 bloqueio honesto agora")
+        assert_in(proc.stdout, "rota suportada:                package_install")
+        assert_in(proc.stdout, "backend necessário:            -")
+        assert_in(proc.stdout, "decisão:                       executar no Python")
+        assert_in(proc.stdout, "detectado como Atomic")
 
 
 def test_dev_ping_host_alignment() -> None:
@@ -828,12 +911,129 @@ def test_runtime_ping() -> None:
 
 def test_runtime_package_search() -> None:
     with tempfile.TemporaryDirectory() as tmp:
-        bin_dir = Path(tmp)
+        root = Path(tmp)
+        bin_dir = root / "bin"
+        bin_dir.mkdir(parents=True, exist_ok=True)
         write_stub(bin_dir, "pacman", "#!/usr/bin/env bash\necho 'PACMAN_SEARCH_STUB -Ss -- steam'\n")
-        env = {"PATH": f"{bin_dir}:{os.environ['PATH']}"}
+        os_release = write_os_release(root, distro_id="cachyos", distro_like="arch", name="CachyOS")
+        env = {"PATH": f"{bin_dir}:{os.environ['PATH']}", "AURY_OS_RELEASE_PATH": str(os_release)}
         proc = run("procurar", "steam", env=env)
         assert proc.returncode == 0
         assert_in(proc.stdout, "PACMAN_SEARCH_STUB")
+
+
+def test_runtime_package_search_no_results() -> None:
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        bin_dir = root / "bin"
+        bin_dir.mkdir(parents=True, exist_ok=True)
+        write_stub(bin_dir, "pacman", "#!/usr/bin/env bash\nexit 1\n")
+        os_release = write_os_release(root, distro_id="cachyos", distro_like="arch", name="CachyOS")
+        env = {"PATH": f"{bin_dir}:{os.environ['PATH']}", "AURY_OS_RELEASE_PATH": str(os_release)}
+        proc = run("procurar", "steam", env=env)
+        assert proc.returncode == 0
+        assert_in(proc.stdout, "não encontrei resultados para 'steam' no backend 'pacman'")
+
+
+def test_runtime_package_install_debian() -> None:
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        bin_dir = root / "bin"
+        bin_dir.mkdir(parents=True, exist_ok=True)
+        dpkg_state = root / "dpkg.state"
+        write_stub(bin_dir, "sudo", "#!/usr/bin/env bash\n\"$@\"\n")
+        write_stub(bin_dir, "apt-get", "#!/usr/bin/env bash\necho 'APT_INSTALL_STUB install -y firefox'\n")
+        write_stub(
+            bin_dir,
+            "dpkg",
+            "#!/usr/bin/env bash\n"
+            f"state={dpkg_state!s}\n"
+            "if [ -f \"$state\" ]; then\n"
+            "  exit 0\n"
+            "fi\n"
+            "touch \"$state\"\n"
+            "exit 1\n",
+        )
+        os_release = write_os_release(root, distro_id="ubuntu", distro_like="debian", name="Ubuntu")
+        env = {"PATH": f"{bin_dir}:{os.environ['PATH']}", "AURY_OS_RELEASE_PATH": str(os_release)}
+        proc = run("instalar", "firefox", env=env)
+        assert proc.returncode == 0
+        assert_in(proc.stdout, "APT_INSTALL_STUB install -y firefox")
+
+
+def test_runtime_package_install_noop_when_already_installed() -> None:
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        bin_dir = root / "bin"
+        bin_dir.mkdir(parents=True, exist_ok=True)
+        write_stub(bin_dir, "sudo", "#!/usr/bin/env bash\n\"$@\"\n")
+        write_stub(bin_dir, "apt-get", "#!/usr/bin/env bash\necho 'APT_SHOULD_NOT_RUN'\n")
+        write_stub(bin_dir, "dpkg", "#!/usr/bin/env bash\nexit 0\n")
+        os_release = write_os_release(root, distro_id="ubuntu", distro_like="debian", name="Ubuntu")
+        env = {"PATH": f"{bin_dir}:{os.environ['PATH']}", "AURY_OS_RELEASE_PATH": str(os_release)}
+        proc = run("instalar", "firefox", env=env)
+        assert proc.returncode == 0
+        assert_in(proc.stdout, "o pacote 'firefox' já está instalado neste host. Nada foi feito.")
+        if "APT_SHOULD_NOT_RUN" in proc.stdout:
+            raise AssertionError("a instalação não deveria chamar o backend quando o pacote já está instalado")
+
+
+def test_runtime_package_install_requires_state_confirmation() -> None:
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        bin_dir = root / "bin"
+        bin_dir.mkdir(parents=True, exist_ok=True)
+        write_stub(bin_dir, "sudo", "#!/usr/bin/env bash\n\"$@\"\n")
+        write_stub(bin_dir, "apt-get", "#!/usr/bin/env bash\necho 'APT_INSTALL_STUB install -y firefox'\n")
+        write_stub(bin_dir, "dpkg", "#!/usr/bin/env bash\nexit 1\n")
+        os_release = write_os_release(root, distro_id="ubuntu", distro_like="debian", name="Ubuntu")
+        env = {"PATH": f"{bin_dir}:{os.environ['PATH']}", "AURY_OS_RELEASE_PATH": str(os_release)}
+        proc = run("instalar", "firefox", env=env)
+        assert proc.returncode == 1
+        assert_in(proc.stdout, "terminou sem eu conseguir confirmar a instalação de 'firefox'")
+
+
+def test_runtime_package_remove_fedora() -> None:
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        bin_dir = root / "bin"
+        bin_dir.mkdir(parents=True, exist_ok=True)
+        rpm_state = root / "rpm.state"
+        write_stub(bin_dir, "sudo", "#!/usr/bin/env bash\n\"$@\"\n")
+        write_stub(bin_dir, "dnf", "#!/usr/bin/env bash\necho 'DNF_REMOVE_STUB remove -y vlc'\n")
+        write_stub(
+            bin_dir,
+            "rpm",
+            "#!/usr/bin/env bash\n"
+            f"state={rpm_state!s}\n"
+            "if [ -f \"$state\" ]; then\n"
+            "  exit 1\n"
+            "fi\n"
+            "touch \"$state\"\n"
+            "exit 0\n",
+        )
+        os_release = write_os_release(root, distro_id="fedora", distro_like="fedora", name="Fedora Linux")
+        env = {"PATH": f"{bin_dir}:{os.environ['PATH']}", "AURY_OS_RELEASE_PATH": str(os_release)}
+        proc = run("remover", "vlc", env=env)
+        assert proc.returncode == 0
+        assert_in(proc.stdout, "DNF_REMOVE_STUB remove -y vlc")
+
+
+def test_runtime_package_remove_noop_when_not_installed() -> None:
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        bin_dir = root / "bin"
+        bin_dir.mkdir(parents=True, exist_ok=True)
+        write_stub(bin_dir, "sudo", "#!/usr/bin/env bash\n\"$@\"\n")
+        write_stub(bin_dir, "dnf", "#!/usr/bin/env bash\necho 'DNF_SHOULD_NOT_RUN'\n")
+        write_stub(bin_dir, "rpm", "#!/usr/bin/env bash\nexit 1\n")
+        os_release = write_os_release(root, distro_id="fedora", distro_like="fedora", name="Fedora Linux")
+        env = {"PATH": f"{bin_dir}:{os.environ['PATH']}", "AURY_OS_RELEASE_PATH": str(os_release)}
+        proc = run("remover", "vlc", env=env)
+        assert proc.returncode == 0
+        assert_in(proc.stdout, "o pacote 'vlc' não está instalado neste host. Nada foi feito.")
+        if "DNF_SHOULD_NOT_RUN" in proc.stdout:
+            raise AssertionError("a remoção não deveria chamar o backend quando o pacote já está ausente")
 
 
 def test_runtime_create_file() -> None:
@@ -873,20 +1073,30 @@ def test_runtime_create_folder_located() -> None:
 
 
 def test_dev_search_inflected_alignment() -> None:
-    proc = run("dev", "procure", "steam")
-    assert proc.returncode == 0
-    assert_in(proc.stdout, "trecho original:               procure steam")
-    assert_in(proc.stdout, "trecho normalizado:            procure steam")
-    assert_in(proc.stdout, "intenção:                      procurar")
-    assert_in(proc.stdout, "domínio:                       pacote")
-    assert_in(proc.stdout, "alvo principal:                steam")
-    assert_in(proc.stdout, "resumo:                        Procurar 'steam'.")
-    assert_in(proc.stdout, "suportada agora")
-    assert_in(proc.stdout, "rota suportada:                package_search")
-    assert_in(proc.stdout, "backend necessário:            pacman")
-    assert_in(proc.stdout, "decisão:                       executar no Python")
-    assert_in(proc.stdout, "motivo:                        todas as ações têm rota explícita no runtime Python atual.")
-    assert_in(proc.stdout, "motivo do plano:               runtime Python já conhece uma rota explícita e segura para essa ação.")
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        bin_dir = root / "bin"
+        bin_dir.mkdir(parents=True, exist_ok=True)
+        write_stub(bin_dir, "pacman", "#!/usr/bin/env bash\nexit 0\n")
+        os_release = write_os_release(root, distro_id="cachyos", distro_like="arch", name="CachyOS")
+        env = {"PATH": f"{bin_dir}:{os.environ['PATH']}", "AURY_OS_RELEASE_PATH": str(os_release)}
+        proc = run("dev", "procure", "steam", env=env)
+        assert proc.returncode == 0
+        assert_in(proc.stdout, "trecho original:               procure steam")
+        assert_in(proc.stdout, "trecho normalizado:            procure steam")
+        assert_in(proc.stdout, "intenção:                      procurar")
+        assert_in(proc.stdout, "domínio:                       pacote")
+        assert_in(proc.stdout, "alvo principal:                steam")
+        assert_in(proc.stdout, "resumo:                        Procurar 'steam'.")
+        assert_in(proc.stdout, "suportada agora")
+        assert_in(proc.stdout, "rota suportada:                package_search")
+        assert_in(proc.stdout, "backend necessário:            pacman")
+        assert_in(proc.stdout, "decisão:                       executar no Python")
+        assert_in(proc.stdout, "motivo:                        todas as ações têm rota explícita no runtime Python atual.")
+        assert_in(
+            proc.stdout,
+            "motivo do plano:               o perfil do host Linux já resolve esta busca de pacote com backend explícito nesta fase, e a execução real trata ausência de resultado com saída honesta.",
+        )
 
 
 def test_dev_out_of_scope_plan_reason_alignment() -> None:
@@ -929,15 +1139,33 @@ def test_runtime_multi_action_supported() -> None:
         assert_in(proc.stdout, "UPTIME_MULTI_STUB")
 
 
-def test_runtime_multi_action_unsupported_no_partial() -> None:
+def test_runtime_multi_action_package_supported() -> None:
     with tempfile.TemporaryDirectory() as tmp:
-        bin_dir = Path(tmp)
-        write_stub(bin_dir, "pacman", "#!/usr/bin/env bash\necho 'PACMAN_MULTI_STUB'\n")
-        env = {"PATH": f"{bin_dir}:{os.environ['PATH']}"}
+        root = Path(tmp)
+        bin_dir = root / "bin"
+        bin_dir.mkdir(parents=True, exist_ok=True)
+        vlc_state = root / "vlc.removed"
+        write_stub(bin_dir, "sudo", "#!/usr/bin/env bash\n\"$@\"\n")
+        write_stub(
+            bin_dir,
+            "pacman",
+            "#!/usr/bin/env bash\n"
+            f"state={vlc_state!s}\n"
+            "if [ \"$1\" = \"-Q\" ] && [ \"$3\" = \"vlc\" ]; then\n"
+            "  if [ -f \"$state\" ]; then\n"
+            "    exit 1\n"
+            "  fi\n"
+            "  touch \"$state\"\n"
+            "  exit 0\n"
+            "fi\n"
+            "echo 'PACMAN_MULTI_STUB'\n",
+        )
+        os_release = write_os_release(root, distro_id="cachyos", distro_like="arch", name="CachyOS")
+        env = {"PATH": f"{bin_dir}:{os.environ['PATH']}", "AURY_OS_RELEASE_PATH": str(os_release)}
         proc = run("procurar", "steam", "e", "remover", "vlc", env=env)
-        assert proc.returncode == 120
-        if "PACMAN_MULTI_STUB" in proc.stdout:
-            raise AssertionError("runtime multi-ação executou parcialmente uma sequência que deveria cair em fallback")
+        assert proc.returncode == 0
+        if proc.stdout.count("PACMAN_MULTI_STUB") != 2:
+            raise AssertionError(f"multi-ação de pacote deveria executar as duas rotas no Python: {proc.stdout!r}")
 
 
 def test_sensitive_tokens_contract() -> None:
@@ -992,6 +1220,16 @@ def test_prepare_analysis_uses_prepared_action() -> None:
         raise AssertionError("a análise não está partindo do trecho original da ação preparada")
     if analysis.normalized_text != action.normalized_action:
         raise AssertionError("a análise não está partindo do trecho normalizado da ação preparada")
+    if analysis.summary != "Remover 'vlc'.":
+        raise AssertionError(f"resumo inesperado: {analysis.summary!r}")
+
+
+def test_prepare_analysis_explicit_package_target_strips_domain_noise() -> None:
+    _phrase, _action, analysis = prepare_analysis("remover pacote vlc")
+    if analysis.domain != "pacote":
+        raise AssertionError(f"domínio inesperado: {analysis.domain!r}")
+    if analysis.entities.get("alvo_principal") != "vlc":
+        raise AssertionError(f"alvo principal inesperado: {analysis.entities.get('alvo_principal')!r}")
     if analysis.summary != "Remover 'vlc'.":
         raise AssertionError(f"resumo inesperado: {analysis.summary!r}")
 
@@ -1300,16 +1538,23 @@ def test_action_execution_plan_supported_runtime_route_contract() -> None:
 
 
 def test_action_execution_plan_future_migration_candidate() -> None:
-    _phrase, _action, analysis = prepare_analysis("remover vlc")
-    action_plan = plan_action_execution(analysis)
-    if action_plan.status != "FUTURE_MIGRATION_CANDIDATE":
-        raise AssertionError(f"classificação inesperada: {action_plan.status!r}")
-    if action_plan.route is not None:
-        raise AssertionError(f"rota não deveria existir: {action_plan.route!r}")
-    if action_plan.backend is not None:
-        raise AssertionError(f"backend não deveria existir: {action_plan.backend!r}")
-    if action_plan.executes_in_python:
-        raise AssertionError("a ação atendida pelo adaptador Fish ainda deve voltar ao Fish")
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        bin_dir = root / "bin"
+        bin_dir.mkdir(parents=True, exist_ok=True)
+        write_stub(bin_dir, "pacman", "#!/usr/bin/env bash\nexit 0\n")
+        os_release = write_os_release(root, distro_id="cachyos", distro_like="arch", name="CachyOS")
+        _phrase, _action, analysis = prepare_analysis("remover vlc")
+        with temporary_env({"PATH": f"{bin_dir}:{os.environ['PATH']}", "AURY_OS_RELEASE_PATH": str(os_release)}):
+            action_plan = plan_action_execution(analysis)
+        if action_plan.status != "SUPPORTED_NOW":
+            raise AssertionError(f"classificação inesperada: {action_plan.status!r}")
+        if action_plan.route != "package_remove":
+            raise AssertionError(f"rota inesperada: {action_plan.route!r}")
+        if action_plan.backend != "sudo + pacman":
+            raise AssertionError(f"backend inesperado: {action_plan.backend!r}")
+        if not action_plan.executes_in_python:
+            raise AssertionError("a remoção de pacote em Tier 1 já deve fechar direto no runtime Python")
 
 
 def test_action_execution_plan_fish_fallback_reason_for_out_of_scope() -> None:
@@ -1331,12 +1576,19 @@ def test_sequence_execution_plan_supported_now() -> None:
 
 
 def test_sequence_execution_plan_returns_to_fish() -> None:
-    _phrase, _actions, analyses = prepare_analyses("procurar steam e remover vlc")
-    sequence_plan = plan_sequence_execution(analyses)
-    if sequence_plan.decision != "RETURN_TO_FISH":
-        raise AssertionError(f"decisão inesperada: {sequence_plan.decision!r}")
-    if sequence_plan.action_plans[1].status != "FUTURE_MIGRATION_CANDIDATE":
-        raise AssertionError(f"classificação inesperada: {sequence_plan.action_plans[1].status!r}")
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        bin_dir = root / "bin"
+        bin_dir.mkdir(parents=True, exist_ok=True)
+        write_stub(bin_dir, "pacman", "#!/usr/bin/env bash\nexit 0\n")
+        os_release = write_os_release(root, distro_id="cachyos", distro_like="arch", name="CachyOS")
+        _phrase, _actions, analyses = prepare_analyses("procurar steam e remover vlc")
+        with temporary_env({"PATH": f"{bin_dir}:{os.environ['PATH']}", "AURY_OS_RELEASE_PATH": str(os_release)}):
+            sequence_plan = plan_sequence_execution(analyses)
+        if sequence_plan.decision != "EXECUTE_IN_PYTHON":
+            raise AssertionError(f"decisão inesperada: {sequence_plan.decision!r}")
+        if sequence_plan.action_plans[1].status != "SUPPORTED_NOW":
+            raise AssertionError(f"classificação inesperada: {sequence_plan.action_plans[1].status!r}")
 
 
 def test_sequence_execution_plan_return_reason_for_blocked_gap() -> None:
@@ -1349,16 +1601,42 @@ def test_sequence_execution_plan_return_reason_for_blocked_gap() -> None:
 
 
 def test_dev_multiple_actions() -> None:
-    phrase = "procurar steam e remover vlc"
-    proc = run("dev", *phrase.split())
-    assert proc.returncode == 0
-    assert_in(proc.stdout, "Plano da sequência")
-    assert_in(proc.stdout, "Ação 1")
-    assert_in(proc.stdout, "Ação 2")
-    assert_in(proc.stdout, FISH_ROUTED_LABEL)
-    assert_in(proc.stdout, "voltar ao Fish")
-    assert_in(proc.stdout, "resumo:                        Procurar 'steam'.")
-    assert_in(proc.stdout, "resumo:                        Remover 'vlc'.")
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        bin_dir = root / "bin"
+        bin_dir.mkdir(parents=True, exist_ok=True)
+        write_stub(bin_dir, "pacman", "#!/usr/bin/env bash\nexit 0\n")
+        os_release = write_os_release(root, distro_id="cachyos", distro_like="arch", name="CachyOS")
+        env = {"PATH": f"{bin_dir}:{os.environ['PATH']}", "AURY_OS_RELEASE_PATH": str(os_release)}
+        phrase = "procurar steam e remover vlc"
+        proc = run("dev", *phrase.split(), env=env)
+        assert proc.returncode == 0
+        assert_in(proc.stdout, "Plano da sequência")
+        assert_in(proc.stdout, "Ação 1")
+        assert_in(proc.stdout, "Ação 2")
+        assert_in(proc.stdout, "suportada agora")
+        assert_in(proc.stdout, "executar no Python")
+        assert_in(proc.stdout, "resumo:                        Procurar 'steam'.")
+        assert_in(proc.stdout, "resumo:                        Remover 'vlc'.")
+        assert_in(proc.stdout, "rota suportada:                package_search")
+        assert_in(proc.stdout, "rota suportada:                package_remove")
+
+
+def test_detect_host_profile_tiers() -> None:
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        bin_dir = root / "bin"
+        bin_dir.mkdir(parents=True, exist_ok=True)
+        write_stub(bin_dir, "zypper", "#!/usr/bin/env bash\nexit 0\n")
+        os_release = write_os_release(root, distro_id="opensuse-tumbleweed", distro_like="opensuse suse", name="openSUSE Tumbleweed")
+        with temporary_env({"PATH": f"{bin_dir}:{os.environ['PATH']}", "AURY_OS_RELEASE_PATH": str(os_release)}):
+            host_profile = detect_host_profile()
+        if host_profile.linux_family != "opensuse":
+            raise AssertionError(f"família inesperada: {host_profile.linux_family!r}")
+        if host_profile.support_tier != "tier_2":
+            raise AssertionError(f"tier inesperado: {host_profile.support_tier!r}")
+        if "zypper" not in host_profile.package_backends:
+            raise AssertionError(f"backend inesperado: {host_profile.package_backends!r}")
 
 
 def test_dev_destructive_remove_without_safe_antecedent_blocks_local_reference() -> None:
@@ -1503,6 +1781,7 @@ def main() -> int:
         test_version,
         test_dev_remove_pkg,
         test_dev_install_package_alignment,
+        test_dev_package_atomic_block_alignment,
         test_dev_ping_host_alignment,
         test_dev_network_speed_rede_alignment,
         test_dev_create_file_alignment,
@@ -1554,15 +1833,22 @@ def main() -> int:
         test_runtime_speedtest,
         test_runtime_ping,
         test_runtime_package_search,
+        test_runtime_package_search_no_results,
+        test_runtime_package_install_debian,
+        test_runtime_package_install_noop_when_already_installed,
+        test_runtime_package_install_requires_state_confirmation,
+        test_runtime_package_remove_fedora,
+        test_runtime_package_remove_noop_when_not_installed,
         test_runtime_create_file,
         test_runtime_create_folder_located,
         test_dev_search_inflected_alignment,
         test_runtime_gpu,
         test_runtime_multi_action_supported,
-        test_runtime_multi_action_unsupported_no_partial,
+        test_runtime_multi_action_package_supported,
         test_sensitive_tokens_contract,
         test_pipeline_prepare_text,
         test_prepare_analysis_uses_prepared_action,
+        test_prepare_analysis_explicit_package_target_strips_domain_noise,
         test_prepare_analysis_isolated_destructive_remove_local_reference_blocks,
         test_prepare_analysis_extract_conversational_destination_alignment,
         test_prepare_analysis_extract_explicit_real_path_destination_alignment,
@@ -1584,6 +1870,7 @@ def main() -> int:
         test_sequence_execution_plan_returns_to_fish,
         test_sequence_execution_plan_return_reason_for_blocked_gap,
         test_dev_multiple_actions,
+        test_detect_host_profile_tiers,
         test_dev_destructive_remove_without_safe_antecedent_blocks_local_reference,
         test_dev_destructive_remove_chain_local_reference_alignment,
         test_dev_destructive_remove_chain_local_reference_inflected_alignment,

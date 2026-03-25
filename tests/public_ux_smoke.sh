@@ -292,30 +292,73 @@ remove_policy_tmp="$(mktemp -d /tmp/aury-public-ux-XXXXXX)"
 tmpdirs+=("$remove_policy_tmp")
 mkdir -p "$remove_policy_tmp/bin"
 printf 'x\n' > "$remove_policy_tmp/vlc"
+cat > "$remove_policy_tmp/os-release" <<'EOF'
+ID=cachyos
+ID_LIKE="arch"
+NAME="CachyOS"
+EOF
 
 cat > "$remove_policy_tmp/bin/sudo" <<'EOF'
 #!/usr/bin/env bash
 printf 'SUDO_STUB %s\n' "$*"
+"$@"
 EOF
 chmod +x "$remove_policy_tmp/bin/sudo"
 
-remove_policy_dev_output="$(ROOT="$ROOT" TMP="$remove_policy_tmp" fish -c 'source $ROOT/bin/aury.fish; cd $TMP; aury dev remover vlc' 2>&1 || true)"
+cat > "$remove_policy_tmp/bin/pacman" <<EOF
+#!/usr/bin/env bash
+state="$remove_policy_tmp/vlc.removed"
+if [[ "\$1" == "-Q" && "\$3" == "vlc" ]]; then
+    if [[ -f "\$state" ]]; then
+        exit 1
+    fi
+    exit 0
+fi
+
+if [[ "\$1" == "-Rns" && "\$3" == "vlc" ]]; then
+    : > "\$state"
+fi
+
+printf 'PACMAN_STUB %s\n' "\$*"
+EOF
+chmod +x "$remove_policy_tmp/bin/pacman"
+
+remove_policy_dev_output="$(ROOT="$ROOT" TMP="$remove_policy_tmp" AURY_OS_RELEASE_PATH="$remove_policy_tmp/os-release" fish -c 'source $ROOT/bin/aury.fish; cd $TMP; aury dev remover vlc' 2>&1 || true)"
 require_in_output "$remove_policy_dev_output" "domínio:                       pacote" "'aury dev remover vlc' precisa assumir a política canônica de pacote"
 require_in_output "$remove_policy_dev_output" "estado:                        CONSISTENTE" "'aury dev remover vlc' não pode continuar parcial"
 require_in_output "$remove_policy_dev_output" "resumo:                        Remover 'vlc'." "'aury dev remover vlc' precisa expor o alvo de pacote com clareza"
 
-remove_policy_pkg_output="$(ROOT="$ROOT" TMP="$remove_policy_tmp" PATH="$remove_policy_tmp/bin:$PATH" fish -c 'source $ROOT/bin/aury.fish; cd $TMP; aury remover vlc; if test -e vlc; echo FILE_STILL_PRESENT; else; echo FILE_REMOVED; end' 2>&1 || true)"
+remove_policy_pkg_output="$(ROOT="$ROOT" TMP="$remove_policy_tmp" PATH="$remove_policy_tmp/bin:$PATH" AURY_OS_RELEASE_PATH="$remove_policy_tmp/os-release" fish -c 'source $ROOT/bin/aury.fish; cd $TMP; aury remover vlc; if test -e vlc; echo FILE_STILL_PRESENT; else; echo FILE_REMOVED; end' 2>&1 || true)"
 require_in_output "$remove_policy_pkg_output" "SUDO_STUB pacman -Rns -- vlc" "'aury remover vlc' deve seguir a política determinística de pacote"
 require_in_output "$remove_policy_pkg_output" "FILE_STILL_PRESENT" "'aury remover vlc' não pode apagar um arquivo local só por colisão de nome"
 
-remove_policy_pkg_explicit_output="$(ROOT="$ROOT" TMP="$remove_policy_tmp" PATH="$remove_policy_tmp/bin:$PATH" fish -c 'source $ROOT/bin/aury.fish; cd $TMP; aury remover pacote vlc' 2>&1 || true)"
+rm -f "$remove_policy_tmp/vlc.removed"
+remove_policy_pkg_explicit_output="$(ROOT="$ROOT" TMP="$remove_policy_tmp" PATH="$remove_policy_tmp/bin:$PATH" AURY_OS_RELEASE_PATH="$remove_policy_tmp/os-release" fish -c 'source $ROOT/bin/aury.fish; cd $TMP; aury remover pacote vlc' 2>&1 || true)"
 require_in_output "$remove_policy_pkg_explicit_output" "SUDO_STUB pacman -Rns -- vlc" "forma explícita de pacote precisa continuar coerente mesmo com colisão local"
 
-remove_policy_file_output="$(ROOT="$ROOT" TMP="$remove_policy_tmp" PATH="$remove_policy_tmp/bin:$PATH" fish -c 'source $ROOT/bin/aury.fish; cd $TMP; printf "n\n" | aury remover arquivo vlc; if test -e vlc; echo FILE_STILL_PRESENT; else; echo FILE_REMOVED; end' 2>&1 || true)"
+remove_policy_file_output="$(ROOT="$ROOT" TMP="$remove_policy_tmp" PATH="$remove_policy_tmp/bin:$PATH" AURY_OS_RELEASE_PATH="$remove_policy_tmp/os-release" fish -c 'source $ROOT/bin/aury.fish; cd $TMP; printf "n\n" | aury remover arquivo vlc; if test -e vlc; echo FILE_STILL_PRESENT; else; echo FILE_REMOVED; end' 2>&1 || true)"
 require_in_output "$remove_policy_file_output" "Confirma? [s/N]" "forma explícita de arquivo precisa passar pela confirmação destrutiva"
 require_in_output "$remove_policy_file_output" "eu não removi 'vlc'." "negação de confirmação precisa cancelar a remoção explícita de arquivo"
 require_not_in_output "$remove_policy_file_output" "SUDO_STUB" "forma explícita de arquivo não pode cair no backend de pacote"
 require_in_output "$remove_policy_file_output" "FILE_STILL_PRESENT" "forma explícita de arquivo negada deve preservar o alvo"
+
+atomic_pkg_tmp="$(mktemp -d /tmp/aury-public-ux-XXXXXX)"
+tmpdirs+=("$atomic_pkg_tmp")
+mkdir -p "$atomic_pkg_tmp/bin"
+cat > "$atomic_pkg_tmp/os-release" <<'EOF'
+ID=bazzite
+ID_LIKE="fedora"
+NAME="Bazzite"
+EOF
+cat > "$atomic_pkg_tmp/bin/dnf" <<'EOF'
+#!/usr/bin/env bash
+printf 'DNF_SHOULD_NOT_RUN\n'
+EOF
+chmod +x "$atomic_pkg_tmp/bin/dnf"
+
+atomic_pkg_output="$(ROOT="$ROOT" TMP="$atomic_pkg_tmp" PATH="$atomic_pkg_tmp/bin:$PATH" AURY_OS_RELEASE_PATH="$atomic_pkg_tmp/os-release" fish -c 'source $ROOT/bin/aury.fish; cd $TMP; aury instalar firefox' 2>&1 || true)"
+require_in_output "$atomic_pkg_output" "detectado como Atomic" "host Atomic precisa expor bloqueio honesto na superfície pública"
+require_not_in_output "$atomic_pkg_output" "DNF_SHOULD_NOT_RUN" "host Atomic não pode tentar mutar pacote do sistema nesta fase"
 
 network_keep_tmp="$(mktemp -d /tmp/aury-public-ux-XXXXXX)"
 tmpdirs+=("$network_keep_tmp")

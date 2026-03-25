@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from .analyzer import prepare_analyses
 from .contracts import ActionExecutionPlan, Analysis, PreparedAction, SequenceExecutionPlan
+from .host import detect_host_profile
 from .runtime import plan_action_execution, plan_sequence_execution
 
 _FIELD_WIDTH = 30
@@ -16,6 +17,8 @@ def _field(label: str, value: str | None) -> str:
 def _action_plan_status_label(action_plan: ActionExecutionPlan) -> str:
     if action_plan.status == "SUPPORTED_NOW":
         return "suportada agora"
+    if action_plan.status == "SUPPORTED_WITH_POLICY_BLOCK":
+        return "bloqueio honesto agora"
     if action_plan.status == "FUTURE_MIGRATION_CANDIDATE":
         return "atendida pelo adaptador Fish"
     return "fora do recorte do núcleo Python"
@@ -28,6 +31,8 @@ def _action_plan_decision(action_plan: ActionExecutionPlan) -> str:
 
 
 def _sequence_plan_status_label(sequence_plan: SequenceExecutionPlan) -> str:
+    if any(action_plan.status == "SUPPORTED_WITH_POLICY_BLOCK" for action_plan in sequence_plan.action_plans):
+        return "bloqueio honesto agora"
     if sequence_plan.executes_in_python:
         return "suportada agora"
     if any(action_plan.status == "FUTURE_MIGRATION_CANDIDATE" for action_plan in sequence_plan.action_plans):
@@ -47,6 +52,21 @@ def _render_sequence_plan(sequence_plan: SequenceExecutionPlan) -> list[str]:
         _field("classificação", _sequence_plan_status_label(sequence_plan)),
         _field("decisão", _sequence_plan_decision(sequence_plan)),
         _field("motivo", sequence_plan.reason),
+    ]
+
+
+def _needs_host_profile(analyses: list[Analysis]) -> bool:
+    return any(analysis.domain == "pacote" for analysis in analyses)
+
+
+def _render_host_profile() -> list[str]:
+    host_profile = detect_host_profile()
+    return [
+        "Perfil do host",
+        _field("família linux", host_profile.linux_family_label),
+        _field("mutabilidade", host_profile.mutability_label),
+        _field("tier de suporte", host_profile.support_tier_label),
+        _field("backends de pacote", host_profile.package_backends_label),
     ]
 
 
@@ -119,6 +139,9 @@ def render_dev_report(text: str) -> str:
     action_plans = [plan_action_execution(analysis) for analysis in analyses]
     lines = [""]
     lines.extend(_render_sequence_plan(sequence_plan))
+    if _needs_host_profile(analyses):
+        lines.append("")
+        lines.extend(_render_host_profile())
     if actions:
         lines.append("")
     for index, (action, analysis, action_plan) in enumerate(zip(actions, analyses, action_plans)):

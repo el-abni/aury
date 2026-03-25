@@ -11,10 +11,20 @@ from typing import Sequence
 
 from .analyzer import prepare_analyses
 from .contracts import ActionExecutionPlan, Analysis, SequenceExecutionPlan, SupportedRuntimeRoute
+from .host import (
+    PackageExecutionPlan,
+    build_package_execution_plan,
+    package_no_results_message,
+    package_noop_message,
+    package_state_confirmation_message,
+    package_success_message,
+    resolve_package_action_policy,
+)
 
 UNSUPPORTED_EXIT = 120
 _PYTHON_RUNTIME_BACKEND = "runtime Python"
 RouteHandler = Callable[[Analysis, ActionExecutionPlan], int]
+_PACKAGE_ROUTE_NAMES = {"package_search", "package_install", "package_remove"}
 
 
 def _run(args: Sequence[str]) -> subprocess.CompletedProcess[str]:
@@ -68,8 +78,88 @@ def _run_and_print(backend: str, args: Sequence[str]) -> int:
     proc = _run(args)
     if proc.returncode != 0:
         return _backend_failed(backend)
-    print(proc.stdout.rstrip())
+    output = proc.stdout.rstrip()
+    if output:
+        print(output)
     return 0
+
+
+def _package_search_no_results(proc: subprocess.CompletedProcess[str]) -> bool:
+    if proc.returncode not in {0, 1}:
+        return False
+
+    if proc.stdout.strip():
+        return False
+
+    stderr = proc.stderr.strip().lower()
+    if not stderr:
+        return True
+
+    return "no packages found" in stderr or "no matches found" in stderr
+
+
+def _probe_package_state(execution_plan: PackageExecutionPlan) -> bool | None:
+    if not execution_plan.state_probe_command:
+        return None
+
+    proc = _run(execution_plan.state_probe_command)
+    if execution_plan.policy.intent == "instalar":
+        return proc.returncode == 0
+    return proc.returncode != 0
+
+
+def _run_package_search(execution_plan: PackageExecutionPlan) -> int:
+    proc = _run(execution_plan.command)
+    if proc.returncode != 0 and not _package_search_no_results(proc):
+        return _backend_failed(execution_plan.policy.backend_label)
+
+    output = proc.stdout.rstrip()
+    if output:
+        print(output)
+        return 0
+
+    print(package_no_results_message(execution_plan.package_target, execution_plan.policy.backend_label))
+    return 0
+
+
+def _run_package_mutation(execution_plan: PackageExecutionPlan) -> int:
+    target = execution_plan.package_target
+    intent = execution_plan.policy.intent
+    backend_label = execution_plan.policy.backend_label
+
+    initial_state = _probe_package_state(execution_plan)
+    if initial_state is True:
+        print(package_noop_message(intent, target))
+        return 0
+
+    proc = _run(execution_plan.command)
+    if proc.returncode != 0:
+        return _backend_failed(backend_label)
+
+    final_state = _probe_package_state(execution_plan)
+    if final_state is False:
+        print(package_state_confirmation_message(intent, target, backend_label))
+        return 1
+
+    output = proc.stdout.rstrip()
+    if output:
+        print(output)
+        return 0
+
+    print(package_success_message(intent, target))
+    return 0
+
+
+def _execute_package_operation(intent: str, analysis: Analysis) -> int:
+    execution_plan = build_package_execution_plan(intent, analysis.entities.get("alvo_principal", ""))
+    if execution_plan.policy.block_message is not None:
+        print(execution_plan.policy.block_message)
+        return 1
+
+    if intent == "procurar":
+        return _run_package_search(execution_plan)
+
+    return _run_package_mutation(execution_plan)
 
 
 def _file_kind_label(kind: str) -> str:
@@ -122,10 +212,15 @@ def _handle_folder_create(analysis: Analysis, _action_plan: ActionExecutionPlan)
 
 
 def _handle_package_search(analysis: Analysis, action_plan: ActionExecutionPlan) -> int:
-    if action_plan.backend is None:
-        return UNSUPPORTED_EXIT
-    target = analysis.entities.get("alvo_principal", "")
-    return _run_and_print(action_plan.backend, [action_plan.backend, "-Ss", "--", target])
+    return _execute_package_operation("procurar", analysis)
+
+
+def _handle_package_install(analysis: Analysis, _action_plan: ActionExecutionPlan) -> int:
+    return _execute_package_operation("instalar", analysis)
+
+
+def _handle_package_remove(analysis: Analysis, _action_plan: ActionExecutionPlan) -> int:
+    return _execute_package_operation("remover", analysis)
 
 
 def _handle_network_ip(_analysis: Analysis, action_plan: ActionExecutionPlan) -> int:
@@ -242,7 +337,7 @@ class _RuntimeRouteSpec:
         return True
 
     def matches_plan(self, action_plan: ActionExecutionPlan) -> bool:
-        return action_plan.matches_supported_runtime_route(self.supported_runtime_route)
+        return action_plan.route == self.supported_runtime_route.route
 
     def build_action_plan(self) -> ActionExecutionPlan:
         return ActionExecutionPlan.supported_now(
@@ -251,7 +346,7 @@ class _RuntimeRouteSpec:
         )
 
 
-_RUNTIME_ROUTE_SPECS = (
+_PLANNED_RUNTIME_ROUTE_SPECS = (
     _RuntimeRouteSpec(
         supported_runtime_route=SupportedRuntimeRoute(route="file_create", backend=_PYTHON_RUNTIME_BACKEND),
         handler=_handle_file_create,
@@ -269,13 +364,6 @@ _RUNTIME_ROUTE_SPECS = (
         entity_type="pasta",
         requires_target=True,
         requires_backend=False,
-    ),
-    _RuntimeRouteSpec(
-        supported_runtime_route=SupportedRuntimeRoute(route="package_search", backend="pacman"),
-        handler=_handle_package_search,
-        domain="pacote",
-        intent="procurar",
-        requires_target=True,
     ),
     _RuntimeRouteSpec(
         supported_runtime_route=SupportedRuntimeRoute(route="network_ip", backend="ip"),
@@ -327,9 +415,36 @@ _RUNTIME_ROUTE_SPECS = (
     ),
 )
 
+_RUNTIME_ROUTE_SPECS = _PLANNED_RUNTIME_ROUTE_SPECS + (
+    _RuntimeRouteSpec(
+        supported_runtime_route=SupportedRuntimeRoute(route="package_search", backend="-"),
+        handler=_handle_package_search,
+        domain="pacote",
+        intent="procurar",
+        requires_target=True,
+        requires_backend=False,
+    ),
+    _RuntimeRouteSpec(
+        supported_runtime_route=SupportedRuntimeRoute(route="package_install", backend="-"),
+        handler=_handle_package_install,
+        domain="pacote",
+        intent="instalar",
+        requires_target=True,
+        requires_backend=False,
+    ),
+    _RuntimeRouteSpec(
+        supported_runtime_route=SupportedRuntimeRoute(route="package_remove", backend="-"),
+        handler=_handle_package_remove,
+        domain="pacote",
+        intent="remover",
+        requires_target=True,
+        requires_backend=False,
+    ),
+)
+
 
 def _route_spec_for_analysis(analysis: Analysis) -> _RuntimeRouteSpec | None:
-    for route_spec in _RUNTIME_ROUTE_SPECS:
+    for route_spec in _PLANNED_RUNTIME_ROUTE_SPECS:
         if route_spec.matches_analysis(analysis):
             return route_spec
     return None
@@ -343,6 +458,19 @@ def _route_spec_for_plan(action_plan: ActionExecutionPlan) -> _RuntimeRouteSpec 
 
 
 def plan_action_execution(analysis: Analysis) -> ActionExecutionPlan:
+    if analysis.status == "CONSISTENTE" and analysis.domain == "pacote" and analysis.intent in {"procurar", "instalar", "remover"}:
+        package_policy = resolve_package_action_policy(analysis.intent)
+        supported_runtime_route = SupportedRuntimeRoute(route=package_policy.route, backend=package_policy.backend_label)
+        if package_policy.status == "SUPPORTED_WITH_POLICY_BLOCK":
+            return ActionExecutionPlan.supported_with_policy_block(
+                supported_runtime_route,
+                reason=package_policy.reason,
+            )
+        return ActionExecutionPlan.supported_now(
+            supported_runtime_route,
+            reason=package_policy.reason,
+        )
+
     route_spec = _route_spec_for_analysis(analysis)
     if route_spec is not None:
         return route_spec.build_action_plan()
@@ -371,6 +499,13 @@ def plan_sequence_execution(analyses: list[Analysis]) -> SequenceExecutionPlan:
             reason=_sequence_return_reason(index, analysis, action_plan),
         )
 
+    if any(action_plan.status == "SUPPORTED_WITH_POLICY_BLOCK" for action_plan in action_plans):
+        return SequenceExecutionPlan(
+            action_plans=action_plans,
+            decision="EXECUTE_IN_PYTHON",
+            reason="todas as ações ficam dentro do runtime Python atual, inclusive os bloqueios honestos exigidos pela política de host.",
+        )
+
     return SequenceExecutionPlan(
         action_plans=action_plans,
         decision="EXECUTE_IN_PYTHON",
@@ -386,6 +521,25 @@ def _ensure_route_backend(route_spec: _RuntimeRouteSpec) -> int:
     return 0
 
 
+def _ensure_package_backends(analysis: Analysis) -> int:
+    execution_plan = build_package_execution_plan(analysis.intent, _analysis_target(analysis))
+    if execution_plan.policy.block_message is not None:
+        return 0
+    for required_command in execution_plan.required_commands:
+        if shutil.which(required_command) is None:
+            return _backend_missing(required_command)
+    for required_command in execution_plan.state_probe_required_commands:
+        if shutil.which(required_command) is None:
+            return _backend_missing(required_command)
+    return 0
+
+
+def _ensure_analysis_backend(analysis: Analysis, route_spec: _RuntimeRouteSpec, action_plan: ActionExecutionPlan) -> int:
+    if action_plan.route in _PACKAGE_ROUTE_NAMES:
+        return _ensure_package_backends(analysis)
+    return _ensure_route_backend(route_spec)
+
+
 def _execute_supported_analysis(analysis: Analysis, action_plan: ActionExecutionPlan | None = None) -> int:
     resolved_plan = action_plan or plan_action_execution(analysis)
     if not resolved_plan.executes_in_python or resolved_plan.route is None:
@@ -395,7 +549,7 @@ def _execute_supported_analysis(analysis: Analysis, action_plan: ActionExecution
     if route_spec is None:
         return UNSUPPORTED_EXIT
 
-    backend_status = _ensure_route_backend(route_spec)
+    backend_status = _ensure_analysis_backend(analysis, route_spec, resolved_plan)
     if backend_status != 0:
         return backend_status
 
@@ -406,15 +560,15 @@ def _can_execute_multi_action(sequence_plan: SequenceExecutionPlan) -> bool:
     return len(sequence_plan.action_plans) > 1 and sequence_plan.executes_in_python
 
 
-def _preflight_multi_action(sequence_plan: SequenceExecutionPlan) -> int:
+def _preflight_multi_action(analyses: list[Analysis], sequence_plan: SequenceExecutionPlan) -> int:
     if not sequence_plan.executes_in_python:
         return UNSUPPORTED_EXIT
 
-    for action_plan in sequence_plan.action_plans:
+    for analysis, action_plan in zip(analyses, sequence_plan.action_plans):
         route_spec = _route_spec_for_plan(action_plan)
         if route_spec is None:
             return UNSUPPORTED_EXIT
-        status = _ensure_route_backend(route_spec)
+        status = _ensure_analysis_backend(analysis, route_spec, action_plan)
         if status != 0:
             return status
     return 0
@@ -424,7 +578,7 @@ def _execute_multi_action(analyses: list[Analysis], sequence_plan: SequenceExecu
     if not _can_execute_multi_action(sequence_plan):
         return UNSUPPORTED_EXIT
 
-    preflight_status = _preflight_multi_action(sequence_plan)
+    preflight_status = _preflight_multi_action(analyses, sequence_plan)
     if preflight_status != 0:
         return preflight_status
 

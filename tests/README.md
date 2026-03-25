@@ -43,6 +43,8 @@ O gate final mínimo canônico da linha 1.x é:
 bash tests/release_gate_minimo.sh
 ```
 
+Se você precisar validar esse gate sem tocar na stage real do usuário, use um índice Git temporário com `GIT_INDEX_FILE` e faça o staging só nesse índice descartável.
+
 Esse wrapper é o gate final porque ele já reúne, em cima da stage pública explícita:
 
 - higiene da stage pública
@@ -96,11 +98,11 @@ Hoje ele cobre de forma executável:
 
 ### `audit_public_coherence.py`
 
-Este auditor pequeno verifica o chão público mínimo que o fechamento público da v1.9.0 precisa manter coerente:
+Este auditor pequeno verifica o chão público mínimo que a abertura incremental da v1.9.1 precisa manter coerente:
 
 - `VERSION` preenchida
 - `resources/help.txt` com placeholder de versão e nota honesta sobre `aury dev`
-- `README.md` e `CHANGELOG.md` alinhados à versão pública atual e ao fechamento público contido da v1.9.0
+- `README.md` e `CHANGELOG.md` alinhados à versão pública atual e à continuidade pública contida da v1.9.1
 - ausência de hardcode de versão no runtime público e nos scripts de instalação
 - renderização real de `help` e `version` via entrada pública Fish
 

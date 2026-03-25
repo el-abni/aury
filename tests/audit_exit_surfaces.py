@@ -40,6 +40,26 @@ def write_stub(bin_dir: Path, name: str, body: str) -> None:
     path.chmod(path.stat().st_mode | stat.S_IXUSR)
 
 
+def write_os_release(
+    root: Path,
+    *,
+    distro_id: str,
+    distro_like: str = "",
+    variant_id: str = "",
+    name: str = "",
+) -> Path:
+    path = root / "os-release"
+    lines = [f"ID={distro_id}"]
+    if distro_like:
+        lines.append(f'ID_LIKE="{distro_like}"')
+    if variant_id:
+        lines.append(f'VARIANT_ID="{variant_id}"')
+    if name:
+        lines.append(f'NAME="{name}"')
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    return path
+
+
 def run_public(args: list[str], *, env: dict[str, str] | None = None, cwd: Path | None = None) -> tuple[int, str, str]:
     merged_env = os.environ.copy()
     if env:
@@ -246,21 +266,64 @@ def main() -> int:
         ensure(not stderr, "falha operacional do speedtest não pode vazar stderr")
     ok("erro operacional do speedtest sai com 1")
 
-    direct_proc = run_python(["procurar", "steam"], env={"PATH": ""})
-    ensure(direct_proc.returncode == 1, "backend ausente em rota Python suportada precisa sair com status 1")
-    ensure("backend 'pacman' não está disponível" in direct_proc.stdout, "backend ausente em rota Python suportada precisa expor erro honesto")
-    ensure(not direct_proc.stderr.strip(), "backend ausente em rota Python suportada não pode vazar stderr")
+    with tempfile.TemporaryDirectory() as tmp:
+        workdir = Path(tmp)
+        os_release = write_os_release(workdir, distro_id="cachyos", distro_like="arch", name="CachyOS")
+        direct_proc = run_python(["procurar", "steam"], env={"PATH": "", "AURY_OS_RELEASE_PATH": str(os_release)}, cwd=workdir)
+        ensure(direct_proc.returncode == 1, "backend ausente em rota Python suportada precisa sair com status 1")
+        ensure("backend 'pacman' não está disponível" in direct_proc.stdout, "backend ausente em rota Python suportada precisa expor erro honesto")
+        ensure(not direct_proc.stderr.strip(), "backend ausente em rota Python suportada não pode vazar stderr")
     ok("backend ausente em rota Python suportada sai com 1")
 
     with tempfile.TemporaryDirectory() as tmp:
-        bin_dir = Path(tmp) / "bin"
+        workdir = Path(tmp)
+        bin_dir = workdir / "bin"
         bin_dir.mkdir(parents=True, exist_ok=True)
         write_stub(bin_dir, "pacman", f"#!{BASH_BIN}\nexit 12\n")
-        direct_proc = run_python(["procurar", "steam"], env={"PATH": str(bin_dir)})
+        os_release = write_os_release(workdir, distro_id="cachyos", distro_like="arch", name="CachyOS")
+        direct_proc = run_python(["procurar", "steam"], env={"PATH": str(bin_dir), "AURY_OS_RELEASE_PATH": str(os_release)}, cwd=workdir)
         ensure(direct_proc.returncode == 1, "falha operacional em rota Python suportada precisa sair com status 1")
         ensure("backend 'pacman' retornou erro operacional" in direct_proc.stdout, "falha operacional em rota Python suportada precisa expor erro honesto")
         ensure(not direct_proc.stderr.strip(), "falha operacional em rota Python suportada não pode vazar stderr")
     ok("falha operacional em rota Python suportada sai com 1")
+
+    with tempfile.TemporaryDirectory() as tmp:
+        workdir = Path(tmp)
+        bin_dir = workdir / "bin"
+        bin_dir.mkdir(parents=True, exist_ok=True)
+        write_stub(bin_dir, "dnf", "#!/usr/bin/env bash\nprintf 'DNF_SHOULD_NOT_RUN\\n'\n")
+        os_release = write_os_release(workdir, distro_id="bazzite", distro_like="fedora", name="Bazzite")
+        env = {"PATH": f"{bin_dir}:{os.environ['PATH']}", "AURY_OS_RELEASE_PATH": str(os_release)}
+
+        direct_proc = run_python(["instalar", "firefox"], env=env, cwd=workdir)
+        ensure(direct_proc.returncode == 1, "host Atomic bloqueado precisa sair com status 1 no runtime Python direto")
+        ensure("detectado como Atomic" in direct_proc.stdout, "host Atomic bloqueado precisa expor a mensagem pública honesta")
+        ensure("DNF_SHOULD_NOT_RUN" not in direct_proc.stdout, "host Atomic bloqueado não pode tentar mutar pacote do sistema")
+        ensure(not direct_proc.stderr.strip(), "host Atomic bloqueado não pode vazar stderr")
+
+        status, output, stderr = run_public(["instalar", "firefox"], env=env, cwd=workdir)
+        ensure(status == 1, "host Atomic bloqueado precisa sair com status 1 também pela entrada pública")
+        ensure("detectado como Atomic" in output, "entrada pública precisa preservar o bloqueio honesto para host Atomic")
+        ensure("DNF_SHOULD_NOT_RUN" not in output, "entrada pública não pode tentar rodar backend de pacote no host Atomic")
+        ensure(not stderr, "entrada pública não pode vazar stderr no bloqueio Atomic")
+    ok("host Atomic fica bloqueado com honestidade e sem mutação implícita")
+
+    with tempfile.TemporaryDirectory() as tmp:
+        workdir = Path(tmp)
+        bin_dir = workdir / "bin"
+        bin_dir.mkdir(parents=True, exist_ok=True)
+        write_stub(bin_dir, "zypper", "#!/usr/bin/env bash\nprintf 'ZYPPER_SHOULD_NOT_RUN\\n'\n")
+        os_release = write_os_release(workdir, distro_id="opensuse-tumbleweed", distro_like="opensuse suse", name="openSUSE Tumbleweed")
+        direct_proc = run_python(
+            ["procurar", "steam"],
+            env={"PATH": f"{bin_dir}:{os.environ['PATH']}", "AURY_OS_RELEASE_PATH": str(os_release)},
+            cwd=workdir,
+        )
+        ensure(direct_proc.returncode == 1, "OpenSUSE detectado e bloqueado precisa sair com status 1")
+        ensure("família Linux 'opensuse'" in direct_proc.stdout, "OpenSUSE detectado e bloqueado precisa expor o enquadramento honesto")
+        ensure("ZYPPER_SHOULD_NOT_RUN" not in direct_proc.stdout, "OpenSUSE detectado e bloqueado não pode fingir backend útil nesta fase")
+        ensure(not direct_proc.stderr.strip(), "OpenSUSE detectado e bloqueado não pode vazar stderr")
+    ok("OpenSUSE entra só como detecção e bloqueio honesto nesta fase")
 
     with tempfile.TemporaryDirectory() as tmp:
         bin_dir = Path(tmp) / "bin"
@@ -284,7 +347,15 @@ def main() -> int:
         ensure("Entrada global" in output, "fallback local de 'aury dev <frase>' precisa expor o relatório local do Fish")
         ensure("Instalar 'firefox'." in output, "fallback local de 'aury dev <frase>' precisa preservar o resumo público")
         ensure(not stderr, "fallback local de 'aury dev <frase>' não pode vazar stderr")
-    ok("fallbacks técnicos de help/version/dev continuam limpos quando o Python devolve 127")
+
+        status, output, stderr = run_public(["instalar", "firefox"], env=path_env)
+        ensure(status == 1, "pacote público precisa sair com status 1 quando o runtime Python não sobe")
+        ensure(
+            "não consegui aplicar a política canônica de pacote porque o runtime Python não está disponível." in output,
+            "pacote público precisa bloquear honestamente quando a política canônica não pode subir",
+        )
+        ensure(not stderr, "bloqueio público de pacote sem runtime Python não pode vazar stderr")
+    ok("help/version/dev continuam limpos com Python 127, e pacote bloqueia honestamente sem política canônica")
 
     print("audit_exit_surfaces: ok")
     return 0
