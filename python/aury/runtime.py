@@ -19,6 +19,7 @@ from .host import (
     package_state_probe_missing_message,
     package_state_confirmation_message,
     package_success_message,
+    resolve_host_maintenance_action_policy,
     resolve_package_action_policy,
 )
 
@@ -176,6 +177,14 @@ def _execute_package_operation(intent: str, analysis: Analysis) -> int:
         return _run_package_search(execution_plan)
 
     return _run_package_mutation(execution_plan)
+
+
+def _handle_host_maintenance_policy_gate(analysis: Analysis, _action_plan: ActionExecutionPlan) -> int:
+    policy = resolve_host_maintenance_action_policy(analysis.intent)
+    if policy.block_message is not None:
+        print(policy.block_message)
+        return 1
+    return UNSUPPORTED_EXIT
 
 
 def _file_kind_label(kind: str) -> str:
@@ -433,6 +442,12 @@ _PLANNED_RUNTIME_ROUTE_SPECS = (
 
 _RUNTIME_ROUTE_SPECS = _PLANNED_RUNTIME_ROUTE_SPECS + (
     _RuntimeRouteSpec(
+        supported_runtime_route=SupportedRuntimeRoute(route="host_maintenance_policy_gate", backend="-"),
+        handler=_handle_host_maintenance_policy_gate,
+        domain="sistema",
+        requires_backend=False,
+    ),
+    _RuntimeRouteSpec(
         supported_runtime_route=SupportedRuntimeRoute(route="package_search", backend="-"),
         handler=_handle_package_search,
         domain="pacote",
@@ -485,6 +500,17 @@ def plan_action_execution(analysis: Analysis) -> ActionExecutionPlan:
         return ActionExecutionPlan.supported_now(
             supported_runtime_route,
             reason=package_policy.reason,
+        )
+
+    if analysis.status == "CONSISTENTE" and analysis.domain == "sistema" and analysis.intent in {"atualizar", "otimizar"}:
+        maintenance_policy = resolve_host_maintenance_action_policy(analysis.intent)
+        if maintenance_policy.status == "SUPPORTED_WITH_POLICY_BLOCK":
+            return ActionExecutionPlan.supported_with_policy_block(
+                SupportedRuntimeRoute(route=maintenance_policy.route, backend=maintenance_policy.backend_label),
+                reason=maintenance_policy.reason,
+            )
+        return ActionExecutionPlan.future_migration_candidate(
+            reason=maintenance_policy.reason,
         )
 
     route_spec = _route_spec_for_analysis(analysis)

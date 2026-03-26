@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from .analyzer import prepare_analyses
 from .contracts import ActionExecutionPlan, Analysis, PreparedAction, SequenceExecutionPlan
-from .host import detect_host_profile, resolve_package_action_policy
+from .host import detect_host_profile, resolve_host_maintenance_action_policy, resolve_package_action_policy
 from .runtime import plan_action_execution, plan_sequence_execution
 
 _FIELD_WIDTH = 30
@@ -14,7 +14,14 @@ def _field(label: str, value: str | None) -> str:
     return f"{label + ':':<{_FIELD_WIDTH}} {value}"
 
 
-def _action_plan_status_label(action_plan: ActionExecutionPlan) -> str:
+def _action_plan_status_label(
+    action_plan: ActionExecutionPlan,
+    analysis: Analysis | None = None,
+) -> str:
+    if analysis is not None and analysis.domain == "sistema" and analysis.intent in {"atualizar", "otimizar"}:
+        maintenance_policy = resolve_host_maintenance_action_policy(analysis.intent)
+        if maintenance_policy.status == "FUTURE_MIGRATION_CANDIDATE":
+            return "manutenção local do host"
     if action_plan.status == "SUPPORTED_NOW":
         return "suportada agora"
     if action_plan.status == "SUPPORTED_WITH_POLICY_BLOCK":
@@ -56,7 +63,11 @@ def _render_sequence_plan(sequence_plan: SequenceExecutionPlan) -> list[str]:
 
 
 def _needs_host_profile(analyses: list[Analysis]) -> bool:
-    return any(analysis.domain == "pacote" for analysis in analyses)
+    return any(
+        analysis.domain == "pacote"
+        or (analysis.domain == "sistema" and analysis.intent in {"atualizar", "otimizar"})
+        for analysis in analyses
+    )
 
 
 def _render_host_profile() -> list[str]:
@@ -87,8 +98,20 @@ def _lacunas_label(analysis: Analysis) -> str:
 def _render_action_report(action: PreparedAction, analysis: Analysis, action_plan: ActionExecutionPlan) -> list[str]:
     entities = analysis.entities
     package_policy = None
+    maintenance_policy = None
     if analysis.domain == "pacote" and analysis.intent in {"procurar", "instalar", "remover"}:
         package_policy = resolve_package_action_policy(analysis.intent)
+    if analysis.domain == "sistema" and analysis.intent in {"atualizar", "otimizar"}:
+        maintenance_policy = resolve_host_maintenance_action_policy(analysis.intent)
+    compatibility_label = "-"
+    route_label = action_plan.route
+    backend_label = action_plan.backend
+    if package_policy is not None:
+        compatibility_label = package_policy.compatibility_frontier_label
+    if maintenance_policy is not None:
+        compatibility_label = maintenance_policy.compatibility_frontier_label
+        route_label = route_label or maintenance_policy.route
+        backend_label = backend_label or maintenance_policy.backend_label
     lines = [
         f"Ação {action.index}",
         "Entrada",
@@ -125,10 +148,10 @@ def _render_action_report(action: PreparedAction, analysis: Analysis, action_pla
             "Acao prevista",
             _field("resumo", analysis.summary),
             "Plano de execução",
-            _field("classificação", _action_plan_status_label(action_plan)),
-            _field("compatibilidade", package_policy.compatibility_frontier_label if package_policy is not None else "-"),
-            _field("rota suportada", action_plan.route),
-            _field("backend necessário", action_plan.backend),
+            _field("classificação", _action_plan_status_label(action_plan, analysis)),
+            _field("compatibilidade", compatibility_label),
+            _field("rota suportada", route_label),
+            _field("backend necessário", backend_label),
             _field("decisão", _action_plan_decision(action_plan)),
             _field("motivo do plano", action_plan.reason),
             "Observacoes",

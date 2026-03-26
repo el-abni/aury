@@ -75,6 +75,108 @@ function __aury_read_confirmation --argument-names action target
     return 1
 end
 
+function __aury_host_os_release_path
+    if test -n "$AURY_OS_RELEASE_PATH"
+        echo $AURY_OS_RELEASE_PATH
+        return 0
+    end
+
+    echo /etc/os-release
+end
+
+function __aury_os_release_value --argument-names key
+    set -l path (__aury_host_os_release_path)
+    if not test -f "$path"
+        return 1
+    end
+
+    while read -l line
+        if string match -rq -- "^$key=" "$line"
+            set -l value (string replace -r "^$key=" "" -- "$line")
+            set value (string trim -c '"' -c "'" -- "$value")
+            echo (string lower -- "$value")
+            return 0
+        end
+    end < "$path"
+
+    return 1
+end
+
+function __aury_detect_host_maintenance_family
+    set -l distro_id (__aury_os_release_value ID)
+    set -l distro_like (__aury_os_release_value ID_LIKE)
+    set -l variant_id (__aury_os_release_value VARIANT_ID)
+    set -l name (__aury_os_release_value NAME)
+    set -l pretty_name (__aury_os_release_value PRETTY_NAME)
+    set -l combined (string join " " -- $distro_id $distro_like $variant_id $name $pretty_name)
+    set -l family_tokens (string join " " -- $distro_id $distro_like)
+
+    if test "$AURY_OSTREE_BOOTED" = "1"; or test -e /run/ostree-booted
+        echo atomic
+        return 0
+    end
+
+    if string match -rq -- '(^|[[:space:]])(aurora|bazzite|bluefin|fedora-coreos|kinoite|microos|opensuse-microos|silverblue|sericea|onyx|atomic|coreos|immutable|ostree)([[:space:]]|$)' "$combined"
+        echo atomic
+        return 0
+    end
+
+    if string match -rq -- '(^|[[:space:]])(arch|archlinux|artix|cachyos|endeavouros|manjaro)([[:space:]]|$)' "$family_tokens"
+        echo arch
+        return 0
+    end
+
+    if string match -rq -- '(^|[[:space:]])(debian|ubuntu|linuxmint|pop|neon|raspbian|elementary)([[:space:]]|$)' "$family_tokens"
+        echo debian
+        return 0
+    end
+
+    if string match -rq -- '(^|[[:space:]])(fedora|rhel|centos|rocky|almalinux|nobara)([[:space:]]|$)' "$family_tokens"
+        echo fedora
+        return 0
+    end
+
+    if string match -rq -- '(^|[[:space:]])(opensuse|opensuse-leap|opensuse-tumbleweed|sles|sled|suse)([[:space:]]|$)' "$family_tokens"
+        echo opensuse
+        return 0
+    end
+
+    echo unknown
+end
+
+function __aury_host_maintenance_family_label --argument-names family
+    switch $family
+        case arch
+            echo "Arch/derivadas"
+        case debian
+            echo "Debian/Ubuntu/derivadas"
+        case fedora
+            echo "Fedora mutável"
+        case opensuse
+            echo "OpenSUSE mutável"
+        case atomic
+            echo "Atomic/imutável"
+        case '*'
+            echo "família Linux desconhecida"
+    end
+end
+
+function __aury_guard_host_maintenance --argument-names intent
+    set -l family (__aury_detect_host_maintenance_family)
+
+    switch $family
+        case arch
+            return 0
+        case atomic
+            __aury_msg_blocked "'$intent' pertence à manutenção do host e fica bloqueado por política em hosts Atomic/imutáveis nesta linha."
+            return 1
+        case '*'
+            set -l family_label (__aury_host_maintenance_family_label $family)
+            __aury_msg_blocked "'$intent' pertence à manutenção do host e continua fora do recorte equivalente em $family_label nesta linha."
+            return 1
+    end
+end
+
 function __aury_path_kind --argument-names path fallback_kind
     if test -n "$path"
         if test -d "$path"
@@ -3549,30 +3651,61 @@ function __aury_exec_system
     set -l norm_words $argv
 
     if test "$intent" = "atualizar"
+        if not __aury_guard_host_maintenance atualizar
+            return 1
+        end
+
         echo "📦 atualizando sistema"
 
         if type -q paru
             paru -Syu
-        else
-            sudo pacman -Syu
+            return $status
         end
 
-        return 0
+        if type -q pacman; and type -q sudo
+            sudo pacman -Syu
+            return $status
+        end
+
+        __aury_msg_error "não encontrei o backend local esperado para atualizar o host neste perfil."
+        return 1
     end
 
     if test "$intent" = "otimizar"
+        if not __aury_guard_host_maintenance otimizar
+            return 1
+        end
+
         echo "🚀 otimizando sistema"
+
+        if not type -q sudo
+            __aury_msg_error "não encontrei o backend local esperado 'sudo' para otimizar o host neste perfil."
+            return 1
+        end
+
+        if not type -q journalctl
+            __aury_msg_error "não encontrei o backend local esperado 'journalctl' para otimizar o host neste perfil."
+            return 1
+        end
+
+        if not type -q pacman
+            __aury_msg_error "não encontrei o backend local esperado 'pacman' para otimizar o host neste perfil."
+            return 1
+        end
 
         if type -q paccache
             sudo paccache -rk2
+            or return 1
         end
 
         sudo journalctl --vacuum-time=7d
+        or return 1
 
         set -l orphans (pacman -Qtdq 2>/dev/null)
 
         if test -n "$orphans"
             sudo pacman -Rns -- $orphans
+            return $status
         else
             __aury_msg_info "nenhum pacote órfão encontrado"
         end

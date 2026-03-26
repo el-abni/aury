@@ -337,6 +337,83 @@ def main() -> int:
         workdir = Path(tmp)
         bin_dir = workdir / "bin"
         bin_dir.mkdir(parents=True, exist_ok=True)
+        write_stub(bin_dir, "paru", "#!/usr/bin/env bash\nprintf 'PARU_UPDATE_STUB %s\\n' \"$*\"\n")
+        write_stub(bin_dir, "pacman", "#!/usr/bin/env bash\nprintf 'PACMAN_UNUSED %s\\n' \"$*\"\n")
+        write_stub(bin_dir, "sudo", "#!/usr/bin/env bash\n\"$@\"\n")
+        write_stub(bin_dir, "journalctl", "#!/usr/bin/env bash\nprintf 'JOURNALCTL_STUB %s\\n' \"$*\"\n")
+        write_stub(bin_dir, "paccache", "#!/usr/bin/env bash\nprintf 'PACCACHE_STUB %s\\n' \"$*\"\n")
+        os_release = write_os_release(workdir, distro_id="cachyos", distro_like="arch", name="CachyOS")
+        env = {"PATH": f"{bin_dir}:{os.environ['PATH']}", "AURY_OS_RELEASE_PATH": str(os_release)}
+
+        direct_proc = run_python(["atualizar", "sistema"], env=env, cwd=workdir)
+        ensure(direct_proc.returncode == 120, "manutenção local em Arch precisa continuar devolvendo 120 no runtime Python direto")
+        ensure(not direct_proc.stdout.strip(), "runtime Python direto não deve fingir execução de atualizar sistema ainda local ao Fish")
+        ensure(not direct_proc.stderr.strip(), "runtime Python direto não pode vazar stderr para atualizar sistema ainda local ao Fish")
+
+        status, output, stderr = run_public(["atualizar", "sistema"], env=env, cwd=workdir)
+        ensure(status == 0, "entrada pública precisa sair com 0 para atualizar sistema ainda local em Arch")
+        ensure("PARU_UPDATE_STUB -Syu" in output, "entrada pública precisa preservar a rota local de atualização em Arch")
+        ensure(not stderr, "entrada pública não pode vazar stderr em atualizar sistema local de Arch")
+
+        direct_proc = run_python(["otimizar", "sistema"], env=env, cwd=workdir)
+        ensure(direct_proc.returncode == 120, "manutenção local em Arch precisa continuar devolvendo 120 no runtime Python direto para otimizar sistema")
+        ensure(not direct_proc.stdout.strip(), "runtime Python direto não deve fingir execução de otimizar sistema ainda local ao Fish")
+        ensure(not direct_proc.stderr.strip(), "runtime Python direto não pode vazar stderr para otimizar sistema ainda local ao Fish")
+
+        status, output, stderr = run_public(["otimizar", "sistema"], env=env, cwd=workdir)
+        ensure(status == 0, "entrada pública precisa sair com 0 para otimizar sistema ainda local em Arch")
+        ensure("PACCACHE_STUB -rk2" in output, "entrada pública precisa preservar a rota local de otimização em Arch")
+        ensure("JOURNALCTL_STUB --vacuum-time=7d" in output, "entrada pública precisa preservar o passo local de journalctl em Arch")
+        ensure(not stderr, "entrada pública não pode vazar stderr em otimizar sistema local de Arch")
+    ok("manutenção local em Arch continua no Fish sem fingir rota Python portátil")
+
+    with tempfile.TemporaryDirectory() as tmp:
+        workdir = Path(tmp)
+        os_release = write_os_release(workdir, distro_id="ubuntu", distro_like="debian", name="Ubuntu")
+        env = {"PATH": os.environ["PATH"], "AURY_OS_RELEASE_PATH": str(os_release)}
+
+        direct_proc = run_python(["atualizar", "sistema"], env=env, cwd=workdir)
+        ensure(direct_proc.returncode == 1, "atualizar sistema em Debian precisa sair com status 1 no runtime Python direto")
+        ensure("manutenção do host" in direct_proc.stdout, "atualizar sistema em Debian precisa expor que pertence à manutenção do host")
+        ensure("fora do recorte equivalente" in direct_proc.stdout, "atualizar sistema em Debian precisa expor a ausência de equivalência na linha 1.x")
+        ensure("backend '" not in direct_proc.stdout, "atualizar sistema em Debian não pode parecer simples ausência de backend")
+        ensure(not direct_proc.stderr.strip(), "atualizar sistema em Debian não pode vazar stderr")
+
+        status, output, stderr = run_public(["atualizar", "sistema"], env=env, cwd=workdir)
+        ensure(status == 1, "entrada pública precisa sair com status 1 para atualizar sistema em Debian")
+        ensure("manutenção do host" in output, "entrada pública precisa preservar o enquadramento de manutenção do host em Debian")
+        ensure("fora do recorte equivalente" in output, "entrada pública precisa preservar a ausência de equivalência em Debian")
+        ensure("backend '" not in output, "entrada pública não pode tratar atualizar sistema em Debian como backend ausente")
+        ensure(not stderr, "entrada pública não pode vazar stderr para atualizar sistema em Debian")
+    ok("manutenção do host em Debian sai como fora do recorte, não como backend ausente")
+
+    with tempfile.TemporaryDirectory() as tmp:
+        workdir = Path(tmp)
+        bin_dir = workdir / "bin"
+        bin_dir.mkdir(parents=True, exist_ok=True)
+        write_stub(bin_dir, "dnf", "#!/usr/bin/env bash\nprintf 'DNF_SHOULD_NOT_RUN\\n'\n")
+        os_release = write_os_release(workdir, distro_id="bazzite", distro_like="fedora", name="Bazzite")
+        env = {"PATH": f"{bin_dir}:{os.environ['PATH']}", "AURY_OS_RELEASE_PATH": str(os_release)}
+
+        direct_proc = run_python(["otimizar", "sistema"], env=env, cwd=workdir)
+        ensure(direct_proc.returncode == 1, "host Atomic precisa sair com status 1 ao bloquear otimizar sistema no runtime Python direto")
+        ensure("bloqueado por política" in direct_proc.stdout, "host Atomic precisa expor bloqueio por política em otimizar sistema")
+        ensure("DNF_SHOULD_NOT_RUN" not in direct_proc.stdout, "host Atomic não pode tentar backend local para otimizar sistema")
+        ensure("backend '" not in direct_proc.stdout, "host Atomic não pode parecer ausência simples de backend em otimizar sistema")
+        ensure(not direct_proc.stderr.strip(), "host Atomic não pode vazar stderr ao bloquear otimizar sistema")
+
+        status, output, stderr = run_public(["otimizar", "sistema"], env=env, cwd=workdir)
+        ensure(status == 1, "entrada pública precisa sair com status 1 para otimizar sistema em host Atomic")
+        ensure("bloqueado por política" in output, "entrada pública precisa preservar o bloqueio por política em otimizar sistema")
+        ensure("DNF_SHOULD_NOT_RUN" not in output, "entrada pública não pode tentar backend local em otimizar sistema no host Atomic")
+        ensure("backend '" not in output, "entrada pública não pode tratar host Atomic como backend ausente em otimizar sistema")
+        ensure(not stderr, "entrada pública não pode vazar stderr ao bloquear otimizar sistema em host Atomic")
+    ok("manutenção do host em Atomic continua bloqueada por política")
+
+    with tempfile.TemporaryDirectory() as tmp:
+        workdir = Path(tmp)
+        bin_dir = workdir / "bin"
+        bin_dir.mkdir(parents=True, exist_ok=True)
         firefox_state = workdir / "firefox.installed"
         vlc_state = workdir / "vlc.installed"
         vlc_state.write_text("installed\n", encoding="utf-8")

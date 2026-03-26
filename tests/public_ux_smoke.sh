@@ -534,6 +534,95 @@ require_not_in_output "$atomic_pkg_output" "DNF_SHOULD_NOT_RUN" "host Atomic nã
 require_not_in_output "$atomic_pkg_output" "backend 'dnf' não está disponível" "host Atomic não pode parecer simples ausência de backend"
 require_not_in_output "$atomic_pkg_output" "ferramenta auxiliar" "host Atomic não pode parecer ausência de sonda auxiliar"
 
+arch_maintenance_tmp="$(mktemp -d /tmp/aury-public-ux-XXXXXX)"
+tmpdirs+=("$arch_maintenance_tmp")
+mkdir -p "$arch_maintenance_tmp/bin"
+
+cat > "$arch_maintenance_tmp/os-release" <<'EOF'
+ID=cachyos
+ID_LIKE="arch"
+NAME="CachyOS"
+EOF
+
+cat > "$arch_maintenance_tmp/bin/paru" <<'EOF'
+#!/usr/bin/env bash
+printf 'PARU_UPDATE_STUB %s\n' "$*"
+EOF
+chmod +x "$arch_maintenance_tmp/bin/paru"
+
+cat > "$arch_maintenance_tmp/bin/pacman" <<'EOF'
+#!/usr/bin/env bash
+printf 'PACMAN_STUB %s\n' "$*"
+EOF
+chmod +x "$arch_maintenance_tmp/bin/pacman"
+
+cat > "$arch_maintenance_tmp/bin/sudo" <<'EOF'
+#!/usr/bin/env bash
+"$@"
+EOF
+chmod +x "$arch_maintenance_tmp/bin/sudo"
+
+cat > "$arch_maintenance_tmp/bin/paccache" <<'EOF'
+#!/usr/bin/env bash
+printf 'PACCACHE_STUB %s\n' "$*"
+EOF
+chmod +x "$arch_maintenance_tmp/bin/paccache"
+
+cat > "$arch_maintenance_tmp/bin/journalctl" <<'EOF'
+#!/usr/bin/env bash
+printf 'JOURNALCTL_STUB %s\n' "$*"
+EOF
+chmod +x "$arch_maintenance_tmp/bin/journalctl"
+
+arch_maintenance_output="$(ROOT="$ROOT" TMP="$arch_maintenance_tmp" PATH="$arch_maintenance_tmp/bin:$PATH" AURY_OS_RELEASE_PATH="$arch_maintenance_tmp/os-release" fish -c 'source $ROOT/bin/aury.fish; cd $TMP; aury dev atualizar sistema; echo ---RUN1---; aury atualizar sistema; echo ---DEV2---; aury dev otimizar sistema; echo ---RUN2---; aury otimizar sistema' 2>&1 || true)"
+require_in_output "$arch_maintenance_output" "compatibilidade:               manutenção local do host" "aury dev precisa enquadrar atualizar/otimizar como manutenção local do host em Arch"
+require_in_output "$arch_maintenance_output" "rota suportada:                maintenance_local_atualizar" "aury dev precisa expor a rota local de atualização do host"
+require_in_output "$arch_maintenance_output" "rota suportada:                maintenance_local_otimizar" "aury dev precisa expor a rota local de otimização do host"
+require_in_output "$arch_maintenance_output" "backend necessário:            paru + pacman" "aury dev precisa expor o backend local de atualização em Arch"
+require_in_output "$arch_maintenance_output" "backend necessário:            paccache + journalctl + pacman" "aury dev precisa expor o backend local de otimização em Arch"
+require_in_output "$arch_maintenance_output" "PARU_UPDATE_STUB -Syu" "atualizar sistema em Arch precisa continuar executando a rota local"
+require_in_output "$arch_maintenance_output" "PACCACHE_STUB -rk2" "otimizar sistema em Arch precisa continuar executando o passo local de paccache"
+require_in_output "$arch_maintenance_output" "JOURNALCTL_STUB --vacuum-time=7d" "otimizar sistema em Arch precisa continuar executando o passo local de journalctl"
+
+debian_maintenance_tmp="$(mktemp -d /tmp/aury-public-ux-XXXXXX)"
+tmpdirs+=("$debian_maintenance_tmp")
+
+cat > "$debian_maintenance_tmp/os-release" <<'EOF'
+ID=ubuntu
+ID_LIKE="debian"
+NAME="Ubuntu"
+EOF
+
+debian_maintenance_output="$(ROOT="$ROOT" TMP="$debian_maintenance_tmp" PATH="$PATH" AURY_OS_RELEASE_PATH="$debian_maintenance_tmp/os-release" "$FISH_BIN" -c 'source $ROOT/bin/aury.fish; cd $TMP; aury dev atualizar sistema; echo ---RUN---; aury atualizar sistema' 2>&1 || true)"
+require_in_output "$debian_maintenance_output" "família linux:                 debian" "aury dev precisa identificar Debian no enquadramento de manutenção do host"
+require_in_output "$debian_maintenance_output" "compatibilidade:               fora do recorte" "aury dev não pode vender atualizar sistema em Debian como manutenção portátil"
+require_in_output "$debian_maintenance_output" "manutenção do host" "superfície pública precisa expor que atualizar sistema em Debian pertence à manutenção do host"
+require_in_output "$debian_maintenance_output" "fora do recorte equivalente" "superfície pública precisa expor a ausência de equivalência em Debian"
+require_not_in_output "$debian_maintenance_output" "backend 'pacman' não está disponível" "Debian não pode parecer simples ausência de pacman no domínio de manutenção do host"
+
+atomic_maintenance_tmp="$(mktemp -d /tmp/aury-public-ux-XXXXXX)"
+tmpdirs+=("$atomic_maintenance_tmp")
+mkdir -p "$atomic_maintenance_tmp/bin"
+
+cat > "$atomic_maintenance_tmp/os-release" <<'EOF'
+ID=bazzite
+ID_LIKE="fedora"
+NAME="Bazzite"
+EOF
+
+cat > "$atomic_maintenance_tmp/bin/dnf" <<'EOF'
+#!/usr/bin/env bash
+printf 'DNF_SHOULD_NOT_RUN\n'
+EOF
+chmod +x "$atomic_maintenance_tmp/bin/dnf"
+
+atomic_maintenance_output="$(ROOT="$ROOT" TMP="$atomic_maintenance_tmp" PATH="$atomic_maintenance_tmp/bin:$PATH" AURY_OS_RELEASE_PATH="$atomic_maintenance_tmp/os-release" fish -c 'source $ROOT/bin/aury.fish; cd $TMP; aury dev otimizar sistema; echo ---RUN---; aury otimizar sistema' 2>&1 || true)"
+require_in_output "$atomic_maintenance_output" "mutabilidade:                  Atomic" "aury dev precisa manter a mutabilidade explícita ao enquadrar manutenção em host Atomic"
+require_in_output "$atomic_maintenance_output" "compatibilidade:               bloqueado por política" "aury dev precisa explicitar bloqueio por política para manutenção em host Atomic"
+require_in_output "$atomic_maintenance_output" "bloqueado por política" "superfície pública precisa expor o bloqueio por política em manutenção do host"
+require_not_in_output "$atomic_maintenance_output" "DNF_SHOULD_NOT_RUN" "host Atomic não pode tentar backend local ao bloquear manutenção do host"
+require_not_in_output "$atomic_maintenance_output" "backend 'dnf' não está disponível" "host Atomic não pode parecer backend ausente ao bloquear manutenção do host"
+
 network_keep_tmp="$(mktemp -d /tmp/aury-public-ux-XXXXXX)"
 tmpdirs+=("$network_keep_tmp")
 mkdir -p "$network_keep_tmp/bin"

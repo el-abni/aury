@@ -6,6 +6,25 @@ A linha pública da **💜 Aury** continua incremental na série **v1.9.x**. Est
 
 ---
 
+## v1.9.6
+
+### Consolidado
+- fechamento público da **v1.9.6** como fronteira honesta de manutenção do host, sem abrir compatibilidade Linux nova
+- versão, narrativa, arquitetura, ajuda e metadados passam a refletir a **v1.9.6** como continuação incremental contida da base pública já consolidada na **v1.9.5**
+
+### Manutenção do host
+- `aury dev` passa a enquadrar `atualizar` e `otimizar` como **manutenção do host**, em vez de deixá-los parecer parte natural da compatibilidade multi-distro de pacote
+- Arch e derivadas mutáveis preservam a rota local existente de `atualizar` e `otimizar` no adaptador Fish, agora com enquadramento explícito de manutenção local do host
+- Debian/Ubuntu, Fedora mutável e OpenSUSE mutável deixam de soar como equivalentes nesse bloco: `atualizar` e `otimizar` passam a sair como fora do recorte equivalente nesta linha
+- Atomic, Universal Blue, `opensuse-microos`, `microos` e equivalentes continuam fora por política também para manutenção do host
+
+### Compatibilidade e limites
+- `procurar`, `instalar` e `remover` permanecem como o domínio portátil atual de pacote do host
+- `atualizar` e `otimizar` não viram compatibilidade multi-distro nesta release; continuam como manutenção local do host em Arch/derivadas
+- continuam fora desta release: `update` multi-distro, `optimize` multi-distro, `rpm-ostree`, toolbox, distrobox, tradução de nomes de pacote e suporte cross-distro amplo
+
+---
+
 ## v1.9.5
 
 ### Consolidado
