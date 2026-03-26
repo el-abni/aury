@@ -6,6 +6,25 @@ A linha pública da **💜 Aury** continua incremental na série **v1.9.x**. Est
 
 ---
 
+## v1.9.2
+
+### Consolidado
+- fechamento público da **v1.9.2** como hardening representacional incremental do `aury dev`, sem abrir nova frente de produto
+- versão, narrativa, arquitetura e metadados passam a refletir a **v1.9.2** como continuação contida da base pública já fechada na **v1.9.1**
+
+### Paridade local curta do `aury dev`
+- entra o fechamento curto de renomeação localizada no relatório `dev`
+- entra `copiar -> mover` com anáfora local segura
+- entra `copiar -> renomear` com artigo explícito e anáfora local
+- entra `mover -> renomear` com destino explícito seguro
+
+### Compatibilidade e limites
+- a compatibilidade Linux inicial de pacote aberta na **v1.9.1** permanece como base pública vigente desta release
+- fica conscientemente fora a inferência representacional de `mover arquivo ... para destino nu` quando a leitura correta depende do estado do filesystem
+- não entram frentes adjacentes de auditoria nem expansão nova de produto neste fechamento
+
+---
+
 ## v1.9.1
 
 ### Consolidado
