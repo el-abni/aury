@@ -66,6 +66,16 @@ class HostProfile:
         return "fora do recorte"
 
     @property
+    def compatibility_frontier_label(self) -> str:
+        if self.mutability == "atomic":
+            return "bloqueado por política"
+        if self.support_tier == "tier_1":
+            return "suportado agora"
+        if self.support_tier == "tier_2":
+            return "suportado contido"
+        return "fora do recorte"
+
+    @property
     def package_backends_label(self) -> str:
         if not self.package_backends:
             return "-"
@@ -81,6 +91,16 @@ class PackageActionPolicy:
     reason: str
     host_profile: HostProfile
     block_message: str | None = None
+
+    @property
+    def compatibility_frontier_label(self) -> str:
+        if self.status == "SUPPORTED_WITH_POLICY_BLOCK":
+            if self.host_profile.mutability == "atomic":
+                return "bloqueado por política"
+            return "fora do recorte"
+        if self.host_profile.support_tier == "tier_2":
+            return "suportado contido"
+        return "suportado agora"
 
 
 @dataclass(frozen=True)
@@ -206,8 +226,8 @@ def detect_host_profile(environ: dict[str, str] | None = None) -> HostProfile:
 
 def _package_block_reason(profile: HostProfile) -> tuple[str, str]:
     if profile.mutability == "atomic":
-        reason = "o host Linux foi detectado como Atomic, e o recorte atual ainda só sustenta bloqueio honesto para pacote do host nesse perfil."
-        message = "❌ este host Linux foi detectado como Atomic; o recorte atual ainda não sustenta pacote do host neste perfil."
+        reason = "o host Linux foi detectado como Atomic/imutável, e a política atual da linha 1.x bloqueia pacote do host nesse perfil mesmo quando há backend instalado."
+        message = "❌ este host Linux foi detectado como Atomic/imutável; nesta linha o pacote do host fica bloqueado por política nesse perfil, mesmo com backend instalado."
         return reason, message
 
     reason = "a família Linux deste host ficou fora do recorte atual de pacote da linha 1.x."

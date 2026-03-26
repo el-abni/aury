@@ -148,11 +148,15 @@ def test_dev_package_atomic_block_alignment() -> None:
         assert_in(proc.stdout, "Perfil do host")
         assert_in(proc.stdout, "família linux:                 fedora")
         assert_in(proc.stdout, "mutabilidade:                  Atomic")
+        assert_in(proc.stdout, "tier de suporte:               suporte limitado")
+        assert_in(proc.stdout, "fronteira:                     bloqueado por política")
         assert_in(proc.stdout, "classificação:                 bloqueio honesto agora")
+        assert_in(proc.stdout, "compatibilidade:               bloqueado por política")
         assert_in(proc.stdout, "rota suportada:                package_install")
         assert_in(proc.stdout, "backend necessário:            -")
         assert_in(proc.stdout, "decisão:                       executar no Python")
-        assert_in(proc.stdout, "detectado como Atomic")
+        assert_in(proc.stdout, "detectado como Atomic/imutável")
+        assert_in(proc.stdout, "mesmo quando há backend instalado")
 
 
 def test_dev_package_opensuse_search_alignment() -> None:
@@ -1423,6 +1427,35 @@ def test_runtime_package_opensuse_requires_auxiliary_state_probe() -> None:
             raise AssertionError("instalação em OpenSUSE não deveria rodar sem a ferramenta auxiliar de confirmação")
 
 
+def test_runtime_package_atomic_without_backend_stays_policy_block() -> None:
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        os_release = write_os_release(root, distro_id="bazzite", distro_like="fedora", name="Bazzite")
+        env = {"PATH": "", "AURY_OS_RELEASE_PATH": str(os_release)}
+        proc = run("procurar", "steam", env=env)
+        assert proc.returncode == 1
+        assert_in(proc.stdout, "bloqueado por política")
+        if "backend '" in proc.stdout:
+            raise AssertionError("host Atomic não pode parecer simples ausência de backend")
+
+
+def test_runtime_package_atomic_without_probe_stays_policy_block() -> None:
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        bin_dir = root / "bin"
+        bin_dir.mkdir(parents=True, exist_ok=True)
+        write_stub(bin_dir, "dnf", "#!/usr/bin/env bash\necho 'DNF_SHOULD_NOT_RUN'\n")
+        os_release = write_os_release(root, distro_id="bazzite", distro_like="fedora", name="Bazzite")
+        env = {"PATH": str(bin_dir), "AURY_OS_RELEASE_PATH": str(os_release)}
+        proc = run("instalar", "firefox", env=env)
+        assert proc.returncode == 1
+        assert_in(proc.stdout, "bloqueado por política")
+        if "ferramenta auxiliar" in proc.stdout:
+            raise AssertionError("host Atomic não pode parecer ausência de sonda auxiliar")
+        if "DNF_SHOULD_NOT_RUN" in proc.stdout:
+            raise AssertionError("host Atomic não pode tentar mutar pacote do sistema")
+
+
 def test_runtime_create_file() -> None:
     with tempfile.TemporaryDirectory() as tmp:
         workdir = Path(tmp)
@@ -2206,6 +2239,25 @@ def test_detect_host_profile_tiers() -> None:
             raise AssertionError(f"backend inesperado: {host_profile.package_backends!r}")
 
 
+def test_detect_host_profile_atomic_frontier_labels() -> None:
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        bin_dir = root / "bin"
+        bin_dir.mkdir(parents=True, exist_ok=True)
+        write_stub(bin_dir, "dnf", "#!/usr/bin/env bash\nexit 0\n")
+        os_release = write_os_release(root, distro_id="bluefin", distro_like="fedora", name="Bluefin")
+        with temporary_env({"PATH": f"{bin_dir}:{os.environ['PATH']}", "AURY_OS_RELEASE_PATH": str(os_release)}):
+            host_profile = detect_host_profile()
+        if host_profile.linux_family != "fedora":
+            raise AssertionError(f"família inesperada: {host_profile.linux_family!r}")
+        if host_profile.mutability != "atomic":
+            raise AssertionError(f"mutabilidade inesperada: {host_profile.mutability!r}")
+        if host_profile.support_tier_label != "suporte limitado":
+            raise AssertionError(f"tier inesperado: {host_profile.support_tier_label!r}")
+        if host_profile.compatibility_frontier_label != "bloqueado por política":
+            raise AssertionError(f"fronteira inesperada: {host_profile.compatibility_frontier_label!r}")
+
+
 def test_detect_host_profile_opensuse_microos_is_atomic() -> None:
     with tempfile.TemporaryDirectory() as tmp:
         root = Path(tmp)
@@ -2221,6 +2273,8 @@ def test_detect_host_profile_opensuse_microos_is_atomic() -> None:
             raise AssertionError(f"mutabilidade inesperada: {host_profile.mutability!r}")
         if host_profile.support_tier != "limited":
             raise AssertionError(f"tier inesperado: {host_profile.support_tier!r}")
+        if host_profile.compatibility_frontier_label != "bloqueado por política":
+            raise AssertionError(f"fronteira inesperada: {host_profile.compatibility_frontier_label!r}")
 
 
 def test_package_policy_opensuse_supported_now() -> None:
@@ -2242,12 +2296,18 @@ def test_package_policy_opensuse_supported_now() -> None:
             raise AssertionError(f"classificação inesperada na busca: {search_policy.status!r}")
         if search_policy.backend_label != "zypper":
             raise AssertionError(f"backend inesperado na busca: {search_policy.backend_label!r}")
+        if search_policy.compatibility_frontier_label != "suportado contido":
+            raise AssertionError(f"fronteira inesperada na busca: {search_policy.compatibility_frontier_label!r}")
         if "recorte contido" not in search_policy.reason:
             raise AssertionError(f"motivo inesperado na busca: {search_policy.reason!r}")
         if install_policy.backend_label != "sudo + zypper":
             raise AssertionError(f"backend inesperado na instalação: {install_policy.backend_label!r}")
         if remove_policy.backend_label != "sudo + zypper":
             raise AssertionError(f"backend inesperado na remoção: {remove_policy.backend_label!r}")
+        if install_policy.compatibility_frontier_label != "suportado contido":
+            raise AssertionError(f"fronteira inesperada na instalação: {install_policy.compatibility_frontier_label!r}")
+        if remove_policy.compatibility_frontier_label != "suportado contido":
+            raise AssertionError(f"fronteira inesperada na remoção: {remove_policy.compatibility_frontier_label!r}")
         if install_plan.command != ("sudo", "zypper", "--non-interactive", "install", "--", "firefox"):
             raise AssertionError(f"comando inesperado na instalação: {install_plan.command!r}")
         if install_plan.state_probe_label != "rpm":
@@ -2262,6 +2322,34 @@ def test_package_policy_opensuse_supported_now() -> None:
             raise AssertionError(f"sonda inesperada na remoção: {remove_plan.state_probe_command!r}")
 
 
+def test_package_policy_atomic_blocked_by_policy_even_with_backend() -> None:
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        bin_dir = root / "bin"
+        bin_dir.mkdir(parents=True, exist_ok=True)
+        write_stub(bin_dir, "dnf", "#!/usr/bin/env bash\nexit 0\n")
+        write_stub(bin_dir, "rpm", "#!/usr/bin/env bash\nexit 0\n")
+        write_stub(bin_dir, "sudo", "#!/usr/bin/env bash\nexit 0\n")
+        os_release = write_os_release(root, distro_id="bazzite", distro_like="fedora", name="Bazzite")
+        with temporary_env({"PATH": f"{bin_dir}:{os.environ['PATH']}", "AURY_OS_RELEASE_PATH": str(os_release)}):
+            install_policy = resolve_package_action_policy("instalar")
+            install_plan = build_package_execution_plan("instalar", "firefox")
+        if install_policy.status != "SUPPORTED_WITH_POLICY_BLOCK":
+            raise AssertionError(f"classificação inesperada: {install_policy.status!r}")
+        if install_policy.compatibility_frontier_label != "bloqueado por política":
+            raise AssertionError(f"fronteira inesperada: {install_policy.compatibility_frontier_label!r}")
+        if install_policy.backend_label != "-":
+            raise AssertionError(f"backend inesperado: {install_policy.backend_label!r}")
+        if "bloqueia pacote do host" not in install_policy.reason:
+            raise AssertionError(f"motivo inesperado: {install_policy.reason!r}")
+        if install_policy.block_message is None or "bloqueado por política" not in install_policy.block_message:
+            raise AssertionError(f"mensagem inesperada: {install_policy.block_message!r}")
+        if install_plan.required_commands:
+            raise AssertionError(f"requisitos inesperados: {install_plan.required_commands!r}")
+        if install_plan.state_probe_required_commands:
+            raise AssertionError(f"sonda inesperada: {install_plan.state_probe_required_commands!r}")
+
+
 def test_package_policy_matrix_mutable_hosts() -> None:
     cases = (
         (
@@ -2270,6 +2358,7 @@ def test_package_policy_matrix_mutable_hosts() -> None:
             {
                 "procurar": {
                     "target": "steam",
+                    "compatibility_frontier_label": "suportado agora",
                     "backend_label": "pacman",
                     "command": ("pacman", "-Ss", "--", "steam"),
                     "required_commands": ("pacman",),
@@ -2278,6 +2367,7 @@ def test_package_policy_matrix_mutable_hosts() -> None:
                 },
                 "instalar": {
                     "target": "obs studio",
+                    "compatibility_frontier_label": "suportado agora",
                     "backend_label": "sudo + pacman",
                     "command": ("sudo", "pacman", "-S", "--needed", "--", "obs-studio"),
                     "required_commands": ("pacman", "sudo"),
@@ -2286,6 +2376,7 @@ def test_package_policy_matrix_mutable_hosts() -> None:
                 },
                 "remover": {
                     "target": "obs studio",
+                    "compatibility_frontier_label": "suportado agora",
                     "backend_label": "sudo + pacman",
                     "command": ("sudo", "pacman", "-Rns", "--", "obs-studio"),
                     "required_commands": ("pacman", "sudo"),
@@ -2300,6 +2391,7 @@ def test_package_policy_matrix_mutable_hosts() -> None:
             {
                 "procurar": {
                     "target": "steam",
+                    "compatibility_frontier_label": "suportado agora",
                     "backend_label": "apt-cache",
                     "command": ("apt-cache", "search", "steam"),
                     "required_commands": ("apt-cache",),
@@ -2308,6 +2400,7 @@ def test_package_policy_matrix_mutable_hosts() -> None:
                 },
                 "instalar": {
                     "target": "obs studio",
+                    "compatibility_frontier_label": "suportado agora",
                     "backend_label": "sudo + apt-get",
                     "command": ("sudo", "apt-get", "install", "-y", "obs-studio"),
                     "required_commands": ("apt-get", "sudo"),
@@ -2316,6 +2409,7 @@ def test_package_policy_matrix_mutable_hosts() -> None:
                 },
                 "remover": {
                     "target": "obs studio",
+                    "compatibility_frontier_label": "suportado agora",
                     "backend_label": "sudo + apt-get",
                     "command": ("sudo", "apt-get", "remove", "-y", "obs-studio"),
                     "required_commands": ("apt-get", "sudo"),
@@ -2330,6 +2424,7 @@ def test_package_policy_matrix_mutable_hosts() -> None:
             {
                 "procurar": {
                     "target": "steam",
+                    "compatibility_frontier_label": "suportado agora",
                     "backend_label": "dnf",
                     "command": ("dnf", "search", "steam"),
                     "required_commands": ("dnf",),
@@ -2338,6 +2433,7 @@ def test_package_policy_matrix_mutable_hosts() -> None:
                 },
                 "instalar": {
                     "target": "obs studio",
+                    "compatibility_frontier_label": "suportado agora",
                     "backend_label": "sudo + dnf",
                     "command": ("sudo", "dnf", "install", "-y", "obs-studio"),
                     "required_commands": ("dnf", "sudo"),
@@ -2346,6 +2442,7 @@ def test_package_policy_matrix_mutable_hosts() -> None:
                 },
                 "remover": {
                     "target": "obs studio",
+                    "compatibility_frontier_label": "suportado agora",
                     "backend_label": "sudo + dnf",
                     "command": ("sudo", "dnf", "remove", "-y", "obs-studio"),
                     "required_commands": ("dnf", "sudo"),
@@ -2360,6 +2457,7 @@ def test_package_policy_matrix_mutable_hosts() -> None:
             {
                 "procurar": {
                     "target": "steam",
+                    "compatibility_frontier_label": "suportado contido",
                     "backend_label": "zypper",
                     "command": ("zypper", "search", "--", "steam"),
                     "required_commands": ("zypper",),
@@ -2368,6 +2466,7 @@ def test_package_policy_matrix_mutable_hosts() -> None:
                 },
                 "instalar": {
                     "target": "obs studio",
+                    "compatibility_frontier_label": "suportado contido",
                     "backend_label": "sudo + zypper",
                     "command": ("sudo", "zypper", "--non-interactive", "install", "--", "obs-studio"),
                     "required_commands": ("zypper", "sudo"),
@@ -2376,6 +2475,7 @@ def test_package_policy_matrix_mutable_hosts() -> None:
                 },
                 "remover": {
                     "target": "obs studio",
+                    "compatibility_frontier_label": "suportado contido",
                     "backend_label": "sudo + zypper",
                     "command": ("sudo", "zypper", "--non-interactive", "remove", "--", "obs-studio"),
                     "required_commands": ("zypper", "sudo"),
@@ -2412,6 +2512,8 @@ def test_package_policy_matrix_mutable_hosts() -> None:
                         raise AssertionError(f"classificação inesperada em {family}/{intent}: {policy.status!r}")
                     if plan.policy.status != "SUPPORTED_NOW":
                         raise AssertionError(f"plano inesperado em {family}/{intent}: {plan.policy.status!r}")
+                    if policy.compatibility_frontier_label != expected["compatibility_frontier_label"]:
+                        raise AssertionError(f"fronteira inesperada em {family}/{intent}: {policy.compatibility_frontier_label!r}")
                     if policy.backend_label != expected["backend_label"]:
                         raise AssertionError(f"backend inesperado em {family}/{intent}: {policy.backend_label!r}")
                     if plan.policy.backend_label != expected["backend_label"]:
@@ -2652,6 +2754,8 @@ def main() -> int:
         test_runtime_package_remove_opensuse_requires_state_confirmation,
         test_runtime_package_opensuse_backend_missing,
         test_runtime_package_opensuse_requires_auxiliary_state_probe,
+        test_runtime_package_atomic_without_backend_stays_policy_block,
+        test_runtime_package_atomic_without_probe_stays_policy_block,
         test_runtime_create_file,
         test_runtime_create_folder_located,
         test_dev_search_inflected_alignment,
@@ -2689,8 +2793,10 @@ def main() -> int:
         test_sequence_execution_plan_return_reason_for_blocked_gap,
         test_dev_multiple_actions,
         test_detect_host_profile_tiers,
+        test_detect_host_profile_atomic_frontier_labels,
         test_detect_host_profile_opensuse_microos_is_atomic,
         test_package_policy_opensuse_supported_now,
+        test_package_policy_atomic_blocked_by_policy_even_with_backend,
         test_package_policy_matrix_mutable_hosts,
         test_dev_destructive_remove_without_safe_antecedent_blocks_local_reference,
         test_dev_destructive_remove_chain_local_reference_alignment,

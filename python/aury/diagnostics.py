@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from .analyzer import prepare_analyses
 from .contracts import ActionExecutionPlan, Analysis, PreparedAction, SequenceExecutionPlan
-from .host import detect_host_profile
+from .host import detect_host_profile, resolve_package_action_policy
 from .runtime import plan_action_execution, plan_sequence_execution
 
 _FIELD_WIDTH = 30
@@ -66,6 +66,7 @@ def _render_host_profile() -> list[str]:
         _field("família linux", host_profile.linux_family_label),
         _field("mutabilidade", host_profile.mutability_label),
         _field("tier de suporte", host_profile.support_tier_label),
+        _field("fronteira", host_profile.compatibility_frontier_label),
         _field("backends de pacote", host_profile.package_backends_label),
     ]
 
@@ -85,6 +86,9 @@ def _lacunas_label(analysis: Analysis) -> str:
 
 def _render_action_report(action: PreparedAction, analysis: Analysis, action_plan: ActionExecutionPlan) -> list[str]:
     entities = analysis.entities
+    package_policy = None
+    if analysis.domain == "pacote" and analysis.intent in {"procurar", "instalar", "remover"}:
+        package_policy = resolve_package_action_policy(analysis.intent)
     lines = [
         f"Ação {action.index}",
         "Entrada",
@@ -122,6 +126,7 @@ def _render_action_report(action: PreparedAction, analysis: Analysis, action_pla
             _field("resumo", analysis.summary),
             "Plano de execução",
             _field("classificação", _action_plan_status_label(action_plan)),
+            _field("compatibilidade", package_policy.compatibility_frontier_label if package_policy is not None else "-"),
             _field("rota suportada", action_plan.route),
             _field("backend necessário", action_plan.backend),
             _field("decisão", _action_plan_decision(action_plan)),

@@ -56,4 +56,5 @@ aury dev
 NOTA
 aury dev <frase> continua como relatório canônico da linha 1.x.
 aury dev sem frase fica como verificação local curta do adaptador Fish, em uso secundário nesta linha.
-procurar, instalar e remover usam contrato de pacote por família/host: Tier 1 inicial em Arch, Debian/Ubuntu e Fedora mutável; OpenSUSE mutável entra como Tier 2 útil contido; Atomic segue bloqueado com honestidade.
+procurar, instalar e remover usam contrato de pacote por família/host.
+Suportado agora: Arch, Debian/Ubuntu e Fedora mutável. Suportado contido: OpenSUSE mutável. Bloqueado por política: Atomic, Universal Blue, opensuse-microos, microos e equivalentes.

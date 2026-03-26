@@ -98,7 +98,7 @@ Hoje ele cobre de forma executável:
 
 ### `audit_public_coherence.py`
 
-Este auditor pequeno verifica o chão público mínimo que a continuidade incremental da v1.9.4 precisa manter coerente:
+Este auditor pequeno verifica o chão público mínimo que a continuidade incremental da v1.9.5 precisa manter coerente:
 
 - `VERSION` preenchida
 - `resources/help.txt` com placeholder de versão e nota honesta sobre `aury dev`
@@ -128,7 +128,7 @@ Este auditor pequeno verifica um recorte canônico de status de saída e superf�
 - fallback técnico de `help`, `version` e `aury dev <frase>` quando o Python devolve `127`
 - OpenSUSE mutável com execução real contida de `procurar`, `instalar` e `remover`
 - OpenSUSE mutável com busca sem resultado honesta e distinção entre backend ausente e sonda auxiliar ausente
-- Atomic preservado em bloqueio honesto de pacote do host
+- Atomic preservado em bloqueio honesto de pacote do host, distinto de backend ausente e de sonda auxiliar ausente
 
 ### `release_gate_minimo.sh`
 
@@ -199,7 +199,7 @@ Hoje ele protege:
 - parser e contrato mínimo de `aury dev` para a compactação local simples da v1.7.0
 - leituras simples de rede no runtime Python
 - busca de pacote e leitura de GPU no runtime Python
-- política de pacote por família Linux, inclusive OpenSUSE mutável no recorte contido e a matriz mínima de coerência do domínio de pacote
+- política de pacote por família Linux, inclusive OpenSUSE mutável no recorte contido e a fronteira explícita dos hosts imutáveis bloqueados por política
 - preparação de frase, ações e tokens sensíveis
 - plano de execução por ação e por sequência
 - regressão mínima da virada Fish -> Python
