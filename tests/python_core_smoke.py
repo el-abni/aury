@@ -476,6 +476,34 @@ def test_dev_rename_file_alignment() -> None:
     assert_in(proc.stdout, "decisão:                       voltar ao Fish")
 
 
+def test_dev_located_rename_file_alignment() -> None:
+    proc = run(
+        "dev",
+        "renomeie",
+        "o",
+        "arquivo",
+        "teste.txt",
+        "que",
+        "fica",
+        "em",
+        "Downloads",
+        "para",
+        "teste-final.txt",
+    )
+    assert proc.returncode == 0
+    assert_in(proc.stdout, "intenção:                      renomear")
+    assert_in(proc.stdout, "domínio:                       arquivo")
+    assert_in(proc.stdout, "tipo:                          arquivo")
+    assert_in(proc.stdout, "alvo principal:                Downloads/teste.txt")
+    assert_in(proc.stdout, "origem:                        Downloads/teste.txt")
+    assert_in(proc.stdout, "destino:                       Downloads/teste-final.txt")
+    assert_in(proc.stdout, "novo nome:                     teste-final.txt")
+    assert_in(proc.stdout, "resumo:                        Renomear 'Downloads/teste.txt' para 'Downloads/teste-final.txt'.")
+    assert_in(proc.stdout, FISH_ROUTED_LABEL)
+    assert_in(proc.stdout, "decisão:                       voltar ao Fish")
+    assert_in(proc.stdout, "localização conversacional usada para recompor a base 'Downloads'")
+
+
 def test_dev_explicit_remove_file_alignment() -> None:
     proc = run("dev", "remover", "o", "arquivo", "apagar.txt")
     assert proc.returncode == 0
@@ -872,6 +900,66 @@ def test_dev_copy_rename_local_reference_alignment() -> None:
     assert_in(proc.stdout, "decisão:                       voltar ao Fish")
 
 
+def test_dev_copy_rename_file_local_reference_alignment() -> None:
+    phrase = "copie o arquivo teste.txt para copia.txt e renomeie ele para final.txt"
+    proc = run("dev", *phrase.split())
+    assert proc.returncode == 0
+    assert_in(proc.stdout, "Plano da sequência")
+    assert_in(proc.stdout, "Ação 1")
+    assert_in(proc.stdout, "trecho original:               copie o arquivo teste.txt para copia.txt")
+    assert_in(proc.stdout, "intenção:                      copiar")
+    assert_in(proc.stdout, "domínio:                       arquivo")
+    assert_in(proc.stdout, "tipo:                          arquivo")
+    assert_in(proc.stdout, "alvo principal:                teste.txt")
+    assert_in(proc.stdout, "origem:                        teste.txt")
+    assert_in(proc.stdout, "destino:                       copia.txt")
+    assert_in(proc.stdout, "resumo:                        Copiar 'teste.txt' para 'copia.txt'.")
+    assert_in(proc.stdout, "Ação 2")
+    assert_in(proc.stdout, "trecho original:               renomeie ele para final.txt")
+    assert_in(proc.stdout, "intenção:                      renomear")
+    assert_in(proc.stdout, "domínio:                       arquivo")
+    assert_in(proc.stdout, "tipo:                          arquivo")
+    assert_in(proc.stdout, "alvo principal:                copia.txt")
+    assert_in(proc.stdout, "origem:                        copia.txt")
+    assert_in(proc.stdout, "destino:                       final.txt")
+    assert_in(proc.stdout, "novo nome:                     final.txt")
+    assert_in(proc.stdout, "referência local:              copia.txt")
+    assert_in(proc.stdout, "resumo:                        Renomear 'copia.txt' para 'final.txt'.")
+    assert_in(proc.stdout, "referência local 'ele' resolvida com segurança como 'copia.txt'")
+    assert_in(proc.stdout, FISH_ROUTED_LABEL)
+    assert_in(proc.stdout, "decisão:                       voltar ao Fish")
+
+
+def test_dev_move_rename_file_local_reference_alignment() -> None:
+    phrase = "mova o arquivo teste.txt para pasta2/final.txt e renomeie ele para ultimo.txt"
+    proc = run("dev", *phrase.split())
+    assert proc.returncode == 0
+    assert_in(proc.stdout, "Plano da sequência")
+    assert_in(proc.stdout, "Ação 1")
+    assert_in(proc.stdout, "trecho original:               mova o arquivo teste.txt para pasta2/final.txt")
+    assert_in(proc.stdout, "intenção:                      mover")
+    assert_in(proc.stdout, "domínio:                       arquivo")
+    assert_in(proc.stdout, "tipo:                          arquivo")
+    assert_in(proc.stdout, "alvo principal:                teste.txt")
+    assert_in(proc.stdout, "origem:                        teste.txt")
+    assert_in(proc.stdout, "destino:                       pasta2/final.txt")
+    assert_in(proc.stdout, "resumo:                        Mover 'teste.txt' para 'pasta2/final.txt'.")
+    assert_in(proc.stdout, "Ação 2")
+    assert_in(proc.stdout, "trecho original:               renomeie ele para ultimo.txt")
+    assert_in(proc.stdout, "intenção:                      renomear")
+    assert_in(proc.stdout, "domínio:                       arquivo")
+    assert_in(proc.stdout, "tipo:                          arquivo")
+    assert_in(proc.stdout, "alvo principal:                pasta2/final.txt")
+    assert_in(proc.stdout, "origem:                        pasta2/final.txt")
+    assert_in(proc.stdout, "destino:                       pasta2/ultimo.txt")
+    assert_in(proc.stdout, "novo nome:                     ultimo.txt")
+    assert_in(proc.stdout, "referência local:              pasta2/final.txt")
+    assert_in(proc.stdout, "resumo:                        Renomear 'pasta2/final.txt' para 'pasta2/ultimo.txt'.")
+    assert_in(proc.stdout, "referência local 'ele' resolvida com segurança como 'pasta2/final.txt'")
+    assert_in(proc.stdout, FISH_ROUTED_LABEL)
+    assert_in(proc.stdout, "decisão:                       voltar ao Fish")
+
+
 def test_dev_chain() -> None:
     phrase = "copie a pasta Aury que fica em Documentos para Downloads e renomeie ela para Aury-backup"
     proc = run("dev", *phrase.split())
@@ -883,6 +971,34 @@ def test_dev_chain() -> None:
     assert_in(proc.stdout, "referência local:              Downloads/Aury")
     assert_in(proc.stdout, "novo nome:                     Aury-backup")
     assert_in(proc.stdout, "destino:                       Downloads/Aury-backup")
+
+
+def test_dev_sentence_chain_move_local_reference_alignment() -> None:
+    phrase = "copie a pasta Aury para Downloads. Depois mova ela para Backup."
+    proc = run("dev", *phrase.split())
+    assert proc.returncode == 0
+    assert_in(proc.stdout, "Ação 1")
+    assert_in(proc.stdout, "trecho original:               copie a pasta Aury para Downloads.")
+    assert_in(proc.stdout, "intenção:                      copiar")
+    assert_in(proc.stdout, "domínio:                       arquivo")
+    assert_in(proc.stdout, "tipo:                          pasta")
+    assert_in(proc.stdout, "alvo principal:                Aury")
+    assert_in(proc.stdout, "origem:                        Aury")
+    assert_in(proc.stdout, "destino:                       Downloads/Aury")
+    assert_in(proc.stdout, "resumo:                        Copiar 'Aury' para 'Downloads/Aury'.")
+    assert_in(proc.stdout, "Ação 2")
+    assert_in(proc.stdout, "trecho original:               mova ela para Backup.")
+    assert_in(proc.stdout, "intenção:                      mover")
+    assert_in(proc.stdout, "domínio:                       arquivo")
+    assert_in(proc.stdout, "tipo:                          pasta")
+    assert_in(proc.stdout, "alvo principal:                Downloads/Aury")
+    assert_in(proc.stdout, "origem:                        Downloads/Aury")
+    assert_in(proc.stdout, "referência local:              Downloads/Aury")
+    assert_in(proc.stdout, "destino:                       Backup/Aury")
+    assert_in(proc.stdout, "resumo:                        Mover 'Downloads/Aury' para 'Backup/Aury'.")
+    assert_in(proc.stdout, "referência local 'ela' resolvida com segurança como 'Downloads/Aury'")
+    assert_in(proc.stdout, FISH_ROUTED_LABEL)
+    assert_in(proc.stdout, "decisão:                       voltar ao Fish")
 
 
 def test_runtime_speedtest() -> None:
@@ -1209,6 +1325,17 @@ def test_pipeline_prepare_text() -> None:
             f"split copiar+renomear inesperado: {[action.original_action for action in rename_chain_actions]!r}"
         )
 
+    _sentence_chain_phrase, sentence_chain_actions = prepare_text(
+        "copie a pasta Aury para Downloads. Depois mova ela para Backup."
+    )
+    if [action.original_action for action in sentence_chain_actions] != [
+        "copie a pasta Aury para Downloads.",
+        "mova ela para Backup.",
+    ]:
+        raise AssertionError(
+            f"split copiar+mover entre frases inesperado: {[action.original_action for action in sentence_chain_actions]!r}"
+        )
+
 
 def test_prepare_analysis_uses_prepared_action() -> None:
     phrase, action, analysis = prepare_analysis("Aury, remover vlc")
@@ -1277,6 +1404,32 @@ def test_prepare_analysis_extract_conversational_destination_alignment() -> None
     if not any("localização conversacional simples" in item for item in analysis.observations):
         raise AssertionError(f"observações inesperadas: {analysis.observations!r}")
     if not any("adaptador Fish" in item for item in analysis.observations):
+        raise AssertionError(f"observações inesperadas: {analysis.observations!r}")
+
+
+def test_prepare_analysis_located_rename_alignment() -> None:
+    _phrase, _action, analysis = prepare_analysis(
+        "renomeie o arquivo teste.txt que fica em Downloads para teste-final.txt"
+    )
+    if analysis.intent != "renomear":
+        raise AssertionError(f"intenção inesperada: {analysis.intent!r}")
+    if analysis.domain != "arquivo":
+        raise AssertionError(f"domínio inesperado: {analysis.domain!r}")
+    if analysis.status != "CONSISTENTE":
+        raise AssertionError(f"estado inesperado: {analysis.status!r}")
+    if analysis.entities.get("tipo") != "arquivo":
+        raise AssertionError(f"tipo inesperado: {analysis.entities.get('tipo')!r}")
+    if analysis.entities.get("alvo_principal") != "Downloads/teste.txt":
+        raise AssertionError(f"alvo principal inesperado: {analysis.entities.get('alvo_principal')!r}")
+    if analysis.entities.get("origem") != "Downloads/teste.txt":
+        raise AssertionError(f"origem inesperada: {analysis.entities.get('origem')!r}")
+    if analysis.entities.get("destino") != "Downloads/teste-final.txt":
+        raise AssertionError(f"destino inesperado: {analysis.entities.get('destino')!r}")
+    if analysis.entities.get("novo_nome") != "teste-final.txt":
+        raise AssertionError(f"novo nome inesperado: {analysis.entities.get('novo_nome')!r}")
+    if analysis.summary != "Renomear 'Downloads/teste.txt' para 'Downloads/teste-final.txt'.":
+        raise AssertionError(f"resumo inesperado: {analysis.summary!r}")
+    if not any("base 'Downloads'" in item for item in analysis.observations):
         raise AssertionError(f"observações inesperadas: {analysis.observations!r}")
 
 
@@ -1386,6 +1539,147 @@ def test_prepare_analyses_copy_rename_local_reference_alignment() -> None:
     if analyses[1].summary != "Renomear 'destino/Aury' para 'destino/Aury-backup'.":
         raise AssertionError(f"resumo inesperado na segunda ação: {analyses[1].summary!r}")
     if not any("referência local 'ela' resolvida com segurança como 'destino/Aury'" in item for item in analyses[1].observations):
+        raise AssertionError(f"observações inesperadas na segunda ação: {analyses[1].observations!r}")
+
+
+def test_prepare_analyses_copy_rename_file_local_reference_alignment() -> None:
+    _phrase, actions, analyses = prepare_analyses("copie o arquivo teste.txt para copia.txt e renomeie ele para final.txt")
+    if [action.original_action for action in actions] != [
+        "copie o arquivo teste.txt para copia.txt",
+        "renomeie ele para final.txt",
+    ]:
+        raise AssertionError(f"ações preparadas inesperadas: {[action.original_action for action in actions]!r}")
+    if analyses[0].intent != "copiar":
+        raise AssertionError(f"intenção inesperada na primeira ação: {analyses[0].intent!r}")
+    if analyses[0].status != "CONSISTENTE":
+        raise AssertionError(f"estado inesperado na primeira ação: {analyses[0].status!r}")
+    if analyses[0].entities.get("tipo") != "arquivo":
+        raise AssertionError(f"tipo inesperado na primeira ação: {analyses[0].entities.get('tipo')!r}")
+    if analyses[0].entities.get("origem") != "teste.txt":
+        raise AssertionError(f"origem inesperada na primeira ação: {analyses[0].entities.get('origem')!r}")
+    if analyses[0].entities.get("destino") != "copia.txt":
+        raise AssertionError(f"destino inesperado na primeira ação: {analyses[0].entities.get('destino')!r}")
+    if analyses[1].intent != "renomear":
+        raise AssertionError(f"intenção inesperada na segunda ação: {analyses[1].intent!r}")
+    if analyses[1].status != "CONSISTENTE":
+        raise AssertionError(f"estado inesperado na segunda ação: {analyses[1].status!r}")
+    if analyses[1].domain != "arquivo":
+        raise AssertionError(f"domínio inesperado na segunda ação: {analyses[1].domain!r}")
+    if analyses[1].entities.get("tipo") != "arquivo":
+        raise AssertionError(f"tipo inesperado na segunda ação: {analyses[1].entities.get('tipo')!r}")
+    if analyses[1].entities.get("alvo_principal") != "copia.txt":
+        raise AssertionError(f"alvo principal inesperado na segunda ação: {analyses[1].entities.get('alvo_principal')!r}")
+    if analyses[1].entities.get("origem") != "copia.txt":
+        raise AssertionError(f"origem inesperada na segunda ação: {analyses[1].entities.get('origem')!r}")
+    if analyses[1].entities.get("destino") != "final.txt":
+        raise AssertionError(f"destino inesperado na segunda ação: {analyses[1].entities.get('destino')!r}")
+    if analyses[1].entities.get("novo_nome") != "final.txt":
+        raise AssertionError(f"novo nome inesperado na segunda ação: {analyses[1].entities.get('novo_nome')!r}")
+    if analyses[1].entities.get("referencia_local") != "copia.txt":
+        raise AssertionError(
+            f"referência local inesperada na segunda ação: {analyses[1].entities.get('referencia_local')!r}"
+        )
+    if analyses[1].summary != "Renomear 'copia.txt' para 'final.txt'.":
+        raise AssertionError(f"resumo inesperado na segunda ação: {analyses[1].summary!r}")
+    if not any("referência local 'ele' resolvida com segurança como 'copia.txt'" in item for item in analyses[1].observations):
+        raise AssertionError(f"observações inesperadas na segunda ação: {analyses[1].observations!r}")
+
+
+def test_prepare_analyses_move_rename_file_local_reference_alignment() -> None:
+    _phrase, actions, analyses = prepare_analyses("mova o arquivo teste.txt para pasta2/final.txt e renomeie ele para ultimo.txt")
+    if [action.original_action for action in actions] != [
+        "mova o arquivo teste.txt para pasta2/final.txt",
+        "renomeie ele para ultimo.txt",
+    ]:
+        raise AssertionError(f"ações preparadas inesperadas: {[action.original_action for action in actions]!r}")
+    if analyses[0].intent != "mover":
+        raise AssertionError(f"intenção inesperada na primeira ação: {analyses[0].intent!r}")
+    if analyses[0].status != "CONSISTENTE":
+        raise AssertionError(f"estado inesperado na primeira ação: {analyses[0].status!r}")
+    if analyses[0].entities.get("tipo") != "arquivo":
+        raise AssertionError(f"tipo inesperado na primeira ação: {analyses[0].entities.get('tipo')!r}")
+    if analyses[0].entities.get("origem") != "teste.txt":
+        raise AssertionError(f"origem inesperada na primeira ação: {analyses[0].entities.get('origem')!r}")
+    if analyses[0].entities.get("destino") != "pasta2/final.txt":
+        raise AssertionError(f"destino inesperado na primeira ação: {analyses[0].entities.get('destino')!r}")
+    if analyses[1].intent != "renomear":
+        raise AssertionError(f"intenção inesperada na segunda ação: {analyses[1].intent!r}")
+    if analyses[1].status != "CONSISTENTE":
+        raise AssertionError(f"estado inesperado na segunda ação: {analyses[1].status!r}")
+    if analyses[1].domain != "arquivo":
+        raise AssertionError(f"domínio inesperado na segunda ação: {analyses[1].domain!r}")
+    if analyses[1].entities.get("tipo") != "arquivo":
+        raise AssertionError(f"tipo inesperado na segunda ação: {analyses[1].entities.get('tipo')!r}")
+    if analyses[1].entities.get("alvo_principal") != "pasta2/final.txt":
+        raise AssertionError(f"alvo principal inesperado na segunda ação: {analyses[1].entities.get('alvo_principal')!r}")
+    if analyses[1].entities.get("origem") != "pasta2/final.txt":
+        raise AssertionError(f"origem inesperada na segunda ação: {analyses[1].entities.get('origem')!r}")
+    if analyses[1].entities.get("destino") != "pasta2/ultimo.txt":
+        raise AssertionError(f"destino inesperado na segunda ação: {analyses[1].entities.get('destino')!r}")
+    if analyses[1].entities.get("novo_nome") != "ultimo.txt":
+        raise AssertionError(f"novo nome inesperado na segunda ação: {analyses[1].entities.get('novo_nome')!r}")
+    if analyses[1].entities.get("referencia_local") != "pasta2/final.txt":
+        raise AssertionError(
+            f"referência local inesperada na segunda ação: {analyses[1].entities.get('referencia_local')!r}"
+        )
+    if analyses[1].summary != "Renomear 'pasta2/final.txt' para 'pasta2/ultimo.txt'.":
+        raise AssertionError(f"resumo inesperado na segunda ação: {analyses[1].summary!r}")
+    if not any("referência local 'ele' resolvida com segurança como 'pasta2/final.txt'" in item for item in analyses[1].observations):
+        raise AssertionError(f"observações inesperadas na segunda ação: {analyses[1].observations!r}")
+
+
+def test_prepare_analyses_move_rename_file_local_reference_requires_explicit_destination_shape() -> None:
+    _phrase, actions, analyses = prepare_analyses("mova o arquivo teste.txt para pasta2 e renomeie ele para final.txt")
+    if [action.original_action for action in actions] != [
+        "mova o arquivo teste.txt para pasta2",
+        "renomeie ele para final.txt",
+    ]:
+        raise AssertionError(f"ações preparadas inesperadas: {[action.original_action for action in actions]!r}")
+    if analyses[0].intent != "mover":
+        raise AssertionError(f"intenção inesperada na primeira ação: {analyses[0].intent!r}")
+    if analyses[0].status != "CONSISTENTE":
+        raise AssertionError(f"estado inesperado na primeira ação: {analyses[0].status!r}")
+    if analyses[1].intent != "não identificada":
+        raise AssertionError(f"intenção inesperada na segunda ação: {analyses[1].intent!r}")
+    if analyses[1].status != "NAO_ENQUADRADA":
+        raise AssertionError(f"estado inesperado na segunda ação: {analyses[1].status!r}")
+
+
+def test_prepare_analyses_sentence_chain_move_local_reference_alignment() -> None:
+    _phrase, actions, analyses = prepare_analyses("copie a pasta Aury para Downloads. Depois mova ela para Backup.")
+    if [action.original_action for action in actions] != ["copie a pasta Aury para Downloads.", "mova ela para Backup."]:
+        raise AssertionError(f"ações preparadas inesperadas: {[action.original_action for action in actions]!r}")
+    if analyses[0].intent != "copiar":
+        raise AssertionError(f"intenção inesperada na primeira ação: {analyses[0].intent!r}")
+    if analyses[0].status != "CONSISTENTE":
+        raise AssertionError(f"estado inesperado na primeira ação: {analyses[0].status!r}")
+    if analyses[0].entities.get("tipo") != "pasta":
+        raise AssertionError(f"tipo inesperado na primeira ação: {analyses[0].entities.get('tipo')!r}")
+    if analyses[0].entities.get("origem") != "Aury":
+        raise AssertionError(f"origem inesperada na primeira ação: {analyses[0].entities.get('origem')!r}")
+    if analyses[0].entities.get("destino") != "Downloads/Aury":
+        raise AssertionError(f"destino inesperado na primeira ação: {analyses[0].entities.get('destino')!r}")
+    if analyses[1].intent != "mover":
+        raise AssertionError(f"intenção inesperada na segunda ação: {analyses[1].intent!r}")
+    if analyses[1].status != "CONSISTENTE":
+        raise AssertionError(f"estado inesperado na segunda ação: {analyses[1].status!r}")
+    if analyses[1].domain != "arquivo":
+        raise AssertionError(f"domínio inesperado na segunda ação: {analyses[1].domain!r}")
+    if analyses[1].entities.get("tipo") != "pasta":
+        raise AssertionError(f"tipo inesperado na segunda ação: {analyses[1].entities.get('tipo')!r}")
+    if analyses[1].entities.get("alvo_principal") != "Downloads/Aury":
+        raise AssertionError(f"alvo principal inesperado na segunda ação: {analyses[1].entities.get('alvo_principal')!r}")
+    if analyses[1].entities.get("origem") != "Downloads/Aury":
+        raise AssertionError(f"origem inesperada na segunda ação: {analyses[1].entities.get('origem')!r}")
+    if analyses[1].entities.get("destino") != "Backup/Aury":
+        raise AssertionError(f"destino inesperado na segunda ação: {analyses[1].entities.get('destino')!r}")
+    if analyses[1].entities.get("referencia_local") != "Downloads/Aury":
+        raise AssertionError(
+            f"referência local inesperada na segunda ação: {analyses[1].entities.get('referencia_local')!r}"
+        )
+    if analyses[1].summary != "Mover 'Downloads/Aury' para 'Backup/Aury'.":
+        raise AssertionError(f"resumo inesperado na segunda ação: {analyses[1].summary!r}")
+    if not any("referência local 'ela' resolvida com segurança como 'Downloads/Aury'" in item for item in analyses[1].observations):
         raise AssertionError(f"observações inesperadas na segunda ação: {analyses[1].observations!r}")
 
 
@@ -1804,6 +2098,7 @@ def main() -> int:
         test_dev_copy_file_alignment,
         test_dev_move_file_alignment,
         test_dev_rename_file_alignment,
+        test_dev_located_rename_file_alignment,
         test_dev_explicit_remove_file_alignment,
         test_dev_explicit_remove_folder_alignment,
         test_dev_explicit_remove_located_folder_alignment,
@@ -1829,7 +2124,10 @@ def main() -> int:
         test_dev_extract_conversational_destination_alignment,
         test_dev_extract_explicit_real_path_destination_alignment,
         test_dev_copy_rename_local_reference_alignment,
+        test_dev_copy_rename_file_local_reference_alignment,
+        test_dev_move_rename_file_local_reference_alignment,
         test_dev_chain,
+        test_dev_sentence_chain_move_local_reference_alignment,
         test_runtime_speedtest,
         test_runtime_ping,
         test_runtime_package_search,
@@ -1851,10 +2149,15 @@ def main() -> int:
         test_prepare_analysis_explicit_package_target_strips_domain_noise,
         test_prepare_analysis_isolated_destructive_remove_local_reference_blocks,
         test_prepare_analysis_extract_conversational_destination_alignment,
+        test_prepare_analysis_located_rename_alignment,
         test_prepare_analysis_extract_explicit_real_path_destination_alignment,
         test_prepare_analysis_compact_alignment,
         test_prepare_analysis_compact_invalid_format_blocks,
         test_prepare_analyses_copy_rename_local_reference_alignment,
+        test_prepare_analyses_copy_rename_file_local_reference_alignment,
+        test_prepare_analyses_move_rename_file_local_reference_alignment,
+        test_prepare_analyses_move_rename_file_local_reference_requires_explicit_destination_shape,
+        test_prepare_analyses_sentence_chain_move_local_reference_alignment,
         test_prepare_analyses_multiple_actions,
         test_prepare_analyses_destructive_remove_followup_reuses_safe_local_reference,
         test_prepare_analyses_destructive_remove_with_previous_package_context_blocks_local_reference,

@@ -288,6 +288,104 @@ if [[ ! -e "$chain_tmp/notas/teste.txt" || ! -e "$chain_tmp/notas/final2.txt" ||
     fail "encadeamento copiar->mover com 'ela' precisa materializar só o destino final esperado"
 fi
 
+copy_rename_file_gap_tmp="$(mktemp -d /tmp/aury-public-ux-XXXXXX)"
+tmpdirs+=("$copy_rename_file_gap_tmp")
+printf 'x\n' > "$copy_rename_file_gap_tmp/teste.txt"
+
+copy_rename_file_gap_output="$(ROOT="$ROOT" TMP="$copy_rename_file_gap_tmp" fish -c 'source $ROOT/bin/aury.fish; cd $TMP; aury copie o arquivo teste.txt para copia.txt e renomeie ele para final.txt; echo ---DEV---; aury dev copie o arquivo teste.txt para copia.txt e renomeie ele para final.txt' 2>&1 || true)"
+require_in_output "$copy_rename_file_gap_output" "copiei o arquivo 'teste.txt' para 'copia.txt'" "copiar->renomear de arquivo no fluxo real precisa continuar materializando a cópia intermediária"
+require_in_output "$copy_rename_file_gap_output" "renomeei o arquivo 'copia.txt' para 'final.txt'" "copiar->renomear de arquivo no fluxo real precisa continuar materializando o nome final"
+require_in_output "$copy_rename_file_gap_output" "trecho original:               copie o arquivo teste.txt para copia.txt" "o diagnóstico precisa preservar a primeira ação curta de copiar arquivo"
+require_in_output "$copy_rename_file_gap_output" "trecho original:               renomeie ele para final.txt" "o diagnóstico precisa preservar a segunda ação anafórica de renomear arquivo"
+require_in_output "$copy_rename_file_gap_output" "intenção:                      copiar" "a primeira ação de copiar->renomear em aury dev precisa fechar a cópia de arquivo"
+require_in_output "$copy_rename_file_gap_output" "origem:                        teste.txt" "a primeira ação de copiar->renomear em aury dev precisa preservar a origem do arquivo"
+require_in_output "$copy_rename_file_gap_output" "destino:                       copia.txt" "a primeira ação de copiar->renomear em aury dev precisa expor o destino intermediário"
+require_in_output "$copy_rename_file_gap_output" "intenção:                      renomear" "a segunda ação de copiar->renomear em aury dev precisa fechar a renomeação"
+require_in_output "$copy_rename_file_gap_output" "referência local:              copia.txt" "a segunda ação de copiar->renomear em aury dev precisa reaproveitar a referência local intermediária"
+require_in_output "$copy_rename_file_gap_output" "destino:                       final.txt" "a segunda ação de copiar->renomear em aury dev precisa expor o destino final"
+require_in_output "$copy_rename_file_gap_output" "novo nome:                     final.txt" "a segunda ação de copiar->renomear em aury dev precisa expor o novo nome solicitado"
+require_in_output "$copy_rename_file_gap_output" "estado:                        CONSISTENTE" "a divergência de copiar->renomear arquivo em aury dev precisa ser fechada"
+require_in_output "$copy_rename_file_gap_output" "Renomear 'copia.txt' para 'final.txt'." "a segunda ação de copiar->renomear em aury dev precisa resumir o alvo final coerente"
+require_in_output "$copy_rename_file_gap_output" "referência local 'ele' resolvida com segurança como 'copia.txt'" "a segunda ação de copiar->renomear em aury dev precisa explicitar a anáfora resolvida"
+
+if [[ ! -f "$copy_rename_file_gap_tmp/final.txt" || -f "$copy_rename_file_gap_tmp/copia.txt" || ! -f "$copy_rename_file_gap_tmp/teste.txt" ]]; then
+    fail "copiar->renomear de arquivo precisa materializar só o arquivo final preservando a origem copiada"
+fi
+
+move_rename_file_gap_tmp="$(mktemp -d /tmp/aury-public-ux-XXXXXX)"
+tmpdirs+=("$move_rename_file_gap_tmp")
+mkdir -p "$move_rename_file_gap_tmp/pasta2"
+printf 'x\n' > "$move_rename_file_gap_tmp/teste.txt"
+
+move_rename_file_gap_output="$(ROOT="$ROOT" TMP="$move_rename_file_gap_tmp" fish -c 'source $ROOT/bin/aury.fish; cd $TMP; aury mova o arquivo teste.txt para pasta2/final.txt e renomeie ele para ultimo.txt; echo ---DEV---; aury dev mova o arquivo teste.txt para pasta2/final.txt e renomeie ele para ultimo.txt' 2>&1 || true)"
+require_in_output "$move_rename_file_gap_output" "movi o arquivo 'teste.txt' para 'pasta2/final.txt'" "mover->renomear de arquivo no fluxo real precisa continuar materializando o destino intermediário"
+require_in_output "$move_rename_file_gap_output" "renomeei o arquivo 'pasta2/final.txt' para 'pasta2/ultimo.txt'" "mover->renomear de arquivo no fluxo real precisa continuar materializando o nome final"
+require_in_output "$move_rename_file_gap_output" "trecho original:               mova o arquivo teste.txt para pasta2/final.txt" "o diagnóstico precisa preservar a primeira ação curta de mover arquivo"
+require_in_output "$move_rename_file_gap_output" "trecho original:               renomeie ele para ultimo.txt" "o diagnóstico precisa preservar a segunda ação anafórica de renomear após mover"
+require_in_output "$move_rename_file_gap_output" "intenção:                      mover" "a primeira ação de mover->renomear em aury dev precisa fechar o mover de arquivo"
+require_in_output "$move_rename_file_gap_output" "origem:                        teste.txt" "a primeira ação de mover->renomear em aury dev precisa preservar a origem do arquivo"
+require_in_output "$move_rename_file_gap_output" "destino:                       pasta2/final.txt" "a primeira ação de mover->renomear em aury dev precisa expor o destino intermediário"
+require_in_output "$move_rename_file_gap_output" "intenção:                      renomear" "a segunda ação de mover->renomear em aury dev precisa fechar a renomeação"
+require_in_output "$move_rename_file_gap_output" "referência local:              pasta2/final.txt" "a segunda ação de mover->renomear em aury dev precisa reaproveitar a referência local do mover"
+require_in_output "$move_rename_file_gap_output" "destino:                       pasta2/ultimo.txt" "a segunda ação de mover->renomear em aury dev precisa expor o destino final"
+require_in_output "$move_rename_file_gap_output" "novo nome:                     ultimo.txt" "a segunda ação de mover->renomear em aury dev precisa expor o novo nome solicitado"
+require_in_output "$move_rename_file_gap_output" "estado:                        CONSISTENTE" "a divergência de mover->renomear arquivo em aury dev precisa ser fechada"
+require_in_output "$move_rename_file_gap_output" "Renomear 'pasta2/final.txt' para 'pasta2/ultimo.txt'." "a segunda ação de mover->renomear em aury dev precisa resumir o alvo final coerente"
+require_in_output "$move_rename_file_gap_output" "referência local 'ele' resolvida com segurança como 'pasta2/final.txt'" "a segunda ação de mover->renomear em aury dev precisa explicitar a anáfora resolvida"
+
+if [[ ! -f "$move_rename_file_gap_tmp/pasta2/ultimo.txt" || -f "$move_rename_file_gap_tmp/pasta2/final.txt" || -f "$move_rename_file_gap_tmp/teste.txt" ]]; then
+    fail "mover->renomear de arquivo precisa materializar só o arquivo final no destino movido"
+fi
+
+rename_gap_tmp="$(mktemp -d /tmp/aury-public-ux-XXXXXX)"
+tmpdirs+=("$rename_gap_tmp")
+mkdir -p "$rename_gap_tmp/Downloads"
+printf 'x\n' > "$rename_gap_tmp/Downloads/teste.txt"
+
+rename_gap_output="$(ROOT="$ROOT" TMP="$rename_gap_tmp" fish -c 'source $ROOT/bin/aury.fish; cd $TMP; aury renomeie o arquivo teste.txt que fica em Downloads para teste-final.txt; echo ---DEV---; aury dev renomeie o arquivo teste.txt que fica em Downloads para teste-final.txt' 2>&1 || true)"
+require_in_output "$rename_gap_output" "renomeei o arquivo 'Downloads/teste.txt' para 'Downloads/teste-final.txt'" "renomeação localizada no fluxo real precisa continuar materializando o alvo final"
+require_in_output "$rename_gap_output" "trecho original:               renomeie o arquivo teste.txt que fica em Downloads para teste-final.txt" "o diagnóstico precisa expor a frase conversacional completa da renomeação localizada"
+require_in_output "$rename_gap_output" "intenção:                      renomear" "a renomeação localizada em aury dev precisa fechar a intenção correta"
+require_in_output "$rename_gap_output" "tipo:                          arquivo" "a renomeação localizada em aury dev precisa preservar o tipo de arquivo"
+require_in_output "$rename_gap_output" "alvo principal:                Downloads/teste.txt" "a renomeação localizada em aury dev precisa recompor a origem localizada"
+require_in_output "$rename_gap_output" "origem:                        Downloads/teste.txt" "a renomeação localizada em aury dev precisa expor a origem recomposta"
+require_in_output "$rename_gap_output" "destino:                       Downloads/teste-final.txt" "a renomeação localizada em aury dev precisa expor o destino final recomposto"
+require_in_output "$rename_gap_output" "novo nome:                     teste-final.txt" "a renomeação localizada em aury dev precisa expor o novo nome solicitado"
+require_in_output "$rename_gap_output" "estado:                        CONSISTENTE" "a divergência da renomeação localizada em aury dev precisa ser fechada"
+require_in_output "$rename_gap_output" "Renomear 'Downloads/teste.txt' para 'Downloads/teste-final.txt'." "a renomeação localizada em aury dev precisa resumir o alvo final coerente"
+require_in_output "$rename_gap_output" "localização conversacional usada para recompor a base 'Downloads'" "a renomeação localizada em aury dev precisa manter a observabilidade da base recomposta"
+
+if [[ ! -f "$rename_gap_tmp/Downloads/teste-final.txt" || -f "$rename_gap_tmp/Downloads/teste.txt" ]]; then
+    fail "renomeação localizada precisa deixar apenas o arquivo final esperado dentro de Downloads"
+fi
+
+sentence_chain_gap_tmp="$(mktemp -d /tmp/aury-public-ux-XXXXXX)"
+tmpdirs+=("$sentence_chain_gap_tmp")
+mkdir -p "$sentence_chain_gap_tmp/Aury" "$sentence_chain_gap_tmp/Downloads" "$sentence_chain_gap_tmp/Backup"
+printf 'x\n' > "$sentence_chain_gap_tmp/Aury/item.txt"
+
+sentence_chain_gap_output="$(ROOT="$ROOT" TMP="$sentence_chain_gap_tmp" fish -c 'source $ROOT/bin/aury.fish; cd $TMP; aury copie a pasta Aury para Downloads. Depois mova ela para Backup.; echo ---DEV---; aury dev copie a pasta Aury para Downloads. Depois mova ela para Backup.' 2>&1 || true)"
+require_in_output "$sentence_chain_gap_output" "copiei a pasta 'Aury' para 'Downloads/Aury'" "encadeamento entre frases precisa continuar copiando a pasta no fluxo real"
+require_in_output "$sentence_chain_gap_output" "movi a pasta 'Downloads/Aury' para 'Backup/Aury'" "encadeamento entre frases precisa continuar reutilizando a referência local no fluxo real"
+require_in_output "$sentence_chain_gap_output" "trecho original:               copie a pasta Aury para Downloads." "o diagnóstico precisa preservar a primeira frase do encadeamento entre frases"
+require_in_output "$sentence_chain_gap_output" "trecho original:               mova ela para Backup." "o diagnóstico precisa preservar a segunda frase do encadeamento entre frases"
+require_in_output "$sentence_chain_gap_output" "Ação 1" "o encadeamento entre frases em aury dev precisa continuar em duas ações separadas"
+require_in_output "$sentence_chain_gap_output" "Ação 2" "o encadeamento entre frases em aury dev precisa continuar em duas ações separadas"
+require_in_output "$sentence_chain_gap_output" "intenção:                      copiar" "a primeira ação do encadeamento entre frases em aury dev precisa permanecer como cópia"
+require_in_output "$sentence_chain_gap_output" "origem:                        Aury" "a primeira ação do encadeamento entre frases em aury dev precisa preservar a origem local"
+require_in_output "$sentence_chain_gap_output" "destino:                       Downloads/Aury" "a primeira ação do encadeamento entre frases em aury dev precisa recompor o destino intermediário"
+require_in_output "$sentence_chain_gap_output" "intenção:                      mover" "a segunda ação do encadeamento entre frases em aury dev precisa permanecer como mover"
+require_in_output "$sentence_chain_gap_output" "referência local:              Downloads/Aury" "a segunda ação do encadeamento entre frases em aury dev precisa herdar a referência local intermediária"
+require_in_output "$sentence_chain_gap_output" "origem:                        Downloads/Aury" "a segunda ação do encadeamento entre frases em aury dev precisa expor a origem herdada"
+require_in_output "$sentence_chain_gap_output" "destino:                       Backup/Aury" "a segunda ação do encadeamento entre frases em aury dev precisa recompor o destino final"
+require_in_output "$sentence_chain_gap_output" "estado:                        CONSISTENTE" "a divergência do encadeamento entre frases em aury dev precisa ser fechada"
+require_in_output "$sentence_chain_gap_output" "Mover 'Downloads/Aury' para 'Backup/Aury'." "a segunda ação do encadeamento entre frases em aury dev precisa resumir o movimento final"
+require_in_output "$sentence_chain_gap_output" "referência local 'ela' resolvida com segurança como 'Downloads/Aury'" "a segunda ação do encadeamento entre frases em aury dev precisa explicitar a anáfora resolvida"
+
+if [[ ! -d "$sentence_chain_gap_tmp/Backup/Aury" || ! -f "$sentence_chain_gap_tmp/Backup/Aury/item.txt" || -d "$sentence_chain_gap_tmp/Downloads/Aury" || ! -f "$sentence_chain_gap_tmp/Aury/item.txt" ]]; then
+    fail "encadeamento entre frases precisa materializar a pasta final em Backup sem apagar a origem copiada"
+fi
+
 remove_policy_tmp="$(mktemp -d /tmp/aury-public-ux-XXXXXX)"
 tmpdirs+=("$remove_policy_tmp")
 mkdir -p "$remove_policy_tmp/bin"

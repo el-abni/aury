@@ -138,6 +138,14 @@ def _join_tokens(tokens: list[str]) -> str:
     return " ".join(tokens).strip()
 
 
+def _semantic_token(token: str) -> str:
+    return token.rstrip(",.;:!?")
+
+
+def _semantic_original_tokens(tokens: list[str]) -> list[str]:
+    return [_semantic_token(token) for token in tokens]
+
+
 def _normalized_intent_token(token: str) -> str:
     if token in {"criar", "crie"}:
         return "criar"
@@ -228,6 +236,12 @@ def _resolve_rename_target(source: str, requested_newname: str) -> str:
         return requested_newname
     rename_base = _parent_directory_or_empty(source)
     return _join_base_and_name(rename_base, requested_newname)
+
+
+def _effective_transfer_destination(source_type: str, source: str, requested_destination: str) -> str:
+    if source_type != "pasta":
+        return requested_destination
+    return _join_base_and_name(requested_destination, _basename(source))
 
 
 def _detect_archive_type(path: str) -> str:
@@ -658,6 +672,33 @@ def _resolved_copy_followup_local_reference(previous_analysis: Analysis, token: 
     return reference_path, reference_type
 
 
+def _resolved_move_or_copy_followup_local_reference(previous_analysis: Analysis, token: str) -> tuple[str, str] | None:
+    resolved_reference = _resolved_copy_followup_local_reference(previous_analysis, token)
+    if resolved_reference is not None:
+        return resolved_reference
+
+    if previous_analysis.intent != "mover":
+        return None
+    if previous_analysis.domain != "arquivo":
+        return None
+    if previous_analysis.status != "CONSISTENTE":
+        return None
+
+    reference_path = previous_analysis.entities.get("destino") or previous_analysis.entities.get("alvo_principal", "")
+    reference_type = previous_analysis.entities.get("tipo", "")
+    if not reference_path or not reference_type:
+        return None
+    if reference_type == "arquivo" and not _is_probably_filename(reference_path):
+        return None
+
+    if token == "ele" and reference_type != "arquivo":
+        return None
+    if token == "ela" and reference_type != "pasta":
+        return None
+
+    return reference_path, reference_type
+
+
 def _previous_analysis_context(previous_analysis: Analysis) -> str:
     items = [
         f"intenção '{previous_analysis.intent}'",
@@ -795,12 +836,20 @@ def _match_basic_file_action(action: PreparedAction) -> Analysis | None:
     if len(normalized_tokens) < 3:
         return None
 
-    if first_token in {"copiar", "mover"} and second_token == "arquivo":
+    explicit_type = _explicit_file_type(normalized_tokens)
+    if first_token in {"copiar", "mover"} and explicit_type is not None:
+        target_type, type_idx = explicit_type
+        if target_type != "arquivo":
+            return None
+        target_start = type_idx + 1
         try:
-            connector_idx = normalized_tokens.index("para", 2)
+            connector_idx = normalized_tokens.index("para", target_start)
         except ValueError:
             return None
-        source = _join_tokens(original_tokens[2:connector_idx])
+        source_slice = normalized_tokens[target_start:connector_idx]
+        if not source_slice or _conversational_location_bounds(source_slice) is not None:
+            return None
+        source = _join_tokens(original_tokens[target_start:connector_idx])
         destination = _join_tokens(original_tokens[connector_idx + 1 :])
         if not source or not destination:
             return None
@@ -822,12 +871,19 @@ def _match_basic_file_action(action: PreparedAction) -> Analysis | None:
             observations=["execução normal atual continua no adaptador Fish"],
         )
 
-    if first_token == "renomear" and second_token == "arquivo":
+    if first_token == "renomear" and explicit_type is not None:
+        target_type, type_idx = explicit_type
+        if target_type != "arquivo":
+            return None
+        target_start = type_idx + 1
         try:
-            connector_idx = normalized_tokens.index("para", 2)
+            connector_idx = normalized_tokens.index("para", target_start)
         except ValueError:
             return None
-        source = _join_tokens(original_tokens[2:connector_idx])
+        source_slice = normalized_tokens[target_start:connector_idx]
+        if not source_slice or _conversational_location_bounds(source_slice) is not None:
+            return None
+        source = _join_tokens(original_tokens[target_start:connector_idx])
         requested_newname = _join_tokens(original_tokens[connector_idx + 1 :])
         if not source or not requested_newname:
             return None
@@ -932,6 +988,7 @@ def _match_basic_file_action(action: PreparedAction) -> Analysis | None:
 def _match_located_copy_action(action: PreparedAction) -> Analysis | None:
     normalized_tokens = action.normalized_tokens
     original_tokens = action.original_tokens
+    semantic_original_tokens = _semantic_original_tokens(original_tokens)
 
     if len(normalized_tokens) < 6:
         return None
@@ -952,7 +1009,7 @@ def _match_located_copy_action(action: PreparedAction) -> Analysis | None:
         return None
 
     located_source = _resolve_located_target(
-        original_tokens[:connector_idx],
+        semantic_original_tokens[:connector_idx],
         normalized_tokens[:connector_idx],
         start=target_start,
     )
@@ -960,13 +1017,11 @@ def _match_located_copy_action(action: PreparedAction) -> Analysis | None:
         return None
 
     source, source_base = located_source
-    requested_destination = _join_tokens(original_tokens[connector_idx + 1 :])
+    requested_destination = _join_tokens(semantic_original_tokens[connector_idx + 1 :])
     if not requested_destination:
         return None
 
-    effective_destination = requested_destination
-    if target_type == "pasta":
-        effective_destination = _join_base_and_name(requested_destination, _basename(source))
+    effective_destination = _effective_transfer_destination(target_type, source, requested_destination)
 
     return _analysis(
         action,
@@ -983,6 +1038,63 @@ def _match_located_copy_action(action: PreparedAction) -> Analysis | None:
         },
         observations=[
             f"localização conversacional usada para recompor a base '{source_base}'",
+            f"destino efetivo recomposto como '{effective_destination}' para continuidade local",
+            "execução normal atual continua no adaptador Fish",
+        ],
+    )
+
+
+def _match_folder_transfer_action(action: PreparedAction) -> Analysis | None:
+    normalized_tokens = action.normalized_tokens
+    original_tokens = action.original_tokens
+    semantic_original_tokens = _semantic_original_tokens(original_tokens)
+
+    if len(normalized_tokens) < 5:
+        return None
+
+    first_token = _normalized_intent_token(normalized_tokens[0])
+    if first_token not in {"copiar", "mover"}:
+        return None
+
+    explicit_type = _explicit_file_type(normalized_tokens)
+    if explicit_type is None:
+        return None
+    target_type, type_idx = explicit_type
+    if target_type != "pasta":
+        return None
+
+    target_start = type_idx + 1
+    try:
+        connector_idx = normalized_tokens.index("para", target_start)
+    except ValueError:
+        return None
+
+    source_slice = normalized_tokens[target_start:connector_idx]
+    if not source_slice or _conversational_location_bounds(source_slice) is not None:
+        return None
+
+    source = _join_tokens(semantic_original_tokens[target_start:connector_idx])
+    requested_destination = _join_tokens(semantic_original_tokens[connector_idx + 1 :])
+    if not source or not requested_destination:
+        return None
+
+    effective_destination = _effective_transfer_destination(target_type, source, requested_destination)
+    summary_verb = "Copiar" if first_token == "copiar" else "Mover"
+    reason = "pedido básico de cópia de pasta reconhecido." if first_token == "copiar" else "pedido básico de mover pasta reconhecido."
+    return _analysis(
+        action,
+        intent=first_token,
+        domain="arquivo",
+        status="CONSISTENTE",
+        reason=reason,
+        summary=f"{summary_verb} '{source}' para '{effective_destination}'.",
+        entities={
+            "tipo": target_type,
+            "alvo_principal": source,
+            "origem": source,
+            "destino": effective_destination,
+        },
+        observations=[
             f"destino efetivo recomposto como '{effective_destination}' para continuidade local",
             "execução normal atual continua no adaptador Fish",
         ],
@@ -1074,16 +1186,18 @@ def _match_rename_followup_with_local_reference(
     except ValueError:
         return None
 
-    requested_newname = _join_tokens(action.original_tokens[connector_idx + 1 :])
+    semantic_original_tokens = _semantic_original_tokens(action.original_tokens)
+    requested_newname = _join_tokens(semantic_original_tokens[connector_idx + 1 :])
     if not requested_newname:
         return None
 
-    resolved_reference = _resolved_copy_followup_local_reference(previous_analysis, local_reference_token)
+    resolved_reference = _resolved_move_or_copy_followup_local_reference(previous_analysis, local_reference_token)
     if resolved_reference is None:
         return None
 
     reference_path, reference_type = resolved_reference
     final_target = _resolve_rename_target(reference_path, requested_newname)
+    antecedent_phrase = "da cópia anterior" if previous_analysis.intent == "copiar" else "da ação anterior de mover"
     return _analysis(
         action,
         intent="renomear",
@@ -1091,7 +1205,7 @@ def _match_rename_followup_with_local_reference(
         status="CONSISTENTE",
         reason=(
             f"a referência local '{local_reference_token}' foi resolvida com segurança "
-            f"a partir do resultado da cópia anterior como '{reference_path}'."
+            f"a partir do resultado {antecedent_phrase} como '{reference_path}'."
         ),
         summary=f"Renomear '{reference_path}' para '{final_target}'.",
         entities={
@@ -1104,7 +1218,124 @@ def _match_rename_followup_with_local_reference(
         },
         observations=[
             f"referência local '{local_reference_token}' resolvida com segurança como '{reference_path}'",
+            "resultado da ação anterior permaneceu específico o bastante para continuidade local",
+            "execução normal atual continua no adaptador Fish",
+        ],
+    )
+
+
+def _match_move_followup_with_local_reference(
+    action: PreparedAction,
+    previous_analysis: Analysis | None,
+) -> Analysis | None:
+    if previous_analysis is None:
+        return None
+    if len(action.normalized_tokens) < 4:
+        return None
+
+    first_token = _normalized_intent_token(action.normalized_tokens[0])
+    if first_token != "mover":
+        return None
+
+    local_reference_token = action.normalized_tokens[1]
+    if not _is_local_reference_token(local_reference_token):
+        return None
+
+    try:
+        connector_idx = action.normalized_tokens.index("para", 2)
+    except ValueError:
+        return None
+
+    semantic_original_tokens = _semantic_original_tokens(action.original_tokens)
+    requested_destination = _join_tokens(semantic_original_tokens[connector_idx + 1 :])
+    if not requested_destination:
+        return None
+
+    resolved_reference = _resolved_copy_followup_local_reference(previous_analysis, local_reference_token)
+    if resolved_reference is None:
+        return None
+
+    reference_path, reference_type = resolved_reference
+    effective_destination = _effective_transfer_destination(reference_type, reference_path, requested_destination)
+    return _analysis(
+        action,
+        intent="mover",
+        domain="arquivo",
+        status="CONSISTENTE",
+        reason=(
+            f"a referência local '{local_reference_token}' foi resolvida com segurança "
+            f"a partir do resultado da cópia anterior como '{reference_path}'."
+        ),
+        summary=f"Mover '{reference_path}' para '{effective_destination}'.",
+        entities={
+            "tipo": reference_type,
+            "alvo_principal": reference_path,
+            "origem": reference_path,
+            "destino": effective_destination,
+            "referencia_local": reference_path,
+        },
+        observations=[
+            f"referência local '{local_reference_token}' resolvida com segurança como '{reference_path}'",
+            f"destino efetivo recomposto como '{effective_destination}' para continuidade local",
             "resultado da cópia anterior permaneceu específico o bastante para continuidade local",
+            "execução normal atual continua no adaptador Fish",
+        ],
+    )
+
+
+def _match_located_rename_action(action: PreparedAction) -> Analysis | None:
+    normalized_tokens = action.normalized_tokens
+    original_tokens = action.original_tokens
+    semantic_original_tokens = _semantic_original_tokens(original_tokens)
+
+    if len(normalized_tokens) < 6:
+        return None
+
+    first_token = _normalized_intent_token(normalized_tokens[0])
+    if first_token != "renomear":
+        return None
+
+    explicit_type = _explicit_file_type(normalized_tokens)
+    if explicit_type is None:
+        return None
+    target_type, type_idx = explicit_type
+
+    target_start = type_idx + 1
+    try:
+        connector_idx = normalized_tokens.index("para", target_start)
+    except ValueError:
+        return None
+
+    located_source = _resolve_located_target(
+        semantic_original_tokens[:connector_idx],
+        normalized_tokens[:connector_idx],
+        start=target_start,
+    )
+    if located_source is None:
+        return None
+
+    source, source_base = located_source
+    requested_newname = _join_tokens(semantic_original_tokens[connector_idx + 1 :])
+    if not requested_newname:
+        return None
+
+    final_target = _resolve_rename_target(source, requested_newname)
+    return _analysis(
+        action,
+        intent="renomear",
+        domain="arquivo",
+        status="CONSISTENTE",
+        reason=f"pedido de renomear {target_type} com localização conversacional reconhecido.",
+        summary=f"Renomear '{source}' para '{final_target}'.",
+        entities={
+            "tipo": target_type,
+            "alvo_principal": source,
+            "origem": source,
+            "destino": final_target,
+            "novo_nome": requested_newname,
+        },
+        observations=[
+            f"localização conversacional usada para recompor a base '{source_base}'",
             "execução normal atual continua no adaptador Fish",
         ],
     )
@@ -1175,6 +1406,14 @@ def analyze_prepared_action(action: PreparedAction) -> Analysis:
     located_copy_action = _match_located_copy_action(action)
     if located_copy_action is not None:
         return located_copy_action
+
+    folder_transfer_action = _match_folder_transfer_action(action)
+    if folder_transfer_action is not None:
+        return folder_transfer_action
+
+    located_rename_action = _match_located_rename_action(action)
+    if located_rename_action is not None:
+        return located_rename_action
 
     extract_action = _match_extract_action(action)
     if extract_action is not None:
@@ -1345,10 +1584,11 @@ def analyze_prepared_actions(actions: list[PreparedAction]) -> list[Analysis]:
     analyses: list[Analysis] = []
     previous_analysis: Analysis | None = None
     for action in actions:
+        move_followup = _match_move_followup_with_local_reference(action, previous_analysis)
         rename_followup = _match_rename_followup_with_local_reference(action, previous_analysis)
         followup = _match_destructive_followup_with_local_reference(action, previous_analysis)
         isolated = _match_isolated_destructive_local_reference(action) if previous_analysis is None else None
-        analysis = rename_followup or followup or isolated or analyze_prepared_action(action)
+        analysis = move_followup or rename_followup or followup or isolated or analyze_prepared_action(action)
         analyses.append(analysis)
         previous_analysis = analysis
     return analyses
