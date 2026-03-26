@@ -236,7 +236,6 @@ aury dev copiar arquivo teste.txt para backup.txt
 ---
 
 ## Estado público da v1.9.5
->>>>>>> f82c636 (fronteira de hosts imutaveis da Aury v1.9.5)
 
 - a v1.8.0 fechou a etapa de congelamento semântico e endurecimento incremental sem reabrir expansão estrutural
 - a v1.9.0 fechou a base híbrida pública contida; a v1.9.1 abriu a primeira release pública de compatibilidade Linux; a v1.9.2 fechou o hardening representacional curto de `aury dev`; a v1.9.3 abriu OpenSUSE mutável no pacote do host; a v1.9.4 consolidou esse domínio; a v1.9.5 endurece a fronteira de compatibilidade dos hosts imutáveis
