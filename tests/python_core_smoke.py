@@ -14,7 +14,12 @@ sys.path.insert(0, str(ROOT / "python"))
 
 from aury.analyzer import prepare_analyses, prepare_analysis
 from aury.contracts import ActionExecutionPlan, SupportedRuntimeRoute
-from aury.host import build_package_execution_plan, detect_host_profile, resolve_package_action_policy
+from aury.host import (
+    build_package_execution_plan,
+    detect_host_profile,
+    resolve_host_maintenance_action_policy,
+    resolve_package_action_policy,
+)
 from aury.pipeline import prepare_text
 from aury.runtime import plan_action_execution, plan_sequence_execution
 from aury.sensitive_tokens import protect_sensitive_tokens, restore_sensitive_tokens
@@ -226,6 +231,86 @@ def test_dev_package_opensuse_remove_alignment() -> None:
         assert_in(proc.stdout, "rota suportada:                package_remove")
         assert_in(proc.stdout, "backend necessário:            sudo + zypper")
         assert_in(proc.stdout, "decisão:                       executar no Python")
+
+
+def test_dev_host_maintenance_arch_update_alignment() -> None:
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        bin_dir = root / "bin"
+        bin_dir.mkdir(parents=True, exist_ok=True)
+        write_stub(bin_dir, "pacman", "#!/usr/bin/env bash\nexit 0\n")
+        write_stub(bin_dir, "paru", "#!/usr/bin/env bash\nexit 0\n")
+        os_release = write_os_release(root, distro_id="cachyos", distro_like="arch", name="CachyOS")
+        env = {"PATH": f"{bin_dir}:{os.environ['PATH']}", "AURY_OS_RELEASE_PATH": str(os_release)}
+        proc = run("dev", "atualizar", "sistema", env=env)
+        assert proc.returncode == 0
+        assert_in(proc.stdout, "Perfil do host")
+        assert_in(proc.stdout, "família linux:                 arch")
+        assert_in(proc.stdout, "intenção:                      atualizar")
+        assert_in(proc.stdout, "domínio:                       sistema")
+        assert_in(proc.stdout, "alvo principal:                host local")
+        assert_in(proc.stdout, "resumo:                        Manutenção do host: atualizar o host local.")
+        assert_in(proc.stdout, "classificação:                 manutenção local do host")
+        assert_in(proc.stdout, "compatibilidade:               manutenção local do host")
+        assert_in(proc.stdout, "rota suportada:                maintenance_local_atualizar")
+        assert_in(proc.stdout, "backend necessário:            paru + pacman")
+        assert_in(proc.stdout, "decisão:                       voltar ao Fish")
+        assert_in(proc.stdout, "sem equivalência prometida entre famílias Linux")
+
+
+def test_dev_host_maintenance_arch_optimize_alignment() -> None:
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        bin_dir = root / "bin"
+        bin_dir.mkdir(parents=True, exist_ok=True)
+        write_stub(bin_dir, "pacman", "#!/usr/bin/env bash\nexit 0\n")
+        os_release = write_os_release(root, distro_id="cachyos", distro_like="arch", name="CachyOS")
+        env = {"PATH": f"{bin_dir}:{os.environ['PATH']}", "AURY_OS_RELEASE_PATH": str(os_release)}
+        proc = run("dev", "otimizar", "sistema", env=env)
+        assert proc.returncode == 0
+        assert_in(proc.stdout, "intenção:                      otimizar")
+        assert_in(proc.stdout, "domínio:                       sistema")
+        assert_in(proc.stdout, "resumo:                        Manutenção do host: otimizar o host local.")
+        assert_in(proc.stdout, "classificação:                 manutenção local do host")
+        assert_in(proc.stdout, "compatibilidade:               manutenção local do host")
+        assert_in(proc.stdout, "rota suportada:                maintenance_local_otimizar")
+        assert_in(proc.stdout, "backend necessário:            paccache + journalctl + pacman")
+        assert_in(proc.stdout, "decisão:                       voltar ao Fish")
+
+
+def test_dev_host_maintenance_debian_out_of_scope_alignment() -> None:
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        os_release = write_os_release(root, distro_id="ubuntu", distro_like="debian", name="Ubuntu")
+        env = {"PATH": "", "AURY_OS_RELEASE_PATH": str(os_release)}
+        proc = run("dev", "atualizar", "sistema", env=env)
+        assert proc.returncode == 0
+        assert_in(proc.stdout, "Perfil do host")
+        assert_in(proc.stdout, "família linux:                 debian")
+        assert_in(proc.stdout, "classificação:                 bloqueio honesto agora")
+        assert_in(proc.stdout, "compatibilidade:               fora do recorte")
+        assert_in(proc.stdout, "rota suportada:                host_maintenance_policy_gate")
+        assert_in(proc.stdout, "backend necessário:            -")
+        assert_in(proc.stdout, "decisão:                       executar no Python")
+        assert_in(proc.stdout, "não tem equivalência prometida")
+
+
+def test_dev_host_maintenance_atomic_block_alignment() -> None:
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        os_release = write_os_release(root, distro_id="bluefin", distro_like="fedora", name="Bluefin")
+        env = {"PATH": "", "AURY_OS_RELEASE_PATH": str(os_release)}
+        proc = run("dev", "otimizar", "sistema", env=env)
+        assert proc.returncode == 0
+        assert_in(proc.stdout, "Perfil do host")
+        assert_in(proc.stdout, "família linux:                 fedora")
+        assert_in(proc.stdout, "mutabilidade:                  Atomic")
+        assert_in(proc.stdout, "classificação:                 bloqueio honesto agora")
+        assert_in(proc.stdout, "compatibilidade:               bloqueado por política")
+        assert_in(proc.stdout, "rota suportada:                host_maintenance_policy_gate")
+        assert_in(proc.stdout, "backend necessário:            -")
+        assert_in(proc.stdout, "decisão:                       executar no Python")
+        assert_in(proc.stdout, "bloqueado por política")
 
 
 def test_dev_ping_host_alignment() -> None:
@@ -2535,6 +2620,133 @@ def test_package_policy_matrix_mutable_hosts() -> None:
                             raise AssertionError(f"motivo inesperado no OpenSUSE/{intent}: {policy.reason!r}")
                     elif "recorte contido" in policy.reason:
                         raise AssertionError(f"tier 1 não pode parecer contido em {family}/{intent}: {policy.reason!r}")
+
+
+def test_host_maintenance_policy_matrix() -> None:
+    cases = (
+        (
+            "arch",
+            {"distro_id": "cachyos", "distro_like": "arch", "name": "CachyOS"},
+            {
+                "status": "FUTURE_MIGRATION_CANDIDATE",
+                "compatibility": "manutenção local do host",
+                "update_backend": "paru + pacman",
+                "optimize_backend": "paccache + journalctl + pacman",
+            },
+        ),
+        (
+            "debian",
+            {"distro_id": "ubuntu", "distro_like": "debian", "name": "Ubuntu"},
+            {
+                "status": "SUPPORTED_WITH_POLICY_BLOCK",
+                "compatibility": "fora do recorte",
+            },
+        ),
+        (
+            "fedora",
+            {"distro_id": "fedora", "distro_like": "fedora", "name": "Fedora Linux"},
+            {
+                "status": "SUPPORTED_WITH_POLICY_BLOCK",
+                "compatibility": "fora do recorte",
+            },
+        ),
+        (
+            "opensuse",
+            {"distro_id": "opensuse-tumbleweed", "distro_like": "opensuse suse", "name": "openSUSE Tumbleweed"},
+            {
+                "status": "SUPPORTED_WITH_POLICY_BLOCK",
+                "compatibility": "fora do recorte",
+            },
+        ),
+        (
+            "atomic",
+            {"distro_id": "bazzite", "distro_like": "fedora", "name": "Bazzite"},
+            {
+                "status": "SUPPORTED_WITH_POLICY_BLOCK",
+                "compatibility": "bloqueado por política",
+            },
+        ),
+    )
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        bin_dir = root / "bin"
+        bin_dir.mkdir(parents=True, exist_ok=True)
+        write_stub(bin_dir, "pacman", "#!/usr/bin/env bash\nexit 0\n")
+        write_stub(bin_dir, "paru", "#!/usr/bin/env bash\nexit 0\n")
+        for family, os_release_kwargs, expected in cases:
+            os_release = write_os_release(root, **os_release_kwargs)
+            with temporary_env({"PATH": str(bin_dir), "AURY_OS_RELEASE_PATH": str(os_release)}):
+                update_policy = resolve_host_maintenance_action_policy("atualizar")
+                optimize_policy = resolve_host_maintenance_action_policy("otimizar")
+            if update_policy.status != expected["status"]:
+                raise AssertionError(f"classificação inesperada em {family}/atualizar: {update_policy.status!r}")
+            if optimize_policy.status != expected["status"]:
+                raise AssertionError(f"classificação inesperada em {family}/otimizar: {optimize_policy.status!r}")
+            if update_policy.compatibility_frontier_label != expected["compatibility"]:
+                raise AssertionError(f"fronteira inesperada em {family}/atualizar: {update_policy.compatibility_frontier_label!r}")
+            if optimize_policy.compatibility_frontier_label != expected["compatibility"]:
+                raise AssertionError(f"fronteira inesperada em {family}/otimizar: {optimize_policy.compatibility_frontier_label!r}")
+            if family == "arch":
+                if update_policy.backend_label != expected["update_backend"]:
+                    raise AssertionError(f"backend inesperado em {family}/atualizar: {update_policy.backend_label!r}")
+                if optimize_policy.backend_label != expected["optimize_backend"]:
+                    raise AssertionError(f"backend inesperado em {family}/otimizar: {optimize_policy.backend_label!r}")
+                if "manutenção local" not in update_policy.reason:
+                    raise AssertionError(f"motivo inesperado em {family}/atualizar: {update_policy.reason!r}")
+                if update_policy.block_message is not None or optimize_policy.block_message is not None:
+                    raise AssertionError("manutenção local em Arch não deve vir com bloqueio")
+            elif family == "atomic":
+                if update_policy.block_message is None or "bloqueado por política" not in update_policy.block_message:
+                    raise AssertionError(f"mensagem inesperada em {family}/atualizar: {update_policy.block_message!r}")
+                if optimize_policy.block_message is None or "bloqueado por política" not in optimize_policy.block_message:
+                    raise AssertionError(f"mensagem inesperada em {family}/otimizar: {optimize_policy.block_message!r}")
+            else:
+                if update_policy.block_message is None or "fora do recorte equivalente" not in update_policy.block_message:
+                    raise AssertionError(f"mensagem inesperada em {family}/atualizar: {update_policy.block_message!r}")
+                if optimize_policy.block_message is None or "fora do recorte equivalente" not in optimize_policy.block_message:
+                    raise AssertionError(f"mensagem inesperada em {family}/otimizar: {optimize_policy.block_message!r}")
+
+
+def test_run_host_maintenance_arch_returns_to_fish() -> None:
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        bin_dir = root / "bin"
+        bin_dir.mkdir(parents=True, exist_ok=True)
+        write_stub(bin_dir, "pacman", "#!/usr/bin/env bash\nexit 0\n")
+        os_release = write_os_release(root, distro_id="cachyos", distro_like="arch", name="CachyOS")
+        proc = run("atualizar", "sistema", env={"PATH": str(bin_dir), "AURY_OS_RELEASE_PATH": str(os_release)})
+        assert proc.returncode == 120
+        assert not proc.stdout.strip()
+        assert not proc.stderr.strip()
+
+
+def test_run_host_maintenance_debian_out_of_scope() -> None:
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        os_release = write_os_release(root, distro_id="ubuntu", distro_like="debian", name="Ubuntu")
+        proc = run("otimizar", "sistema", env={"PATH": "", "AURY_OS_RELEASE_PATH": str(os_release)})
+        assert proc.returncode == 1
+        assert_in(proc.stdout, "manutenção do host")
+        assert_in(proc.stdout, "fora do recorte equivalente")
+        assert "backend '" not in proc.stdout
+        assert "ferramenta auxiliar" not in proc.stdout
+        assert not proc.stderr.strip()
+
+
+def test_run_host_maintenance_atomic_blocked_by_policy() -> None:
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        bin_dir = root / "bin"
+        bin_dir.mkdir(parents=True, exist_ok=True)
+        write_stub(bin_dir, "dnf", "#!/usr/bin/env bash\nprintf 'DNF_SHOULD_NOT_RUN\\n'\n")
+        os_release = write_os_release(root, distro_id="bazzite", distro_like="fedora", name="Bazzite")
+        proc = run("atualizar", "sistema", env={"PATH": str(bin_dir), "AURY_OS_RELEASE_PATH": str(os_release)})
+        assert proc.returncode == 1
+        assert_in(proc.stdout, "bloqueado por política")
+        assert_in(proc.stdout, "Atomic/imutáveis")
+        assert "DNF_SHOULD_NOT_RUN" not in proc.stdout
+        assert "backend '" not in proc.stdout
+        assert not proc.stderr.strip()
 
 
 def test_dev_destructive_remove_without_safe_antecedent_blocks_local_reference() -> None:

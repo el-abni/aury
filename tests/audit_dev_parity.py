@@ -185,6 +185,73 @@ def main() -> int:
         root = Path(tmp)
         bin_dir = root / "bin"
         bin_dir.mkdir(parents=True, exist_ok=True)
+        write_stub(bin_dir, "paru", "#!/usr/bin/env bash\nprintf 'PARU_UPDATE_STUB %s\\n' \"$*\"\n")
+        write_stub(bin_dir, "pacman", "#!/usr/bin/env bash\nprintf 'PACMAN_UNUSED %s\\n' \"$*\"\n")
+        write_stub(bin_dir, "sudo", "#!/usr/bin/env bash\n\"$@\"\n")
+        write_stub(bin_dir, "journalctl", "#!/usr/bin/env bash\nprintf 'JOURNALCTL_STUB %s\\n' \"$*\"\n")
+        write_stub(bin_dir, "paccache", "#!/usr/bin/env bash\nprintf 'PACCACHE_STUB %s\\n' \"$*\"\n")
+        os_release = write_os_release(root, distro_id="cachyos", distro_like="arch", name="CachyOS")
+        path_env = {"PATH": f"{bin_dir}:{os.environ['PATH']}", "AURY_OS_RELEASE_PATH": str(os_release)}
+
+        route = assert_executor("atualizar sistema", "fish", env=path_env)
+        if route != "-":
+            fail("manutenção local em Arch não deve fingir rota Python suportada")
+        dev_output = run_fish(["dev", "atualizar", "sistema"], env=path_env)
+        if "manutenção local do host" not in dev_output or "compatibilidade:               manutenção local do host" not in dev_output:
+            fail("aury dev precisa enquadrar atualizar sistema como manutenção local do host em Arch")
+        output = run_fish(["atualizar", "sistema"], env=path_env)
+        if "PARU_UPDATE_STUB -Syu" not in output:
+            fail("modo normal não observou a rota local esperada para atualizar sistema em Arch")
+        ok("atualizar sistema permanece local e honestamente enquadrado em Arch")
+
+        assert_executor("otimizar sistema", "fish", env=path_env)
+        dev_output = run_fish(["dev", "otimizar", "sistema"], env=path_env)
+        if "manutenção local do host" not in dev_output or "compatibilidade:               manutenção local do host" not in dev_output:
+            fail("aury dev precisa enquadrar otimizar sistema como manutenção local do host em Arch")
+        output = run_fish(["otimizar", "sistema"], env=path_env)
+        if "PACCACHE_STUB -rk2" not in output or "JOURNALCTL_STUB --vacuum-time=7d" not in output:
+            fail("modo normal não observou a rota local esperada para otimizar sistema em Arch")
+        ok("otimizar sistema permanece local e honestamente enquadrado em Arch")
+
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        os_release = write_os_release(root, distro_id="ubuntu", distro_like="debian", name="Ubuntu")
+        path_env = {"PATH": os.environ["PATH"], "AURY_OS_RELEASE_PATH": str(os_release)}
+
+        route = assert_executor("atualizar sistema", "python", env=path_env)
+        if route != "host_maintenance_policy_gate":
+            fail("manutenção fora do recorte em Debian precisa subir pelo gate honesto do runtime Python")
+        dev_output = run_fish(["dev", "atualizar", "sistema"], env=path_env)
+        if "compatibilidade:               fora do recorte" not in dev_output:
+            fail("aury dev não pode descrever atualizar sistema em Debian como se fosse portátil")
+        output = run_fish_public_error(["atualizar", "sistema"], env=path_env)
+        if "manutenção do host" not in output or "fora do recorte equivalente" not in output:
+            fail("modo normal precisa bloquear atualizar sistema em Debian com leitura honesta de manutenção do host")
+        ok("atualizar sistema sai como fora do recorte em Debian")
+
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        bin_dir = root / "bin"
+        bin_dir.mkdir(parents=True, exist_ok=True)
+        write_stub(bin_dir, "dnf", "#!/usr/bin/env bash\nprintf 'DNF_SHOULD_NOT_RUN %s\\n' \"$*\"\n")
+        os_release = write_os_release(root, distro_id="bazzite", distro_like="fedora", name="Bazzite")
+        path_env = {"PATH": f"{bin_dir}:{os.environ['PATH']}", "AURY_OS_RELEASE_PATH": str(os_release)}
+
+        route = assert_executor("otimizar sistema", "python", env=path_env)
+        if route != "host_maintenance_policy_gate":
+            fail("host Atomic precisa subir pelo gate honesto de manutenção do host")
+        dev_output = run_fish(["dev", "otimizar", "sistema"], env=path_env)
+        if "compatibilidade:               bloqueado por política" not in dev_output:
+            fail("aury dev precisa explicitar bloqueio por política para otimizar sistema em host Atomic")
+        output = run_fish_public_error(["otimizar", "sistema"], env=path_env)
+        if "bloqueado por política" not in output or "DNF_SHOULD_NOT_RUN" in output:
+            fail("modo normal não pode tratar manutenção em host Atomic como backend simplesmente executável")
+        ok("otimizar sistema permanece bloqueado por política em host Atomic")
+
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        bin_dir = root / "bin"
+        bin_dir.mkdir(parents=True, exist_ok=True)
         write_stub(bin_dir, "sudo", "#!/usr/bin/env bash\n\"$@\"\n")
         write_stub(
             bin_dir,

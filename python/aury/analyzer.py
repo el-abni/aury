@@ -151,6 +151,10 @@ def _normalized_intent_token(token: str) -> str:
         return "criar"
     if token in {"procurar", "procure"}:
         return "procurar"
+    if token in {"atualizar", "atualiza", "atualize", "update", "upgrade", "sincronizar", "atualizara"}:
+        return "atualizar"
+    if token in {"otimizar", "otimiza", "otimize", "limpar", "limpa", "melhorar", "acelerar"}:
+        return "otimizar"
     if token in {"remover", "remova", "apagar", "apague", "apaga"}:
         return "remover"
     if token in _COPY_INTENT_TOKENS:
@@ -1443,6 +1447,36 @@ def analyze_prepared_action(action: PreparedAction) -> Analysis:
             summary=f"Instalar '{target}'.",
             entities={"alvo_principal": target},
             observations=["política de pacote agora depende do perfil mínimo do host Linux"],
+        )
+
+    if first_token == "atualizar":
+        return _analysis(
+            action,
+            intent="atualizar",
+            domain="sistema",
+            status="CONSISTENTE",
+            reason="pedido de manutenção do host reconhecido.",
+            summary="Manutenção do host: atualizar o host local.",
+            entities={"alvo_principal": "host local"},
+            observations=[
+                "manutenção do host continua local ao adaptador Fish nesta linha",
+                "não há equivalência multi-distro prometida para esta ação",
+            ],
+        )
+
+    if first_token == "otimizar":
+        return _analysis(
+            action,
+            intent="otimizar",
+            domain="sistema",
+            status="CONSISTENTE",
+            reason="pedido de manutenção do host reconhecido.",
+            summary="Manutenção do host: otimizar o host local.",
+            entities={"alvo_principal": "host local"},
+            observations=[
+                "manutenção do host continua local ao adaptador Fish nesta linha",
+                "não há equivalência multi-distro prometida para esta ação",
+            ],
         )
 
     if "velocidade" in action.normalized_tokens and "internet" in action.normalized_tokens:

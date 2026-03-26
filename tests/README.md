@@ -98,7 +98,7 @@ Hoje ele cobre de forma executável:
 
 ### `audit_public_coherence.py`
 
-Este auditor pequeno verifica o chão público mínimo que a continuidade incremental da v1.9.5 precisa manter coerente:
+Este auditor pequeno verifica o chão público mínimo que a continuidade incremental da v1.9.6 precisa manter coerente:
 
 - `VERSION` preenchida
 - `resources/help.txt` com placeholder de versão e nota honesta sobre `aury dev`
@@ -114,6 +114,7 @@ Este auditor pequeno verifica um recorte de paridade operacional entre:
 - o executor realmente observado no modo normal
 
 O foco é manter auditáveis as rotas já assumidas como Python e as que seguem canonicamente no adaptador Fish.
+Na v1.9.6, isso passa a incluir o enquadramento de `atualizar` / `otimizar` como manutenção do host local, sem paridade portátil com o domínio de pacote.
 
 ### `audit_exit_surfaces.py`
 
@@ -129,6 +130,9 @@ Este auditor pequeno verifica um recorte canônico de status de saída e superf�
 - OpenSUSE mutável com execução real contida de `procurar`, `instalar` e `remover`
 - OpenSUSE mutável com busca sem resultado honesta e distinção entre backend ausente e sonda auxiliar ausente
 - Atomic preservado em bloqueio honesto de pacote do host, distinto de backend ausente e de sonda auxiliar ausente
+- manutenção do host em Arch preservada como rota local no Fish, sem fingir rota Python portátil
+- manutenção do host em Debian saindo como fora do recorte equivalente, e não como backend ausente
+- manutenção do host em Atomic preservada como bloqueio por política
 
 ### `release_gate_minimo.sh`
 

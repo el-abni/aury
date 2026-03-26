@@ -13,7 +13,7 @@ aury procurar steam
 SISTEMA
 aury atualizar sistema
 aury otimizar sistema
-aury atualiza, otimiza e baixa o firefox
+aury atualiza e otimiza
 aury status
 aury mostrar cpu
 aury mostrar o status do sistema
@@ -57,4 +57,5 @@ NOTA
 aury dev <frase> continua como relatório canônico da linha 1.x.
 aury dev sem frase fica como verificação local curta do adaptador Fish, em uso secundário nesta linha.
 procurar, instalar e remover usam contrato de pacote por família/host.
+atualizar e otimizar pertencem à manutenção do host: continuam locais em Arch/derivadas mutáveis, ficam fora do recorte equivalente em Debian/Fedora/OpenSUSE e seguem bloqueados por política em Atomic/imutáveis.
 Suportado agora: Arch, Debian/Ubuntu e Fedora mutável. Suportado contido: OpenSUSE mutável. Bloqueado por política: Atomic, Universal Blue, opensuse-microos, microos e equivalentes.

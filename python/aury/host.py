@@ -31,6 +31,7 @@ _PACKAGE_ROUTES = {
     "instalar": "package_install",
     "remover": "package_remove",
 }
+_HOST_MAINTENANCE_GATE_ROUTE = "host_maintenance_policy_gate"
 
 
 @dataclass(frozen=True)
@@ -112,6 +113,25 @@ class PackageExecutionPlan:
     state_probe_label: str = ""
     state_probe_command: tuple[str, ...] = ()
     state_probe_required_commands: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True)
+class HostMaintenanceActionPolicy:
+    intent: str
+    route: str
+    status: str
+    backend_label: str
+    reason: str
+    host_profile: HostProfile
+    block_message: str | None = None
+
+    @property
+    def compatibility_frontier_label(self) -> str:
+        if self.status == "SUPPORTED_WITH_POLICY_BLOCK":
+            if self.host_profile.mutability == "atomic":
+                return "bloqueado por política"
+            return "fora do recorte"
+        return "manutenção local do host"
 
 
 def _read_os_release(environ: dict[str, str]) -> dict[str, str]:
@@ -235,6 +255,44 @@ def _package_block_reason(profile: HostProfile) -> tuple[str, str]:
     return reason, message
 
 
+def _host_maintenance_backend_label(intent: str, profile: HostProfile) -> str:
+    backends = set(profile.package_backends)
+    if intent == "atualizar":
+        return "paru + pacman" if "paru" in backends else "sudo + pacman"
+    return "paccache + journalctl + pacman"
+
+
+def _arch_host_maintenance_reason(intent: str, profile: HostProfile) -> str:
+    verb = "atualização" if intent == "atualizar" else "otimização"
+    backend_label = _host_maintenance_backend_label(intent, profile)
+    return (
+        f"nesta linha, {verb} do host continua como manutenção local atendida pelo adaptador Fish em Arch/derivadas mutáveis, "
+        f"com backend legado explícito ({backend_label}) e sem equivalência prometida entre famílias Linux."
+    )
+
+
+def _host_maintenance_block_reason(intent: str, profile: HostProfile) -> tuple[str, str]:
+    action_label = f"'{intent}'"
+    if profile.mutability == "atomic":
+        reason = (
+            f"o host Linux foi detectado como Atomic/imutável, e {action_label} fica bloqueado por política nesta linha "
+            "por pertencer à manutenção do host."
+        )
+        message = (
+            f"❌ {action_label} pertence à manutenção do host e fica bloqueado por política em hosts Atomic/imutáveis nesta linha."
+        )
+        return reason, message
+
+    family_label = profile.linux_family_label
+    reason = (
+        f"{action_label} pertence à manutenção do host e não tem equivalência prometida em hosts {family_label} mutáveis nesta linha."
+    )
+    message = (
+        f"❌ {action_label} pertence à manutenção do host e continua fora do recorte equivalente em hosts {family_label} mutáveis nesta linha."
+    )
+    return reason, message
+
+
 def _package_backend_label(intent: str, profile: HostProfile) -> str:
     backends = set(profile.package_backends)
     if profile.linux_family == "arch":
@@ -299,6 +357,35 @@ def resolve_package_action_policy(
         status="SUPPORTED_NOW",
         backend_label=_package_backend_label(intent, resolved_profile),
         reason=_supported_package_reason(intent, resolved_profile),
+        host_profile=resolved_profile,
+    )
+
+
+def resolve_host_maintenance_action_policy(
+    intent: str,
+    profile: HostProfile | None = None,
+    environ: dict[str, str] | None = None,
+) -> HostMaintenanceActionPolicy:
+    resolved_profile = profile or detect_host_profile(environ)
+
+    if resolved_profile.mutability == "atomic" or resolved_profile.linux_family != "arch":
+        reason, message = _host_maintenance_block_reason(intent, resolved_profile)
+        return HostMaintenanceActionPolicy(
+            intent=intent,
+            route=_HOST_MAINTENANCE_GATE_ROUTE,
+            status="SUPPORTED_WITH_POLICY_BLOCK",
+            backend_label="-",
+            reason=reason,
+            host_profile=resolved_profile,
+            block_message=message,
+        )
+
+    return HostMaintenanceActionPolicy(
+        intent=intent,
+        route=f"maintenance_local_{intent}",
+        status="FUTURE_MIGRATION_CANDIDATE",
+        backend_label=_host_maintenance_backend_label(intent, resolved_profile),
+        reason=_arch_host_maintenance_reason(intent, resolved_profile),
         host_profile=resolved_profile,
     )
 
