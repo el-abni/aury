@@ -6,6 +6,25 @@ A linha pública da **💜 Aury** continua incremental na série **v1.9.x**. Est
 
 ---
 
+## v1.9.5
+
+### Consolidado
+- fechamento público da **v1.9.5** como endurecimento honesto da fronteira de compatibilidade para hosts imutáveis, sem abrir suporte novo
+- versão, narrativa, arquitetura, ajuda e metadados passam a refletir a **v1.9.5** como continuação incremental contida da base pública já consolidada na **v1.9.4**
+
+### Fronteira de compatibilidade
+- a taxonomia pública de pacote fica mais explícita entre `suportado agora`, `suportado contido`, `bloqueado por política` e `impossibilidade operacional`
+- `aury dev` passa a expor com mais clareza quando o host está bloqueado por política de produto, em vez de parecer backend ausente ou falha operacional genérica
+- Atomic, Universal Blue, `opensuse-microos`, `microos` e equivalentes imutáveis permanecem fora como bloqueio por política de host, mesmo quando há backend instalado
+
+### Compatibilidade e limites
+- Arch e derivadas, Debian/Ubuntu e derivadas, e Fedora mutável permanecem como suporte agora
+- OpenSUSE mutável permanece como ganho útil contido, sem ser descrito como paridade total com o Tier 1
+- backend ausente, ferramenta auxiliar de confirmação ausente e erro operacional continuam explícitos como limitação operacional em host já suportado
+- continuam fora desta release: `update` multi-distro, `optimize` multi-distro, `rpm-ostree`, toolbox, distrobox, tradução de nomes de pacote e suporte cross-distro amplo
+
+---
+
 ## v1.9.4
 
 ### Consolidado

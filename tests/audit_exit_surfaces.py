@@ -297,16 +297,41 @@ def main() -> int:
 
         direct_proc = run_python(["instalar", "firefox"], env=env, cwd=workdir)
         ensure(direct_proc.returncode == 1, "host Atomic bloqueado precisa sair com status 1 no runtime Python direto")
-        ensure("detectado como Atomic" in direct_proc.stdout, "host Atomic bloqueado precisa expor a mensagem pública honesta")
+        ensure("bloqueado por política" in direct_proc.stdout, "host Atomic bloqueado precisa expor explicitamente o bloqueio por política")
+        ensure("detectado como Atomic/imutável" in direct_proc.stdout, "host Atomic bloqueado precisa expor a mensagem pública honesta")
         ensure("DNF_SHOULD_NOT_RUN" not in direct_proc.stdout, "host Atomic bloqueado não pode tentar mutar pacote do sistema")
+        ensure("backend '" not in direct_proc.stdout, "host Atomic bloqueado não pode parecer ausência simples de backend")
+        ensure("ferramenta auxiliar" not in direct_proc.stdout, "host Atomic bloqueado não pode parecer ausência de sonda auxiliar")
         ensure(not direct_proc.stderr.strip(), "host Atomic bloqueado não pode vazar stderr")
 
         status, output, stderr = run_public(["instalar", "firefox"], env=env, cwd=workdir)
         ensure(status == 1, "host Atomic bloqueado precisa sair com status 1 também pela entrada pública")
-        ensure("detectado como Atomic" in output, "entrada pública precisa preservar o bloqueio honesto para host Atomic")
+        ensure("bloqueado por política" in output, "entrada pública precisa expor explicitamente o bloqueio por política em host Atomic")
+        ensure("detectado como Atomic/imutável" in output, "entrada pública precisa preservar o bloqueio honesto para host Atomic")
         ensure("DNF_SHOULD_NOT_RUN" not in output, "entrada pública não pode tentar rodar backend de pacote no host Atomic")
+        ensure("backend '" not in output, "entrada pública não pode tratar host Atomic como ausência simples de backend")
+        ensure("ferramenta auxiliar" not in output, "entrada pública não pode tratar host Atomic como ausência de sonda auxiliar")
         ensure(not stderr, "entrada pública não pode vazar stderr no bloqueio Atomic")
+
+        status, output, stderr = run_public(["dev", "instalar", "firefox"], env=env, cwd=workdir)
+        ensure(status == 0, "aury dev em host Atomic precisa continuar saindo com 0")
+        ensure("fronteira:" in output and "bloqueado por política" in output, "aury dev em host Atomic precisa tornar a fronteira de compatibilidade explícita")
+        ensure("compatibilidade:" in output and "bloqueado por política" in output, "aury dev em host Atomic precisa alinhar a taxonomia da ação de pacote")
+        ensure(not stderr, "aury dev em host Atomic não pode vazar stderr")
     ok("host Atomic fica bloqueado com honestidade e sem mutação implícita")
+
+    with tempfile.TemporaryDirectory() as tmp:
+        workdir = Path(tmp)
+        os_release = write_os_release(workdir, distro_id="bazzite", distro_like="fedora", name="Bazzite")
+        env = {"PATH": "", "AURY_OS_RELEASE_PATH": str(os_release)}
+
+        direct_proc = run_python(["instalar", "firefox"], env=env, cwd=workdir)
+        ensure(direct_proc.returncode == 1, "host Atomic sem backend aparente precisa continuar bloqueado por política")
+        ensure("bloqueado por política" in direct_proc.stdout, "host Atomic sem backend aparente precisa continuar saindo como política de produto")
+        ensure("backend '" not in direct_proc.stdout, "host Atomic sem backend aparente não pode parecer simples ausência de backend")
+        ensure("ferramenta auxiliar" not in direct_proc.stdout, "host Atomic sem backend aparente não pode parecer simples ausência de sonda auxiliar")
+        ensure(not direct_proc.stderr.strip(), "host Atomic sem backend aparente não pode vazar stderr")
+    ok("host Atomic continua bloqueado por política mesmo sem backend aparente")
 
     with tempfile.TemporaryDirectory() as tmp:
         workdir = Path(tmp)

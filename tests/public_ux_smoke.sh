@@ -523,9 +523,16 @@ printf 'DNF_SHOULD_NOT_RUN\n'
 EOF
 chmod +x "$atomic_pkg_tmp/bin/dnf"
 
-atomic_pkg_output="$(ROOT="$ROOT" TMP="$atomic_pkg_tmp" PATH="$atomic_pkg_tmp/bin:$PATH" AURY_OS_RELEASE_PATH="$atomic_pkg_tmp/os-release" fish -c 'source $ROOT/bin/aury.fish; cd $TMP; aury instalar firefox' 2>&1 || true)"
-require_in_output "$atomic_pkg_output" "detectado como Atomic" "host Atomic precisa expor bloqueio honesto na superfície pública"
+atomic_pkg_output="$(ROOT="$ROOT" TMP="$atomic_pkg_tmp" PATH="$atomic_pkg_tmp/bin:$PATH" AURY_OS_RELEASE_PATH="$atomic_pkg_tmp/os-release" fish -c 'source $ROOT/bin/aury.fish; cd $TMP; aury dev instalar firefox; echo ---RUN---; aury instalar firefox' 2>&1 || true)"
+require_in_output "$atomic_pkg_output" "mutabilidade:                  Atomic" "host Atomic precisa continuar explícito em aury dev"
+require_in_output "$atomic_pkg_output" "tier de suporte:               suporte limitado" "host Atomic precisa continuar aparecendo como suporte limitado no perfil do host"
+require_in_output "$atomic_pkg_output" "fronteira:                     bloqueado por política" "aury dev em host Atomic precisa explicitar a fronteira de compatibilidade"
+require_in_output "$atomic_pkg_output" "compatibilidade:               bloqueado por política" "aury dev em host Atomic precisa alinhar a taxonomia da ação de pacote"
+require_in_output "$atomic_pkg_output" "detectado como Atomic/imutável" "host Atomic precisa expor bloqueio honesto na superfície pública"
+require_in_output "$atomic_pkg_output" "bloqueado por política" "host Atomic precisa explicitar a natureza do bloqueio"
 require_not_in_output "$atomic_pkg_output" "DNF_SHOULD_NOT_RUN" "host Atomic não pode tentar mutar pacote do sistema nesta fase"
+require_not_in_output "$atomic_pkg_output" "backend 'dnf' não está disponível" "host Atomic não pode parecer simples ausência de backend"
+require_not_in_output "$atomic_pkg_output" "ferramenta auxiliar" "host Atomic não pode parecer ausência de sonda auxiliar"
 
 network_keep_tmp="$(mktemp -d /tmp/aury-public-ux-XXXXXX)"
 tmpdirs+=("$network_keep_tmp")
