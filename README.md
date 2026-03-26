@@ -233,13 +233,6 @@ aury dev copiar arquivo teste.txt para backup.txt
 
 ---
 
-## Estado da linha 1.6.x
-
-- a linha 1.6.x permanece fechada publicamente como etapa já entregue
-- `v1.6.1`: base pública híbrida entre adaptador Fish e núcleo Python
-- `v1.6.2`: alinhamento diagnóstico curto extra de `aury dev` com fluxos já sustentados pelo modo normal
-- `v1.6.3`: fechamento público da linha 1.6.x, sem ampliar o escopo funcional da Aury
-
 ## Estado público da v1.9.4
 
 - a v1.8.0 fechou a etapa de congelamento semântico e endurecimento incremental sem reabrir expansão estrutural
