@@ -78,7 +78,9 @@ def _render_host_profile() -> list[str]:
         _field("mutabilidade", host_profile.mutability_label),
         _field("tier de suporte", host_profile.support_tier_label),
         _field("fronteira", host_profile.compatibility_frontier_label),
-        _field("backends de pacote", host_profile.package_backends_label),
+        _field("contrato de pacote", host_profile.package_contract_label),
+        _field("backends ativos", host_profile.package_backends_label),
+        _field("ferramentas observadas", host_profile.observed_package_tools_label),
     ]
 
 
@@ -104,11 +106,14 @@ def _render_action_report(action: PreparedAction, analysis: Analysis, action_pla
     if analysis.domain == "sistema" and analysis.intent in {"atualizar", "otimizar"}:
         maintenance_policy = resolve_host_maintenance_action_policy(analysis.intent)
     compatibility_label = "-"
+    contract_label = "-"
     route_label = action_plan.route
     backend_label = action_plan.backend
     if package_policy is not None:
+        contract_label = package_policy.host_profile.package_contract_label
         compatibility_label = package_policy.compatibility_frontier_label
     if maintenance_policy is not None:
+        contract_label = "manutenção do host"
         compatibility_label = maintenance_policy.compatibility_frontier_label
         route_label = route_label or maintenance_policy.route
         backend_label = backend_label or maintenance_policy.backend_label
@@ -149,6 +154,7 @@ def _render_action_report(action: PreparedAction, analysis: Analysis, action_pla
             _field("resumo", analysis.summary),
             "Plano de execução",
             _field("classificação", _action_plan_status_label(action_plan, analysis)),
+            _field("contrato público", contract_label),
             _field("compatibilidade", compatibility_label),
             _field("rota suportada", route_label),
             _field("backend necessário", backend_label),

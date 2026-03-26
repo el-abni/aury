@@ -1093,9 +1093,9 @@ function __aury_dev_predicted_action --argument-names state intent source dest n
 
         case remover
             if test -n "$target"
-                echo "Remover '$target'."
+                echo "Remover o pacote do host '$target'."
             else
-                echo "Remover, se houver um alvo seguro."
+                echo "Remover o pacote do host, se houver um alvo seguro."
             end
             return 0
 
@@ -1137,17 +1137,17 @@ function __aury_dev_predicted_action --argument-names state intent source dest n
 
         case instalar
             if test -n "$primary_target"
-                echo "Instalar '$primary_target'."
+                echo "Instalar o pacote do host '$primary_target'."
             else
-                echo "Instalar, se houver um pacote válido."
+                echo "Instalar o pacote do host, se houver um pacote válido."
             end
             return 0
 
         case procurar
             if test -n "$primary_target"
-                echo "Procurar '$primary_target'."
+                echo "Procurar o pacote do host '$primary_target'."
             else
-                echo "Procurar, se houver um termo válido."
+                echo "Procurar o pacote do host, se houver um termo válido."
             end
             return 0
 

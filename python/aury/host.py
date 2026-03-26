@@ -8,7 +8,8 @@ from pathlib import Path
 
 _OS_RELEASE_ENV = "AURY_OS_RELEASE_PATH"
 _OSTREE_BOOTED_ENV = "AURY_OSTREE_BOOTED"
-_KNOWN_PACKAGE_BACKENDS = ("pacman", "paru", "apt-cache", "apt-get", "dnf", "zypper", "flatpak", "rpm-ostree")
+_HOST_PACKAGE_BACKENDS = ("pacman", "paru", "apt-cache", "apt-get", "dnf", "zypper")
+_OBSERVED_PACKAGE_TOOLS = ("flatpak", "rpm-ostree")
 _ARCH_FAMILY_IDS = {"arch", "archlinux", "artix", "cachyos", "endeavouros", "manjaro"}
 _DEBIAN_FAMILY_IDS = {"debian", "ubuntu", "linuxmint", "pop", "neon", "raspbian", "elementary"}
 _FEDORA_FAMILY_IDS = {"fedora", "rhel", "centos", "rocky", "almalinux", "nobara", "bazzite", "bluefin", "aurora"}
@@ -42,6 +43,7 @@ class HostProfile:
     variant_id: str
     mutability: str
     package_backends: tuple[str, ...]
+    observed_package_tools: tuple[str, ...]
     support_tier: str
 
     @property
@@ -81,6 +83,16 @@ class HostProfile:
         if not self.package_backends:
             return "-"
         return ", ".join(self.package_backends)
+
+    @property
+    def package_contract_label(self) -> str:
+        return "pacote do host por família/host"
+
+    @property
+    def observed_package_tools_label(self) -> str:
+        if not self.observed_package_tools:
+            return "-"
+        return f"{', '.join(self.observed_package_tools)} (fora do contrato ativo)"
 
 
 @dataclass(frozen=True)
@@ -203,12 +215,12 @@ def _detect_mutability(
     return "mutable"
 
 
-def _detect_package_backends(environ: dict[str, str]) -> tuple[str, ...]:
+def _detect_available_commands(commands: tuple[str, ...], environ: dict[str, str]) -> tuple[str, ...]:
     path = environ.get("PATH")
     detected: list[str] = []
-    for backend in _KNOWN_PACKAGE_BACKENDS:
-        if shutil.which(backend, path=path) is not None:
-            detected.append(backend)
+    for command in commands:
+        if shutil.which(command, path=path) is not None:
+            detected.append(command)
     return tuple(detected)
 
 
@@ -222,7 +234,8 @@ def detect_host_profile(environ: dict[str, str] | None = None) -> HostProfile:
     pretty_name = os_release.get("PRETTY_NAME", "").strip().lower()
     linux_family = _detect_linux_family(distro_id, distro_like)
     mutability = _detect_mutability(distro_id, variant_id, name, pretty_name, resolved_environ)
-    package_backends = _detect_package_backends(resolved_environ)
+    package_backends = _detect_available_commands(_HOST_PACKAGE_BACKENDS, resolved_environ)
+    observed_package_tools = _detect_available_commands(_OBSERVED_PACKAGE_TOOLS, resolved_environ)
 
     if mutability == "atomic":
         support_tier = "limited"
@@ -240,6 +253,7 @@ def detect_host_profile(environ: dict[str, str] | None = None) -> HostProfile:
         variant_id=variant_id,
         mutability=mutability,
         package_backends=package_backends,
+        observed_package_tools=observed_package_tools,
         support_tier=support_tier,
     )
 
@@ -319,8 +333,14 @@ def _package_backend_label(intent: str, profile: HostProfile) -> str:
 def _supported_package_reason(intent: str, profile: HostProfile) -> str:
     scope = "neste recorte contido" if profile.support_tier == "tier_2" else "nesta fase"
     if intent == "procurar":
-        return f"o perfil do host Linux já resolve esta busca de pacote com backend explícito {scope}, e a execução real trata ausência de resultado com saída honesta."
-    return f"o perfil do host Linux já resolve esta ação de pacote com backend explícito {scope}, e a execução real verifica o estado do pacote antes de agir e confirma o resultado depois."
+        return (
+            "nesta linha, 'procurar' significa pacote do host por família/host; "
+            f"este perfil já resolve a busca com backend explícito {scope}, sem prometer app store, múltiplas rotas ou política de origem."
+        )
+    return (
+        f"nesta linha, '{intent}' significa pacote do host por família/host; "
+        f"este perfil já resolve a ação com backend explícito {scope}, sem prometer app store, múltiplas rotas ou política de origem."
+    )
 
 
 def _package_state_probe_spec(profile: HostProfile, target: str) -> tuple[str, tuple[str, ...], tuple[str, ...]]:

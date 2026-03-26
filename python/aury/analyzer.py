@@ -1430,10 +1430,13 @@ def analyze_prepared_action(action: PreparedAction) -> Analysis:
             intent="remover",
             domain="pacote",
             status="CONSISTENTE",
-            reason="política canônica de remoção sem colisão explícita favorece pacote.",
-            summary=f"Remover '{target}'.",
+            reason="política canônica de remoção sem colisão explícita favorece pacote do host.",
+            summary=f"Remover o pacote do host '{target}'.",
             entities={"alvo_principal": target},
-            observations=["forma explícita de arquivo continua tratada pelo runtime legado"],
+            observations=[
+                "contrato final da linha 1.x: procurar, instalar e remover significam pacote do host por família/host",
+                "forma explícita de arquivo continua tratada pelo runtime legado",
+            ],
         )
 
     if first_token in {"instalar", "instala", "instale"} and _has_explicit_target(action):
@@ -1443,10 +1446,13 @@ def analyze_prepared_action(action: PreparedAction) -> Analysis:
             intent="instalar",
             domain="pacote",
             status="CONSISTENTE",
-            reason="pedido de instalação de pacote reconhecido.",
-            summary=f"Instalar '{target}'.",
+            reason="pedido de instalação de pacote do host reconhecido.",
+            summary=f"Instalar o pacote do host '{target}'.",
             entities={"alvo_principal": target},
-            observations=["política de pacote agora depende do perfil mínimo do host Linux"],
+            observations=[
+                "contrato final da linha 1.x: procurar, instalar e remover significam pacote do host por família/host",
+                "política de pacote depende do perfil mínimo do host Linux",
+            ],
         )
 
     if first_token == "atualizar":
@@ -1513,10 +1519,13 @@ def analyze_prepared_action(action: PreparedAction) -> Analysis:
             intent="procurar",
             domain="pacote",
             status="CONSISTENTE",
-            reason="pedido de busca de pacote reconhecido.",
-            summary=f"Procurar '{target}'.",
+            reason="pedido de busca de pacote do host reconhecido.",
+            summary=f"Procurar o pacote do host '{target}'.",
             entities={"alvo_principal": target},
-            observations=["política de pacote agora depende do perfil mínimo do host Linux"],
+            observations=[
+                "contrato final da linha 1.x: procurar, instalar e remover significam pacote do host por família/host",
+                "política de pacote depende do perfil mínimo do host Linux",
+            ],
         )
 
     if first_token == "ping" and _has_explicit_target(action):
