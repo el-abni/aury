@@ -19,11 +19,13 @@ _ATOMIC_IDS = {
     "bluefin",
     "fedora-coreos",
     "kinoite",
+    "microos",
+    "opensuse-microos",
     "silverblue",
     "sericea",
     "onyx",
 }
-_ATOMIC_VARIANTS = {"atomic", "coreos", "immutable", "kinoite", "ostree", "sericea", "silverblue", "onyx"}
+_ATOMIC_VARIANTS = {"atomic", "coreos", "immutable", "kinoite", "microos", "ostree", "sericea", "silverblue", "onyx"}
 _PACKAGE_ROUTES = {
     "procurar": "package_search",
     "instalar": "package_install",
@@ -203,17 +205,12 @@ def detect_host_profile(environ: dict[str, str] | None = None) -> HostProfile:
 
 def _package_block_reason(profile: HostProfile) -> tuple[str, str]:
     if profile.mutability == "atomic":
-        reason = "o host Linux foi detectado como Atomic, e esta fase ainda só sustenta bloqueio honesto para pacote do host nesse perfil."
-        message = "❌ este host Linux foi detectado como Atomic; a v1.9.1 ainda não sustenta pacote do host neste perfil."
+        reason = "o host Linux foi detectado como Atomic, e o recorte atual ainda só sustenta bloqueio honesto para pacote do host nesse perfil."
+        message = "❌ este host Linux foi detectado como Atomic; o recorte atual ainda não sustenta pacote do host neste perfil."
         return reason, message
 
-    if profile.linux_family == "opensuse":
-        reason = "a família Linux 'opensuse' está detectada, mas esta fase ainda só sustenta detecção e bloqueio honesto para pacote do host nessa família."
-        message = "❌ a família Linux 'opensuse' foi detectada, mas a v1.9.1 ainda não sustenta pacote do host nesta família."
-        return reason, message
-
-    reason = "a família Linux deste host ficou fora do recorte inicial de pacote da v1.9.1."
-    message = "❌ a família Linux deste host ficou fora do recorte inicial de pacote da v1.9.1."
+    reason = "a família Linux deste host ficou fora do recorte atual de pacote da linha 1.x."
+    message = "❌ a família Linux deste host ficou fora do recorte atual de pacote da linha 1.x."
     return reason, message
 
 
@@ -231,7 +228,7 @@ def resolve_package_action_policy(
     resolved_profile = profile or detect_host_profile(environ)
     route = _PACKAGE_ROUTES[intent]
 
-    if resolved_profile.mutability == "atomic" or resolved_profile.linux_family in {"opensuse", "unknown"}:
+    if resolved_profile.mutability == "atomic" or resolved_profile.linux_family == "unknown":
         reason, message = _package_block_reason(resolved_profile)
         return PackageActionPolicy(
             intent=intent,
@@ -262,6 +259,8 @@ def resolve_package_action_policy(
                 backend_label = "sudo + pacman"
     elif resolved_profile.linux_family == "debian":
         backend_label = "apt-cache" if intent == "procurar" else "sudo + apt-get"
+    elif resolved_profile.linux_family == "opensuse":
+        backend_label = "zypper" if intent == "procurar" else "sudo + zypper"
     else:
         backend_label = "dnf" if intent == "procurar" else "sudo + dnf"
 
@@ -411,6 +410,32 @@ def build_package_execution_plan(
             required_commands=("apt-get", "sudo"),
             state_probe_command=("dpkg", "-s", package_target),
             state_probe_required_commands=("dpkg",),
+        )
+
+    if policy.host_profile.linux_family == "opensuse":
+        if intent == "procurar":
+            return PackageExecutionPlan(
+                policy=policy,
+                package_target=package_target,
+                command=("zypper", "search", "--", package_target),
+                required_commands=("zypper",),
+            )
+        if intent == "instalar":
+            return PackageExecutionPlan(
+                policy=policy,
+                package_target=package_target,
+                command=("sudo", "zypper", "--non-interactive", "install", "--", package_target),
+                required_commands=("zypper", "sudo"),
+                state_probe_command=("rpm", "-q", package_target),
+                state_probe_required_commands=("rpm",),
+            )
+        return PackageExecutionPlan(
+            policy=policy,
+            package_target=package_target,
+            command=("sudo", "zypper", "--non-interactive", "remove", "--", package_target),
+            required_commands=("zypper", "sudo"),
+            state_probe_command=("rpm", "-q", package_target),
+            state_probe_required_commands=("rpm",),
         )
 
     if intent == "procurar":

@@ -25,6 +25,14 @@ UNSUPPORTED_EXIT = 120
 _PYTHON_RUNTIME_BACKEND = "runtime Python"
 RouteHandler = Callable[[Analysis, ActionExecutionPlan], int]
 _PACKAGE_ROUTE_NAMES = {"package_search", "package_install", "package_remove"}
+_PACKAGE_NO_RESULTS_MARKERS = (
+    "no packages found",
+    "no matches found",
+    "no matching items found",
+    "nenhum pacote encontrado",
+    "nenhuma correspondencia encontrada",
+    "nenhum item correspondente encontrado",
+)
 
 
 def _run(args: Sequence[str]) -> subprocess.CompletedProcess[str]:
@@ -85,17 +93,14 @@ def _run_and_print(backend: str, args: Sequence[str]) -> int:
 
 
 def _package_search_no_results(proc: subprocess.CompletedProcess[str]) -> bool:
-    if proc.returncode not in {0, 1}:
+    if proc.returncode not in {0, 1, 104}:
         return False
 
-    if proc.stdout.strip():
-        return False
-
-    stderr = proc.stderr.strip().lower()
-    if not stderr:
+    combined_output = "\n".join(part.strip().lower() for part in (proc.stdout, proc.stderr) if part.strip())
+    if not combined_output:
         return True
 
-    return "no packages found" in stderr or "no matches found" in stderr
+    return any(marker in combined_output for marker in _PACKAGE_NO_RESULTS_MARKERS)
 
 
 def _probe_package_state(execution_plan: PackageExecutionPlan) -> bool | None:
@@ -110,8 +115,13 @@ def _probe_package_state(execution_plan: PackageExecutionPlan) -> bool | None:
 
 def _run_package_search(execution_plan: PackageExecutionPlan) -> int:
     proc = _run(execution_plan.command)
-    if proc.returncode != 0 and not _package_search_no_results(proc):
+    no_results = _package_search_no_results(proc)
+    if proc.returncode != 0 and not no_results:
         return _backend_failed(execution_plan.policy.backend_label)
+
+    if no_results:
+        print(package_no_results_message(execution_plan.package_target, execution_plan.policy.backend_label))
+        return 0
 
     output = proc.stdout.rstrip()
     if output:

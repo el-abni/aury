@@ -440,6 +440,69 @@ require_in_output "$remove_policy_file_output" "eu não removi 'vlc'." "negaçã
 require_not_in_output "$remove_policy_file_output" "SUDO_STUB" "forma explícita de arquivo não pode cair no backend de pacote"
 require_in_output "$remove_policy_file_output" "FILE_STILL_PRESENT" "forma explícita de arquivo negada deve preservar o alvo"
 
+opensuse_pkg_tmp="$(mktemp -d /tmp/aury-public-ux-XXXXXX)"
+tmpdirs+=("$opensuse_pkg_tmp")
+mkdir -p "$opensuse_pkg_tmp/bin"
+touch "$opensuse_pkg_tmp/vlc.installed"
+
+cat > "$opensuse_pkg_tmp/os-release" <<'EOF'
+ID=opensuse-tumbleweed
+ID_LIKE="opensuse suse"
+NAME="openSUSE Tumbleweed"
+EOF
+
+cat > "$opensuse_pkg_tmp/bin/sudo" <<'EOF'
+#!/usr/bin/env bash
+"$@"
+EOF
+chmod +x "$opensuse_pkg_tmp/bin/sudo"
+
+cat > "$opensuse_pkg_tmp/bin/zypper" <<EOF
+#!/usr/bin/env bash
+firefox_state="$opensuse_pkg_tmp/firefox.installed"
+vlc_state="$opensuse_pkg_tmp/vlc.installed"
+if [[ "\$1" == "search" && "\$3" == "steam" ]]; then
+    printf 'ZYPPER_SEARCH_STUB %s\n' "\$*"
+    exit 0
+fi
+if [[ "\$1" == "--non-interactive" && "\$2" == "install" && "\$4" == "firefox" ]]; then
+    : > "\$firefox_state"
+    printf 'ZYPPER_INSTALL_STUB %s\n' "\$*"
+    exit 0
+fi
+if [[ "\$1" == "--non-interactive" && "\$2" == "remove" && "\$4" == "vlc" ]]; then
+    rm -f "\$vlc_state"
+    printf 'ZYPPER_REMOVE_STUB %s\n' "\$*"
+    exit 0
+fi
+exit 12
+EOF
+chmod +x "$opensuse_pkg_tmp/bin/zypper"
+
+cat > "$opensuse_pkg_tmp/bin/rpm" <<EOF
+#!/usr/bin/env bash
+firefox_state="$opensuse_pkg_tmp/firefox.installed"
+vlc_state="$opensuse_pkg_tmp/vlc.installed"
+if [[ "\$1" == "-q" && "\$2" == "firefox" ]]; then
+    [[ -f "\$firefox_state" ]] && exit 0 || exit 1
+fi
+if [[ "\$1" == "-q" && "\$2" == "vlc" ]]; then
+    [[ -f "\$vlc_state" ]] && exit 0 || exit 1
+fi
+exit 1
+EOF
+chmod +x "$opensuse_pkg_tmp/bin/rpm"
+
+opensuse_pkg_output="$(ROOT="$ROOT" TMP="$opensuse_pkg_tmp" PATH="$opensuse_pkg_tmp/bin:$PATH" AURY_OS_RELEASE_PATH="$opensuse_pkg_tmp/os-release" fish -c 'source $ROOT/bin/aury.fish; cd $TMP; aury dev procurar steam; echo ---SEARCH---; aury procurar steam; echo ---INSTALL---; rm -f firefox.installed; aury instalar firefox; echo ---REMOVE---; touch vlc.installed; aury remover vlc' 2>&1 || true)"
+require_in_output "$opensuse_pkg_output" "família linux:                 opensuse" "OpenSUSE mutável precisa aparecer como família explícita em aury dev"
+require_in_output "$opensuse_pkg_output" "tier de suporte:               Tier 2 inicial" "OpenSUSE mutável precisa continuar explícito como Tier 2 inicial"
+require_in_output "$opensuse_pkg_output" "backend necessário:            zypper" "aury dev procurar em OpenSUSE mutável precisa expor o backend correto"
+require_in_output "$opensuse_pkg_output" "decisão:                       executar no Python" "aury dev em OpenSUSE mutável precisa permanecer alinhado ao runtime Python"
+require_in_output "$opensuse_pkg_output" "ZYPPER_SEARCH_STUB search -- steam" "OpenSUSE mutável precisa executar a busca pública com zypper"
+require_in_output "$opensuse_pkg_output" "ZYPPER_INSTALL_STUB --non-interactive install -- firefox" "OpenSUSE mutável precisa executar a instalação pública com sudo + zypper"
+require_in_output "$opensuse_pkg_output" "ZYPPER_REMOVE_STUB --non-interactive remove -- vlc" "OpenSUSE mutável precisa executar a remoção pública com sudo + zypper"
+require_not_in_output "$opensuse_pkg_output" "não sustenta pacote do host nesta família" "OpenSUSE mutável não pode continuar fingindo bloqueio honesto quando o backend está disponível"
+
 atomic_pkg_tmp="$(mktemp -d /tmp/aury-public-ux-XXXXXX)"
 tmpdirs+=("$atomic_pkg_tmp")
 mkdir -p "$atomic_pkg_tmp/bin"

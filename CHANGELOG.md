@@ -6,6 +6,25 @@ A linha pública da **💜 Aury** continua incremental na série **v1.9.x**. Est
 
 ---
 
+## v1.9.3
+
+### Consolidado
+- fechamento público da **v1.9.3** como retomada contida da saga de compatibilidade Linux, sem abrir nova frente geral de feature
+- versão, narrativa, arquitetura, ajuda e metadados passam a refletir a **v1.9.3** como continuidade incremental da base pública já endurecida na **v1.9.2**
+
+### OpenSUSE mutável
+- OpenSUSE mutável deixa o bloqueio honesto puro e passa a entrar com execução real contida de pacote do host para `procurar`, `instalar` e `remover`
+- `zypper` entra como backend explícito de busca; `sudo + zypper` entra como backend explícito de instalação e remoção
+- instalação e remoção em OpenSUSE mutável passam a confirmar estado com `rpm -q`, mantendo a mesma filosofia honesta já usada no recorte RPM desta linha
+
+### Compatibilidade e limites
+- Arch e derivadas, Debian/Ubuntu e derivadas, e Fedora mutável permanecem como Tier 1 inicial de pacote
+- OpenSUSE mutável entra como recorte útil contido, sem ser descrito como paridade total com as famílias Tier 1
+- Atomic, Universal Blue e perfis equivalentes permanecem em suporte limitado com bloqueio honesto de pacote do host
+- continuam fora desta release: `update` multi-distro, `optimize` multi-distro, `rpm-ostree`, toolbox, distrobox, tradução de nomes de pacote e suporte cross-distro amplo
+
+---
+
 ## v1.9.2
 
 ### Consolidado

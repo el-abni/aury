@@ -14,7 +14,7 @@ sys.path.insert(0, str(ROOT / "python"))
 
 from aury.analyzer import prepare_analyses, prepare_analysis
 from aury.contracts import ActionExecutionPlan, SupportedRuntimeRoute
-from aury.host import detect_host_profile
+from aury.host import build_package_execution_plan, detect_host_profile, resolve_package_action_policy
 from aury.pipeline import prepare_text
 from aury.runtime import plan_action_execution, plan_sequence_execution
 from aury.sensitive_tokens import protect_sensitive_tokens, restore_sensitive_tokens
@@ -153,6 +153,74 @@ def test_dev_package_atomic_block_alignment() -> None:
         assert_in(proc.stdout, "backend necessário:            -")
         assert_in(proc.stdout, "decisão:                       executar no Python")
         assert_in(proc.stdout, "detectado como Atomic")
+
+
+def test_dev_package_opensuse_search_alignment() -> None:
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        bin_dir = root / "bin"
+        bin_dir.mkdir(parents=True, exist_ok=True)
+        write_stub(bin_dir, "zypper", "#!/usr/bin/env bash\nexit 0\n")
+        os_release = write_os_release(root, distro_id="opensuse-tumbleweed", distro_like="opensuse suse", name="openSUSE Tumbleweed")
+        env = {"PATH": f"{bin_dir}:{os.environ['PATH']}", "AURY_OS_RELEASE_PATH": str(os_release)}
+        proc = run("dev", "procurar", "steam", env=env)
+        assert proc.returncode == 0
+        assert_in(proc.stdout, "intenção:                      procurar")
+        assert_in(proc.stdout, "domínio:                       pacote")
+        assert_in(proc.stdout, "alvo principal:                steam")
+        assert_in(proc.stdout, "família linux:                 opensuse")
+        assert_in(proc.stdout, "mutabilidade:                  mutável")
+        assert_in(proc.stdout, "tier de suporte:               Tier 2 inicial")
+        assert_in(proc.stdout, "suportada agora")
+        assert_in(proc.stdout, "rota suportada:                package_search")
+        assert_in(proc.stdout, "backend necessário:            zypper")
+        assert_in(proc.stdout, "decisão:                       executar no Python")
+
+
+def test_dev_package_opensuse_install_alignment() -> None:
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        bin_dir = root / "bin"
+        bin_dir.mkdir(parents=True, exist_ok=True)
+        write_stub(bin_dir, "zypper", "#!/usr/bin/env bash\nexit 0\n")
+        write_stub(bin_dir, "sudo", "#!/usr/bin/env bash\nexit 0\n")
+        write_stub(bin_dir, "rpm", "#!/usr/bin/env bash\nexit 0\n")
+        os_release = write_os_release(root, distro_id="opensuse-tumbleweed", distro_like="opensuse suse", name="openSUSE Tumbleweed")
+        env = {"PATH": f"{bin_dir}:{os.environ['PATH']}", "AURY_OS_RELEASE_PATH": str(os_release)}
+        proc = run("dev", "instalar", "firefox", env=env)
+        assert proc.returncode == 0
+        assert_in(proc.stdout, "intenção:                      instalar")
+        assert_in(proc.stdout, "domínio:                       pacote")
+        assert_in(proc.stdout, "alvo principal:                firefox")
+        assert_in(proc.stdout, "família linux:                 opensuse")
+        assert_in(proc.stdout, "tier de suporte:               Tier 2 inicial")
+        assert_in(proc.stdout, "suportada agora")
+        assert_in(proc.stdout, "rota suportada:                package_install")
+        assert_in(proc.stdout, "backend necessário:            sudo + zypper")
+        assert_in(proc.stdout, "decisão:                       executar no Python")
+
+
+def test_dev_package_opensuse_remove_alignment() -> None:
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        bin_dir = root / "bin"
+        bin_dir.mkdir(parents=True, exist_ok=True)
+        write_stub(bin_dir, "zypper", "#!/usr/bin/env bash\nexit 0\n")
+        write_stub(bin_dir, "sudo", "#!/usr/bin/env bash\nexit 0\n")
+        write_stub(bin_dir, "rpm", "#!/usr/bin/env bash\nexit 0\n")
+        os_release = write_os_release(root, distro_id="opensuse-tumbleweed", distro_like="opensuse suse", name="openSUSE Tumbleweed")
+        env = {"PATH": f"{bin_dir}:{os.environ['PATH']}", "AURY_OS_RELEASE_PATH": str(os_release)}
+        proc = run("dev", "remover", "vlc", env=env)
+        assert proc.returncode == 0
+        assert_in(proc.stdout, "intenção:                      remover")
+        assert_in(proc.stdout, "domínio:                       pacote")
+        assert_in(proc.stdout, "alvo principal:                vlc")
+        assert_in(proc.stdout, "família linux:                 opensuse")
+        assert_in(proc.stdout, "tier de suporte:               Tier 2 inicial")
+        assert_in(proc.stdout, "suportada agora")
+        assert_in(proc.stdout, "rota suportada:                package_remove")
+        assert_in(proc.stdout, "backend necessário:            sudo + zypper")
+        assert_in(proc.stdout, "decisão:                       executar no Python")
 
 
 def test_dev_ping_host_alignment() -> None:
@@ -1051,6 +1119,34 @@ def test_runtime_package_search_no_results() -> None:
         assert_in(proc.stdout, "não encontrei resultados para 'steam' no backend 'pacman'")
 
 
+def test_runtime_package_search_opensuse() -> None:
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        bin_dir = root / "bin"
+        bin_dir.mkdir(parents=True, exist_ok=True)
+        write_stub(bin_dir, "zypper", "#!/usr/bin/env bash\necho 'ZYPPER_SEARCH_STUB search -- steam'\n")
+        os_release = write_os_release(root, distro_id="opensuse-tumbleweed", distro_like="opensuse suse", name="openSUSE Tumbleweed")
+        env = {"PATH": f"{bin_dir}:{os.environ['PATH']}", "AURY_OS_RELEASE_PATH": str(os_release)}
+        proc = run("procurar", "steam", env=env)
+        assert proc.returncode == 0
+        assert_in(proc.stdout, "ZYPPER_SEARCH_STUB")
+
+
+def test_runtime_package_search_opensuse_no_results() -> None:
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        bin_dir = root / "bin"
+        bin_dir.mkdir(parents=True, exist_ok=True)
+        write_stub(bin_dir, "zypper", "#!/usr/bin/env bash\necho 'No matching items found.'\nexit 104\n")
+        os_release = write_os_release(root, distro_id="opensuse-tumbleweed", distro_like="opensuse suse", name="openSUSE Tumbleweed")
+        env = {"PATH": f"{bin_dir}:{os.environ['PATH']}", "AURY_OS_RELEASE_PATH": str(os_release)}
+        proc = run("procurar", "steam", env=env)
+        assert proc.returncode == 0
+        assert_in(proc.stdout, "não encontrei resultados para 'steam' no backend 'zypper'")
+        if "No matching items found." in proc.stdout:
+            raise AssertionError("a busca sem resultado em OpenSUSE deve sair com a superfície honesta da Aury")
+
+
 def test_runtime_package_install_debian() -> None:
     with tempfile.TemporaryDirectory() as tmp:
         root = Path(tmp)
@@ -1109,6 +1205,58 @@ def test_runtime_package_install_requires_state_confirmation() -> None:
         assert_in(proc.stdout, "terminou sem eu conseguir confirmar a instalação de 'firefox'")
 
 
+def test_runtime_package_install_opensuse() -> None:
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        bin_dir = root / "bin"
+        bin_dir.mkdir(parents=True, exist_ok=True)
+        rpm_state = root / "rpm.state"
+        write_stub(bin_dir, "sudo", "#!/usr/bin/env bash\n\"$@\"\n")
+        write_stub(
+            bin_dir,
+            "zypper",
+            "#!/usr/bin/env bash\n"
+            f"state={rpm_state!s}\n"
+            "if [ \"$1\" = \"--non-interactive\" ] && [ \"$2\" = \"install\" ] && [ \"$4\" = \"firefox\" ]; then\n"
+            "  touch \"$state\"\n"
+            "fi\n"
+            "printf 'ZYPPER_INSTALL_STUB %s\\n' \"$*\"\n",
+        )
+        write_stub(
+            bin_dir,
+            "rpm",
+            "#!/usr/bin/env bash\n"
+            f"state={rpm_state!s}\n"
+            "if [ \"$1\" = \"-q\" ] && [ \"$2\" = \"firefox\" ]; then\n"
+            "  if [ -f \"$state\" ]; then\n"
+            "    exit 0\n"
+            "  fi\n"
+            "  exit 1\n"
+            "fi\n"
+            "exit 1\n",
+        )
+        os_release = write_os_release(root, distro_id="opensuse-tumbleweed", distro_like="opensuse suse", name="openSUSE Tumbleweed")
+        env = {"PATH": f"{bin_dir}:{os.environ['PATH']}", "AURY_OS_RELEASE_PATH": str(os_release)}
+        proc = run("instalar", "firefox", env=env)
+        assert proc.returncode == 0
+        assert_in(proc.stdout, "ZYPPER_INSTALL_STUB --non-interactive install -- firefox")
+
+
+def test_runtime_package_install_opensuse_requires_state_confirmation() -> None:
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        bin_dir = root / "bin"
+        bin_dir.mkdir(parents=True, exist_ok=True)
+        write_stub(bin_dir, "sudo", "#!/usr/bin/env bash\n\"$@\"\n")
+        write_stub(bin_dir, "zypper", "#!/usr/bin/env bash\necho 'ZYPPER_INSTALL_STUB --non-interactive install -- firefox'\n")
+        write_stub(bin_dir, "rpm", "#!/usr/bin/env bash\nexit 1\n")
+        os_release = write_os_release(root, distro_id="opensuse-tumbleweed", distro_like="opensuse suse", name="openSUSE Tumbleweed")
+        env = {"PATH": f"{bin_dir}:{os.environ['PATH']}", "AURY_OS_RELEASE_PATH": str(os_release)}
+        proc = run("instalar", "firefox", env=env)
+        assert proc.returncode == 1
+        assert_in(proc.stdout, "terminou sem eu conseguir confirmar a instalação de 'firefox'")
+
+
 def test_runtime_package_remove_fedora() -> None:
     with tempfile.TemporaryDirectory() as tmp:
         root = Path(tmp)
@@ -1150,6 +1298,70 @@ def test_runtime_package_remove_noop_when_not_installed() -> None:
         assert_in(proc.stdout, "o pacote 'vlc' não está instalado neste host. Nada foi feito.")
         if "DNF_SHOULD_NOT_RUN" in proc.stdout:
             raise AssertionError("a remoção não deveria chamar o backend quando o pacote já está ausente")
+
+
+def test_runtime_package_remove_opensuse() -> None:
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        bin_dir = root / "bin"
+        bin_dir.mkdir(parents=True, exist_ok=True)
+        rpm_state = root / "rpm.state"
+        rpm_state.write_text("installed\n", encoding="utf-8")
+        write_stub(bin_dir, "sudo", "#!/usr/bin/env bash\n\"$@\"\n")
+        write_stub(
+            bin_dir,
+            "zypper",
+            "#!/usr/bin/env bash\n"
+            f"state={rpm_state!s}\n"
+            "if [ \"$1\" = \"--non-interactive\" ] && [ \"$2\" = \"remove\" ] && [ \"$4\" = \"vlc\" ]; then\n"
+            "  rm -f \"$state\"\n"
+            "fi\n"
+            "printf 'ZYPPER_REMOVE_STUB %s\\n' \"$*\"\n",
+        )
+        write_stub(
+            bin_dir,
+            "rpm",
+            "#!/usr/bin/env bash\n"
+            f"state={rpm_state!s}\n"
+            "if [ \"$1\" = \"-q\" ] && [ \"$2\" = \"vlc\" ]; then\n"
+            "  if [ -f \"$state\" ]; then\n"
+            "    exit 0\n"
+            "  fi\n"
+            "  exit 1\n"
+            "fi\n"
+            "exit 1\n",
+        )
+        os_release = write_os_release(root, distro_id="opensuse-tumbleweed", distro_like="opensuse suse", name="openSUSE Tumbleweed")
+        env = {"PATH": f"{bin_dir}:{os.environ['PATH']}", "AURY_OS_RELEASE_PATH": str(os_release)}
+        proc = run("remover", "vlc", env=env)
+        assert proc.returncode == 0
+        assert_in(proc.stdout, "ZYPPER_REMOVE_STUB --non-interactive remove -- vlc")
+
+
+def test_runtime_package_remove_opensuse_noop_when_not_installed() -> None:
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        bin_dir = root / "bin"
+        bin_dir.mkdir(parents=True, exist_ok=True)
+        write_stub(bin_dir, "sudo", "#!/usr/bin/env bash\n\"$@\"\n")
+        write_stub(bin_dir, "zypper", "#!/usr/bin/env bash\necho 'ZYPPER_SHOULD_NOT_RUN'\n")
+        write_stub(bin_dir, "rpm", "#!/usr/bin/env bash\nexit 1\n")
+        os_release = write_os_release(root, distro_id="opensuse-tumbleweed", distro_like="opensuse suse", name="openSUSE Tumbleweed")
+        env = {"PATH": f"{bin_dir}:{os.environ['PATH']}", "AURY_OS_RELEASE_PATH": str(os_release)}
+        proc = run("remover", "vlc", env=env)
+        assert proc.returncode == 0
+        assert_in(proc.stdout, "o pacote 'vlc' não está instalado neste host. Nada foi feito.")
+        if "ZYPPER_SHOULD_NOT_RUN" in proc.stdout:
+            raise AssertionError("a remoção em OpenSUSE não deveria chamar o backend quando o pacote já está ausente")
+
+
+def test_runtime_package_opensuse_backend_missing() -> None:
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        os_release = write_os_release(root, distro_id="opensuse-tumbleweed", distro_like="opensuse suse", name="openSUSE Tumbleweed")
+        proc = run("procurar", "steam", env={"PATH": "", "AURY_OS_RELEASE_PATH": str(os_release)})
+        assert proc.returncode == 1
+        assert_in(proc.stdout, "backend 'zypper' não está disponível")
 
 
 def test_runtime_create_file() -> None:
@@ -1933,6 +2145,56 @@ def test_detect_host_profile_tiers() -> None:
             raise AssertionError(f"backend inesperado: {host_profile.package_backends!r}")
 
 
+def test_detect_host_profile_opensuse_microos_is_atomic() -> None:
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        bin_dir = root / "bin"
+        bin_dir.mkdir(parents=True, exist_ok=True)
+        write_stub(bin_dir, "zypper", "#!/usr/bin/env bash\nexit 0\n")
+        os_release = write_os_release(root, distro_id="opensuse-microos", distro_like="opensuse suse", name="openSUSE MicroOS")
+        with temporary_env({"PATH": f"{bin_dir}:{os.environ['PATH']}", "AURY_OS_RELEASE_PATH": str(os_release)}):
+            host_profile = detect_host_profile()
+        if host_profile.linux_family != "opensuse":
+            raise AssertionError(f"família inesperada: {host_profile.linux_family!r}")
+        if host_profile.mutability != "atomic":
+            raise AssertionError(f"mutabilidade inesperada: {host_profile.mutability!r}")
+        if host_profile.support_tier != "limited":
+            raise AssertionError(f"tier inesperado: {host_profile.support_tier!r}")
+
+
+def test_package_policy_opensuse_supported_now() -> None:
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        bin_dir = root / "bin"
+        bin_dir.mkdir(parents=True, exist_ok=True)
+        write_stub(bin_dir, "zypper", "#!/usr/bin/env bash\nexit 0\n")
+        write_stub(bin_dir, "sudo", "#!/usr/bin/env bash\nexit 0\n")
+        write_stub(bin_dir, "rpm", "#!/usr/bin/env bash\nexit 0\n")
+        os_release = write_os_release(root, distro_id="opensuse-tumbleweed", distro_like="opensuse suse", name="openSUSE Tumbleweed")
+        with temporary_env({"PATH": f"{bin_dir}:{os.environ['PATH']}", "AURY_OS_RELEASE_PATH": str(os_release)}):
+            search_policy = resolve_package_action_policy("procurar")
+            install_policy = resolve_package_action_policy("instalar")
+            remove_policy = resolve_package_action_policy("remover")
+            install_plan = build_package_execution_plan("instalar", "firefox")
+            remove_plan = build_package_execution_plan("remover", "vlc")
+        if search_policy.status != "SUPPORTED_NOW":
+            raise AssertionError(f"classificação inesperada na busca: {search_policy.status!r}")
+        if search_policy.backend_label != "zypper":
+            raise AssertionError(f"backend inesperado na busca: {search_policy.backend_label!r}")
+        if install_policy.backend_label != "sudo + zypper":
+            raise AssertionError(f"backend inesperado na instalação: {install_policy.backend_label!r}")
+        if remove_policy.backend_label != "sudo + zypper":
+            raise AssertionError(f"backend inesperado na remoção: {remove_policy.backend_label!r}")
+        if install_plan.command != ("sudo", "zypper", "--non-interactive", "install", "--", "firefox"):
+            raise AssertionError(f"comando inesperado na instalação: {install_plan.command!r}")
+        if install_plan.state_probe_command != ("rpm", "-q", "firefox"):
+            raise AssertionError(f"sonda inesperada na instalação: {install_plan.state_probe_command!r}")
+        if remove_plan.command != ("sudo", "zypper", "--non-interactive", "remove", "--", "vlc"):
+            raise AssertionError(f"comando inesperado na remoção: {remove_plan.command!r}")
+        if remove_plan.state_probe_command != ("rpm", "-q", "vlc"):
+            raise AssertionError(f"sonda inesperada na remoção: {remove_plan.state_probe_command!r}")
+
+
 def test_dev_destructive_remove_without_safe_antecedent_blocks_local_reference() -> None:
     proc = run("dev", "remover", "ela")
     assert proc.returncode == 0
@@ -2076,6 +2338,9 @@ def main() -> int:
         test_dev_remove_pkg,
         test_dev_install_package_alignment,
         test_dev_package_atomic_block_alignment,
+        test_dev_package_opensuse_search_alignment,
+        test_dev_package_opensuse_install_alignment,
+        test_dev_package_opensuse_remove_alignment,
         test_dev_ping_host_alignment,
         test_dev_network_speed_rede_alignment,
         test_dev_create_file_alignment,
@@ -2132,11 +2397,18 @@ def main() -> int:
         test_runtime_ping,
         test_runtime_package_search,
         test_runtime_package_search_no_results,
+        test_runtime_package_search_opensuse,
+        test_runtime_package_search_opensuse_no_results,
         test_runtime_package_install_debian,
         test_runtime_package_install_noop_when_already_installed,
         test_runtime_package_install_requires_state_confirmation,
+        test_runtime_package_install_opensuse,
+        test_runtime_package_install_opensuse_requires_state_confirmation,
         test_runtime_package_remove_fedora,
         test_runtime_package_remove_noop_when_not_installed,
+        test_runtime_package_remove_opensuse,
+        test_runtime_package_remove_opensuse_noop_when_not_installed,
+        test_runtime_package_opensuse_backend_missing,
         test_runtime_create_file,
         test_runtime_create_folder_located,
         test_dev_search_inflected_alignment,
@@ -2174,6 +2446,8 @@ def main() -> int:
         test_sequence_execution_plan_return_reason_for_blocked_gap,
         test_dev_multiple_actions,
         test_detect_host_profile_tiers,
+        test_detect_host_profile_opensuse_microos_is_atomic,
+        test_package_policy_opensuse_supported_now,
         test_dev_destructive_remove_without_safe_antecedent_blocks_local_reference,
         test_dev_destructive_remove_chain_local_reference_alignment,
         test_dev_destructive_remove_chain_local_reference_inflected_alignment,

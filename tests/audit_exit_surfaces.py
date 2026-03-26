@@ -312,18 +312,89 @@ def main() -> int:
         workdir = Path(tmp)
         bin_dir = workdir / "bin"
         bin_dir.mkdir(parents=True, exist_ok=True)
-        write_stub(bin_dir, "zypper", "#!/usr/bin/env bash\nprintf 'ZYPPER_SHOULD_NOT_RUN\\n'\n")
-        os_release = write_os_release(workdir, distro_id="opensuse-tumbleweed", distro_like="opensuse suse", name="openSUSE Tumbleweed")
-        direct_proc = run_python(
-            ["procurar", "steam"],
-            env={"PATH": f"{bin_dir}:{os.environ['PATH']}", "AURY_OS_RELEASE_PATH": str(os_release)},
-            cwd=workdir,
+        firefox_state = workdir / "firefox.installed"
+        vlc_state = workdir / "vlc.installed"
+        vlc_state.write_text("installed\n", encoding="utf-8")
+        write_stub(bin_dir, "sudo", "#!/usr/bin/env bash\n\"$@\"\n")
+        write_stub(
+            bin_dir,
+            "zypper",
+            "#!/usr/bin/env bash\n"
+            f"firefox_state={firefox_state!s}\n"
+            f"vlc_state={vlc_state!s}\n"
+            "if [ \"$1\" = \"search\" ] && [ \"$3\" = \"steam\" ]; then\n"
+            "  printf 'ZYPPER_SEARCH_STUB %s\\n' \"$*\"\n"
+            "  exit 0\n"
+            "fi\n"
+            "if [ \"$1\" = \"--non-interactive\" ] && [ \"$2\" = \"install\" ] && [ \"$4\" = \"firefox\" ]; then\n"
+            "  touch \"$firefox_state\"\n"
+            "  printf 'ZYPPER_INSTALL_STUB %s\\n' \"$*\"\n"
+            "  exit 0\n"
+            "fi\n"
+            "if [ \"$1\" = \"--non-interactive\" ] && [ \"$2\" = \"remove\" ] && [ \"$4\" = \"vlc\" ]; then\n"
+            "  rm -f \"$vlc_state\"\n"
+            "  printf 'ZYPPER_REMOVE_STUB %s\\n' \"$*\"\n"
+            "  exit 0\n"
+            "fi\n"
+            "exit 12\n",
         )
-        ensure(direct_proc.returncode == 1, "OpenSUSE detectado e bloqueado precisa sair com status 1")
-        ensure("família Linux 'opensuse'" in direct_proc.stdout, "OpenSUSE detectado e bloqueado precisa expor o enquadramento honesto")
-        ensure("ZYPPER_SHOULD_NOT_RUN" not in direct_proc.stdout, "OpenSUSE detectado e bloqueado não pode fingir backend útil nesta fase")
-        ensure(not direct_proc.stderr.strip(), "OpenSUSE detectado e bloqueado não pode vazar stderr")
-    ok("OpenSUSE entra só como detecção e bloqueio honesto nesta fase")
+        write_stub(
+            bin_dir,
+            "rpm",
+            "#!/usr/bin/env bash\n"
+            f"firefox_state={firefox_state!s}\n"
+            f"vlc_state={vlc_state!s}\n"
+            "if [ \"$1\" = \"-q\" ] && [ \"$2\" = \"firefox\" ]; then\n"
+            "  if [ -f \"$firefox_state\" ]; then\n"
+            "    exit 0\n"
+            "  fi\n"
+            "  exit 1\n"
+            "fi\n"
+            "if [ \"$1\" = \"-q\" ] && [ \"$2\" = \"vlc\" ]; then\n"
+            "  if [ -f \"$vlc_state\" ]; then\n"
+            "    exit 0\n"
+            "  fi\n"
+            "  exit 1\n"
+            "fi\n"
+            "exit 1\n",
+        )
+        os_release = write_os_release(workdir, distro_id="opensuse-tumbleweed", distro_like="opensuse suse", name="openSUSE Tumbleweed")
+        env = {"PATH": f"{bin_dir}:{os.environ['PATH']}", "AURY_OS_RELEASE_PATH": str(os_release)}
+
+        direct_proc = run_python(["procurar", "steam"], env=env, cwd=workdir)
+        ensure(direct_proc.returncode == 0, "OpenSUSE mutável precisa executar busca de pacote no runtime Python direto")
+        ensure("ZYPPER_SEARCH_STUB search -- steam" in direct_proc.stdout, "OpenSUSE mutável precisa usar zypper na busca de pacote")
+        ensure(not direct_proc.stderr.strip(), "busca de pacote em OpenSUSE mutável não pode vazar stderr")
+
+        status, output, stderr = run_public(["procurar", "steam"], env=env, cwd=workdir)
+        ensure(status == 0, "entrada pública precisa sair com 0 para busca de pacote em OpenSUSE mutável")
+        ensure("ZYPPER_SEARCH_STUB search -- steam" in output, "entrada pública precisa preservar a busca real em zypper")
+        ensure(not stderr, "entrada pública não pode vazar stderr na busca em OpenSUSE mutável")
+
+        firefox_state.unlink(missing_ok=True)
+        direct_proc = run_python(["instalar", "firefox"], env=env, cwd=workdir)
+        ensure(direct_proc.returncode == 0, "OpenSUSE mutável precisa executar instalação de pacote no runtime Python direto")
+        ensure("ZYPPER_INSTALL_STUB --non-interactive install -- firefox" in direct_proc.stdout, "OpenSUSE mutável precisa usar sudo + zypper na instalação")
+        ensure(not direct_proc.stderr.strip(), "instalação de pacote em OpenSUSE mutável não pode vazar stderr")
+
+        firefox_state.unlink(missing_ok=True)
+        status, output, stderr = run_public(["instalar", "firefox"], env=env, cwd=workdir)
+        ensure(status == 0, "entrada pública precisa sair com 0 para instalação de pacote em OpenSUSE mutável")
+        ensure("ZYPPER_INSTALL_STUB --non-interactive install -- firefox" in output, "entrada pública precisa preservar a instalação real em zypper")
+        ensure(not stderr, "entrada pública não pode vazar stderr na instalação em OpenSUSE mutável")
+
+        vlc_state.write_text("installed\n", encoding="utf-8")
+        direct_proc = run_python(["remover", "vlc"], env=env, cwd=workdir)
+        ensure(direct_proc.returncode == 0, "OpenSUSE mutável precisa executar remoção de pacote no runtime Python direto")
+        ensure("ZYPPER_REMOVE_STUB --non-interactive remove -- vlc" in direct_proc.stdout, "OpenSUSE mutável precisa usar sudo + zypper na remoção")
+        ensure(not direct_proc.stderr.strip(), "remoção de pacote em OpenSUSE mutável não pode vazar stderr")
+
+        vlc_state.write_text("installed\n", encoding="utf-8")
+        status, output, stderr = run_public(["remover", "vlc"], env=env, cwd=workdir)
+        ensure(status == 0, "entrada pública precisa sair com 0 para remoção de pacote em OpenSUSE mutável")
+        ensure("ZYPPER_REMOVE_STUB --non-interactive remove -- vlc" in output, "entrada pública precisa preservar a remoção real em zypper")
+        ensure(not stderr, "entrada pública não pode vazar stderr na remoção em OpenSUSE mutável")
+    ok("OpenSUSE mutável entra com execução real contida de pacote do host")
 
     with tempfile.TemporaryDirectory() as tmp:
         bin_dir = Path(tmp) / "bin"

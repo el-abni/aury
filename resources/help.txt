@@ -56,4 +56,4 @@ aury dev
 NOTA
 aury dev <frase> continua como relatório canônico da linha 1.x.
 aury dev sem frase fica como verificação local curta do adaptador Fish, em uso secundário nesta linha.
-procurar, instalar e remover usam perfil mínimo do host Linux: Tier 1 inicial em Arch, Debian/Ubuntu e Fedora mutável; OpenSUSE e Atomic seguem contidos.
+procurar, instalar e remover usam perfil mínimo do host Linux: Tier 1 inicial em Arch, Debian/Ubuntu e Fedora mutável; OpenSUSE mutável entra com recorte contido no host; Atomic segue bloqueado com honestidade.
