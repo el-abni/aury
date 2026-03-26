@@ -108,6 +108,10 @@ def main() -> int:
     status, output, stderr = run_public(["ajuda"])
     ensure(status == 0, "aury ajuda precisa sair com status 0")
     ensure(f"💜 Aury {CURRENT_VERSION}" in output, "aury ajuda precisa expor a versão ativa")
+    ensure("contrato final de pacote do host por família/host" in output, "aury ajuda precisa congelar o trio como pacote do host")
+    ensure("flatpak e rpm-ostree podem ser observados no ambiente, mas ficam fora do contrato ativo." in output, "aury ajuda precisa enquadrar flatpak e rpm-ostree como observados fora do contrato")
+    ensure("A compatibilidade Linux da Aury 1.x se encerra nesta matriz final." in output, "aury ajuda precisa declarar o encerramento canônico da compatibilidade Linux")
+    ensure("Handoff: software do usuário, múltiplas origens, política de origem/source/trust e suporte operacional real a hosts imutáveis pertencem à Aurora, não à Aury 1.x." in output, "aury ajuda precisa deixar o handoff para a Aurora explícito")
     ensure(not stderr, "aury ajuda não pode vazar stderr no caminho nominal")
     ok("ajuda pública sai com 0 e sem ruído")
 
@@ -542,6 +546,42 @@ def main() -> int:
     ok("OpenSUSE mutável distingue backend ausente de sonda auxiliar ausente")
 
     with tempfile.TemporaryDirectory() as tmp:
+        workdir = Path(tmp)
+        bin_dir = workdir / "bin"
+        bin_dir.mkdir(parents=True, exist_ok=True)
+        write_stub(bin_dir, "sudo", f"#!{BASH_BIN}\n\"$@\"\n")
+        write_stub(
+            bin_dir,
+            "pacman",
+            f"#!{BASH_BIN}\nstate={workdir / 'firefox.installed'}\nif [[ \"$1\" == \"-Q\" && \"$3\" == \"firefox\" ]]; then [[ -f \"$state\" ]] && exit 0 || exit 1; fi\nif [[ \"$1\" == \"-S\" && \"$4\" == \"firefox\" ]]; then : > \"$state\"; printf 'PACMAN_INSTALL_STUB %s\\n' \"$*\"; exit 0; fi\nexit 12\n",
+        )
+        write_stub(bin_dir, "flatpak", f"#!{BASH_BIN}\nprintf 'FLATPAK_SHOULD_NOT_RUN\\n'\n")
+        write_stub(bin_dir, "rpm-ostree", f"#!{BASH_BIN}\nprintf 'RPM_OSTREE_SHOULD_NOT_RUN\\n'\n")
+        write_stub(bin_dir, "python3", f"#!{BASH_BIN}\nexec {shlex.quote(sys.executable)} \"$@\"\n")
+        write_stub(bin_dir, "python", f"#!{BASH_BIN}\nexec {shlex.quote(sys.executable)} \"$@\"\n")
+        write_stub(bin_dir, "dirname", f"#!{BASH_BIN}\nexec {shlex.quote(DIRNAME_BIN)} \"$@\"\n")
+        write_stub(bin_dir, "env", f"#!{BASH_BIN}\nexec /usr/bin/env \"$@\"\n")
+        os_release = write_os_release(workdir, distro_id="cachyos", distro_like="arch", name="CachyOS")
+        env = {"PATH": str(bin_dir), "AURY_OS_RELEASE_PATH": str(os_release)}
+
+        status, output, stderr = run_public(["dev", "instalar", "firefox"], env=env, cwd=workdir)
+        ensure(status == 0, "aury dev com ferramentas observadas precisa continuar saindo com 0")
+        ensure("tier de suporte:               Tier 1 canônico" in output, "aury dev em família suportada precisa expor o Tier 1 canônico final")
+        ensure("contrato de pacote:            pacote do host por família/host" in output, "aury dev precisa expor o contrato final de pacote do host")
+        ensure("ferramentas observadas:        flatpak, rpm-ostree (fora do contrato ativo)" in output, "aury dev precisa enquadrar flatpak e rpm-ostree como observados fora do contrato")
+        ensure("contrato público:              pacote do host por família/host" in output, "aury dev precisa manter instalar no contrato de pacote do host")
+        ensure("app store" in output and "múltiplas rotas" in output, "aury dev precisa negar explicitamente inferência de app store e múltiplas rotas")
+        ensure(not stderr, "aury dev com ferramentas observadas não pode vazar stderr")
+
+        status, output, stderr = run_public(["instalar", "firefox"], env=env, cwd=workdir)
+        ensure(status == 0, "instalar firefox com ferramentas observadas precisa continuar saindo com 0 no host suportado")
+        ensure("PACMAN_INSTALL_STUB -S --needed -- firefox" in output, "instalar firefox precisa continuar usando o backend ativo do contrato")
+        ensure("FLATPAK_SHOULD_NOT_RUN" not in output, "flatpak observado não pode virar rota implícita de instalação")
+        ensure("RPM_OSTREE_SHOULD_NOT_RUN" not in output, "rpm-ostree observado não pode virar rota implícita de instalação")
+        ensure(not stderr, "instalar firefox com ferramentas observadas não pode vazar stderr")
+    ok("ferramentas observadas ficam fora do contrato ativo de pacote do host")
+
+    with tempfile.TemporaryDirectory() as tmp:
         bin_dir = Path(tmp) / "bin"
         bin_dir.mkdir(parents=True, exist_ok=True)
         write_stub(bin_dir, "python3", "#!/usr/bin/env bash\nexit 127\n")
@@ -561,7 +601,7 @@ def main() -> int:
         status, output, stderr = run_public(["dev", "instalar", "firefox"], env=path_env)
         ensure(status == 0, "fallback local de 'aury dev <frase>' precisa sair com 0 quando o Python não sobe")
         ensure("Entrada global" in output, "fallback local de 'aury dev <frase>' precisa expor o relatório local do Fish")
-        ensure("Instalar 'firefox'." in output, "fallback local de 'aury dev <frase>' precisa preservar o resumo público")
+        ensure("Instalar o pacote do host 'firefox'." in output, "fallback local de 'aury dev <frase>' precisa preservar o resumo público")
         ensure(not stderr, "fallback local de 'aury dev <frase>' não pode vazar stderr")
 
         status, output, stderr = run_public(["instalar", "firefox"], env=path_env)

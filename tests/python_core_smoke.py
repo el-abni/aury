@@ -42,6 +42,11 @@ def assert_in(output: str, expected: str) -> None:
         raise AssertionError(f"esperava encontrar {expected!r} em:\n{output}")
 
 
+def assert_not_in(output: str, unexpected: str) -> None:
+    if unexpected in output:
+        raise AssertionError(f"não esperava encontrar {unexpected!r} em:\n{output}")
+
+
 def write_stub(bin_dir: Path, name: str, body: str) -> None:
     path = bin_dir / name
     path.write_text(body, encoding="utf-8")
@@ -104,11 +109,11 @@ def test_dev_remove_pkg() -> None:
         bin_dir.mkdir(parents=True, exist_ok=True)
         write_stub(bin_dir, "pacman", "#!/usr/bin/env bash\nexit 0\n")
         os_release = write_os_release(root, distro_id="cachyos", distro_like="arch", name="CachyOS")
-        env = {"PATH": f"{bin_dir}:{os.environ['PATH']}", "AURY_OS_RELEASE_PATH": str(os_release)}
+        env = {"PATH": str(bin_dir), "AURY_OS_RELEASE_PATH": str(os_release)}
         proc = run("dev", "remover", "vlc", env=env)
         assert proc.returncode == 0
         assert_in(proc.stdout, "domínio:                       pacote")
-        assert_in(proc.stdout, "Remover 'vlc'.")
+        assert_in(proc.stdout, "Remover o pacote do host 'vlc'.")
         assert_in(proc.stdout, "Perfil do host")
         assert_in(proc.stdout, "família linux:                 arch")
         assert_in(proc.stdout, "rota suportada:                package_remove")
@@ -131,13 +136,34 @@ def test_dev_install_package_alignment() -> None:
         assert_in(proc.stdout, "intenção:                      instalar")
         assert_in(proc.stdout, "domínio:                       pacote")
         assert_in(proc.stdout, "alvo principal:                firefox")
-        assert_in(proc.stdout, "resumo:                        Instalar 'firefox'.")
+        assert_in(proc.stdout, "resumo:                        Instalar o pacote do host 'firefox'.")
         assert_in(proc.stdout, "família linux:                 debian")
-        assert_in(proc.stdout, "tier de suporte:               Tier 1 inicial")
+        assert_in(proc.stdout, "tier de suporte:               Tier 1 canônico")
+        assert_in(proc.stdout, "contrato público:              pacote do host por família/host")
         assert_in(proc.stdout, "suportada agora")
         assert_in(proc.stdout, "rota suportada:                package_install")
         assert_in(proc.stdout, "backend necessário:            sudo + apt-get")
         assert_in(proc.stdout, "decisão:                       executar no Python")
+
+
+def test_dev_package_contract_and_observed_tools_alignment() -> None:
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        bin_dir = root / "bin"
+        bin_dir.mkdir(parents=True, exist_ok=True)
+        write_stub(bin_dir, "pacman", "#!/usr/bin/env bash\nexit 0\n")
+        write_stub(bin_dir, "flatpak", "#!/usr/bin/env bash\nexit 0\n")
+        write_stub(bin_dir, "rpm-ostree", "#!/usr/bin/env bash\nexit 0\n")
+        os_release = write_os_release(root, distro_id="cachyos", distro_like="arch", name="CachyOS")
+        env = {"PATH": f"{bin_dir}:{os.environ['PATH']}", "AURY_OS_RELEASE_PATH": str(os_release)}
+        proc = run("dev", "instalar", "firefox", env=env)
+        assert proc.returncode == 0
+        assert_in(proc.stdout, "contrato de pacote:            pacote do host por família/host")
+        assert_in(proc.stdout, "backends ativos:               pacman")
+        assert_in(proc.stdout, "ferramentas observadas:        flatpak, rpm-ostree (fora do contrato ativo)")
+        assert_in(proc.stdout, "contrato público:              pacote do host por família/host")
+        assert_in(proc.stdout, "resumo:                        Instalar o pacote do host 'firefox'.")
+        assert_in(proc.stdout, "sem prometer app store, múltiplas rotas ou política de origem")
 
 
 def test_dev_package_atomic_block_alignment() -> None:
@@ -156,6 +182,8 @@ def test_dev_package_atomic_block_alignment() -> None:
         assert_in(proc.stdout, "tier de suporte:               suporte limitado")
         assert_in(proc.stdout, "fronteira:                     bloqueado por política")
         assert_in(proc.stdout, "classificação:                 bloqueio honesto agora")
+        assert_in(proc.stdout, "contrato de pacote:            pacote do host por família/host")
+        assert_in(proc.stdout, "contrato público:              pacote do host por família/host")
         assert_in(proc.stdout, "compatibilidade:               bloqueado por política")
         assert_in(proc.stdout, "rota suportada:                package_install")
         assert_in(proc.stdout, "backend necessário:            -")
@@ -180,6 +208,7 @@ def test_dev_package_opensuse_search_alignment() -> None:
         assert_in(proc.stdout, "família linux:                 opensuse")
         assert_in(proc.stdout, "mutabilidade:                  mutável")
         assert_in(proc.stdout, "tier de suporte:               Tier 2 útil contido")
+        assert_in(proc.stdout, "contrato público:              pacote do host por família/host")
         assert_in(proc.stdout, "suportada agora")
         assert_in(proc.stdout, "rota suportada:                package_search")
         assert_in(proc.stdout, "backend necessário:            zypper")
@@ -204,6 +233,7 @@ def test_dev_package_opensuse_install_alignment() -> None:
         assert_in(proc.stdout, "alvo principal:                firefox")
         assert_in(proc.stdout, "família linux:                 opensuse")
         assert_in(proc.stdout, "tier de suporte:               Tier 2 útil contido")
+        assert_in(proc.stdout, "contrato público:              pacote do host por família/host")
         assert_in(proc.stdout, "suportada agora")
         assert_in(proc.stdout, "rota suportada:                package_install")
         assert_in(proc.stdout, "backend necessário:            sudo + zypper")
@@ -227,6 +257,7 @@ def test_dev_package_opensuse_remove_alignment() -> None:
         assert_in(proc.stdout, "alvo principal:                vlc")
         assert_in(proc.stdout, "família linux:                 opensuse")
         assert_in(proc.stdout, "tier de suporte:               Tier 2 útil contido")
+        assert_in(proc.stdout, "contrato público:              pacote do host por família/host")
         assert_in(proc.stdout, "suportada agora")
         assert_in(proc.stdout, "rota suportada:                package_remove")
         assert_in(proc.stdout, "backend necessário:            sudo + zypper")
@@ -251,6 +282,7 @@ def test_dev_host_maintenance_arch_update_alignment() -> None:
         assert_in(proc.stdout, "alvo principal:                host local")
         assert_in(proc.stdout, "resumo:                        Manutenção do host: atualizar o host local.")
         assert_in(proc.stdout, "classificação:                 manutenção local do host")
+        assert_in(proc.stdout, "contrato público:              manutenção do host")
         assert_in(proc.stdout, "compatibilidade:               manutenção local do host")
         assert_in(proc.stdout, "rota suportada:                maintenance_local_atualizar")
         assert_in(proc.stdout, "backend necessário:            paru + pacman")
@@ -272,6 +304,7 @@ def test_dev_host_maintenance_arch_optimize_alignment() -> None:
         assert_in(proc.stdout, "domínio:                       sistema")
         assert_in(proc.stdout, "resumo:                        Manutenção do host: otimizar o host local.")
         assert_in(proc.stdout, "classificação:                 manutenção local do host")
+        assert_in(proc.stdout, "contrato público:              manutenção do host")
         assert_in(proc.stdout, "compatibilidade:               manutenção local do host")
         assert_in(proc.stdout, "rota suportada:                maintenance_local_otimizar")
         assert_in(proc.stdout, "backend necessário:            paccache + journalctl + pacman")
@@ -288,6 +321,7 @@ def test_dev_host_maintenance_debian_out_of_scope_alignment() -> None:
         assert_in(proc.stdout, "Perfil do host")
         assert_in(proc.stdout, "família linux:                 debian")
         assert_in(proc.stdout, "classificação:                 bloqueio honesto agora")
+        assert_in(proc.stdout, "contrato público:              manutenção do host")
         assert_in(proc.stdout, "compatibilidade:               fora do recorte")
         assert_in(proc.stdout, "rota suportada:                host_maintenance_policy_gate")
         assert_in(proc.stdout, "backend necessário:            -")
@@ -306,6 +340,7 @@ def test_dev_host_maintenance_atomic_block_alignment() -> None:
         assert_in(proc.stdout, "família linux:                 fedora")
         assert_in(proc.stdout, "mutabilidade:                  Atomic")
         assert_in(proc.stdout, "classificação:                 bloqueio honesto agora")
+        assert_in(proc.stdout, "contrato público:              manutenção do host")
         assert_in(proc.stdout, "compatibilidade:               bloqueado por política")
         assert_in(proc.stdout, "rota suportada:                host_maintenance_policy_gate")
         assert_in(proc.stdout, "backend necessário:            -")
@@ -1592,7 +1627,7 @@ def test_dev_search_inflected_alignment() -> None:
         assert_in(proc.stdout, "intenção:                      procurar")
         assert_in(proc.stdout, "domínio:                       pacote")
         assert_in(proc.stdout, "alvo principal:                steam")
-        assert_in(proc.stdout, "resumo:                        Procurar 'steam'.")
+        assert_in(proc.stdout, "resumo:                        Procurar o pacote do host 'steam'.")
         assert_in(proc.stdout, "suportada agora")
         assert_in(proc.stdout, "rota suportada:                package_search")
         assert_in(proc.stdout, "backend necessário:            pacman")
@@ -1600,7 +1635,7 @@ def test_dev_search_inflected_alignment() -> None:
         assert_in(proc.stdout, "motivo:                        todas as ações têm rota explícita no runtime Python atual.")
         assert_in(
             proc.stdout,
-            "motivo do plano:               o perfil do host Linux já resolve esta busca de pacote com backend explícito nesta fase, e a execução real trata ausência de resultado com saída honesta.",
+            "motivo do plano:               nesta linha, 'procurar' significa pacote do host por família/host; este perfil já resolve a busca com backend explícito neste contrato final, sem prometer app store, múltiplas rotas ou política de origem.",
         )
 
 
@@ -1736,7 +1771,7 @@ def test_prepare_analysis_uses_prepared_action() -> None:
         raise AssertionError("a análise não está partindo do trecho original da ação preparada")
     if analysis.normalized_text != action.normalized_action:
         raise AssertionError("a análise não está partindo do trecho normalizado da ação preparada")
-    if analysis.summary != "Remover 'vlc'.":
+    if analysis.summary != "Remover o pacote do host 'vlc'.":
         raise AssertionError(f"resumo inesperado: {analysis.summary!r}")
 
 
@@ -1746,7 +1781,7 @@ def test_prepare_analysis_explicit_package_target_strips_domain_noise() -> None:
         raise AssertionError(f"domínio inesperado: {analysis.domain!r}")
     if analysis.entities.get("alvo_principal") != "vlc":
         raise AssertionError(f"alvo principal inesperado: {analysis.entities.get('alvo_principal')!r}")
-    if analysis.summary != "Remover 'vlc'.":
+    if analysis.summary != "Remover o pacote do host 'vlc'.":
         raise AssertionError(f"resumo inesperado: {analysis.summary!r}")
 
 
@@ -2078,7 +2113,7 @@ def test_prepare_analyses_multiple_actions() -> None:
         raise AssertionError(f"frase preparada inesperada: {phrase.original_text!r}")
     if [action.original_action for action in actions] != ["procurar steam", "remover vlc"]:
         raise AssertionError(f"ações preparadas inesperadas: {[action.original_action for action in actions]!r}")
-    if [analysis.summary for analysis in analyses] != ["Procurar 'steam'.", "Remover 'vlc'."]:
+    if [analysis.summary for analysis in analyses] != ["Procurar o pacote do host 'steam'.", "Remover o pacote do host 'vlc'."]:
         raise AssertionError(f"análises inesperadas: {[analysis.summary for analysis in analyses]!r}")
 
 
@@ -2299,8 +2334,8 @@ def test_dev_multiple_actions() -> None:
         assert_in(proc.stdout, "Ação 2")
         assert_in(proc.stdout, "suportada agora")
         assert_in(proc.stdout, "executar no Python")
-        assert_in(proc.stdout, "resumo:                        Procurar 'steam'.")
-        assert_in(proc.stdout, "resumo:                        Remover 'vlc'.")
+        assert_in(proc.stdout, "resumo:                        Procurar o pacote do host 'steam'.")
+        assert_in(proc.stdout, "resumo:                        Remover o pacote do host 'vlc'.")
         assert_in(proc.stdout, "rota suportada:                package_search")
         assert_in(proc.stdout, "rota suportada:                package_remove")
 
@@ -2322,6 +2357,75 @@ def test_detect_host_profile_tiers() -> None:
             raise AssertionError(f"rótulo inesperado: {host_profile.support_tier_label!r}")
         if "zypper" not in host_profile.package_backends:
             raise AssertionError(f"backend inesperado: {host_profile.package_backends!r}")
+
+
+def test_final_linux_compatibility_matrix_labels() -> None:
+    cases = (
+        (
+            "arch",
+            {"distro_id": "cachyos", "distro_like": "arch", "name": "CachyOS"},
+            "mutável",
+            "Tier 1 canônico",
+            "suportado agora",
+        ),
+        (
+            "debian",
+            {"distro_id": "ubuntu", "distro_like": "debian", "name": "Ubuntu"},
+            "mutável",
+            "Tier 1 canônico",
+            "suportado agora",
+        ),
+        (
+            "fedora",
+            {"distro_id": "fedora", "distro_like": "fedora", "name": "Fedora Linux"},
+            "mutável",
+            "Tier 1 canônico",
+            "suportado agora",
+        ),
+        (
+            "opensuse",
+            {"distro_id": "opensuse-tumbleweed", "distro_like": "opensuse suse", "name": "openSUSE Tumbleweed"},
+            "mutável",
+            "Tier 2 útil contido",
+            "suportado contido",
+        ),
+        (
+            "fedora",
+            {"distro_id": "bazzite", "distro_like": "fedora", "name": "Bazzite"},
+            "Atomic",
+            "suporte limitado",
+            "bloqueado por política",
+        ),
+    )
+    stub_bodies = {
+        "pacman": "#!/usr/bin/env bash\nexit 0\n",
+        "apt-cache": "#!/usr/bin/env bash\nexit 0\n",
+        "apt-get": "#!/usr/bin/env bash\nexit 0\n",
+        "dnf": "#!/usr/bin/env bash\nexit 0\n",
+        "zypper": "#!/usr/bin/env bash\nexit 0\n",
+        "flatpak": "#!/usr/bin/env bash\nexit 0\n",
+        "rpm-ostree": "#!/usr/bin/env bash\nexit 0\n",
+    }
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        bin_dir = root / "bin"
+        bin_dir.mkdir(parents=True, exist_ok=True)
+        for name, body in stub_bodies.items():
+            write_stub(bin_dir, name, body)
+        for family, os_release_kwargs, mutability_label, support_label, frontier_label in cases:
+            os_release = write_os_release(root, **os_release_kwargs)
+            with temporary_env({"PATH": str(bin_dir), "AURY_OS_RELEASE_PATH": str(os_release)}):
+                host_profile = detect_host_profile()
+            if host_profile.linux_family != family:
+                raise AssertionError(f"família inesperada em {os_release_kwargs['distro_id']}: {host_profile.linux_family!r}")
+            if host_profile.mutability_label != mutability_label:
+                raise AssertionError(f"mutabilidade inesperada em {os_release_kwargs['distro_id']}: {host_profile.mutability_label!r}")
+            if host_profile.support_tier_label != support_label:
+                raise AssertionError(f"tier inesperado em {os_release_kwargs['distro_id']}: {host_profile.support_tier_label!r}")
+            if host_profile.compatibility_frontier_label != frontier_label:
+                raise AssertionError(
+                    f"fronteira inesperada em {os_release_kwargs['distro_id']}: {host_profile.compatibility_frontier_label!r}"
+                )
 
 
 def test_detect_host_profile_atomic_frontier_labels() -> None:
@@ -2360,6 +2464,25 @@ def test_detect_host_profile_opensuse_microos_is_atomic() -> None:
             raise AssertionError(f"tier inesperado: {host_profile.support_tier!r}")
         if host_profile.compatibility_frontier_label != "bloqueado por política":
             raise AssertionError(f"fronteira inesperada: {host_profile.compatibility_frontier_label!r}")
+
+
+def test_detect_host_profile_observed_tools_stay_out_of_active_contract() -> None:
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        bin_dir = root / "bin"
+        bin_dir.mkdir(parents=True, exist_ok=True)
+        write_stub(bin_dir, "pacman", "#!/usr/bin/env bash\nexit 0\n")
+        write_stub(bin_dir, "flatpak", "#!/usr/bin/env bash\nexit 0\n")
+        write_stub(bin_dir, "rpm-ostree", "#!/usr/bin/env bash\nexit 0\n")
+        os_release = write_os_release(root, distro_id="cachyos", distro_like="arch", name="CachyOS")
+        with temporary_env({"PATH": str(bin_dir), "AURY_OS_RELEASE_PATH": str(os_release)}):
+            host_profile = detect_host_profile()
+        if host_profile.package_backends != ("pacman",):
+            raise AssertionError(f"backends ativos inesperados: {host_profile.package_backends!r}")
+        if host_profile.observed_package_tools != ("flatpak", "rpm-ostree"):
+            raise AssertionError(f"ferramentas observadas inesperadas: {host_profile.observed_package_tools!r}")
+        if host_profile.observed_package_tools_label != "flatpak, rpm-ostree (fora do contrato ativo)":
+            raise AssertionError(f"rótulo inesperado: {host_profile.observed_package_tools_label!r}")
 
 
 def test_package_policy_opensuse_supported_now() -> None:
@@ -2891,6 +3014,7 @@ def main() -> int:
         test_version,
         test_dev_remove_pkg,
         test_dev_install_package_alignment,
+        test_dev_package_contract_and_observed_tools_alignment,
         test_dev_package_atomic_block_alignment,
         test_dev_package_opensuse_search_alignment,
         test_dev_package_opensuse_install_alignment,
@@ -3007,6 +3131,7 @@ def main() -> int:
         test_detect_host_profile_tiers,
         test_detect_host_profile_atomic_frontier_labels,
         test_detect_host_profile_opensuse_microos_is_atomic,
+        test_detect_host_profile_observed_tools_stay_out_of_active_contract,
         test_package_policy_opensuse_supported_now,
         test_package_policy_atomic_blocked_by_policy_even_with_backend,
         test_package_policy_matrix_mutable_hosts,

@@ -61,7 +61,7 @@ class HostProfile:
     @property
     def support_tier_label(self) -> str:
         if self.support_tier == "tier_1":
-            return "Tier 1 inicial"
+            return "Tier 1 canônico"
         if self.support_tier == "tier_2":
             return "Tier 2 útil contido"
         if self.support_tier == "limited":
@@ -331,7 +331,7 @@ def _package_backend_label(intent: str, profile: HostProfile) -> str:
 
 
 def _supported_package_reason(intent: str, profile: HostProfile) -> str:
-    scope = "neste recorte contido" if profile.support_tier == "tier_2" else "nesta fase"
+    scope = "neste recorte contido" if profile.support_tier == "tier_2" else "neste contrato final"
     if intent == "procurar":
         return (
             "nesta linha, 'procurar' significa pacote do host por família/host; "

@@ -1,6 +1,6 @@
 # tests/
 
-Esta pasta guarda a base pública mínima de regressão auditável que sustenta o fechamento público final da linha **1.x** da **💜 Aury**.
+Esta pasta guarda a base pública mínima de regressão auditável que sustenta o fechamento canônico da linha **1.x** da **💜 Aury**.
 
 Ela nasceu como **Fase 0** na linha 1.6.x e continua pequena de propósito. Na abertura operacional da v1.7.0, essa mesma base ganhou um tooling inicial curto de preflight e auditoria para blindar melhor o chão público já herdado, sem virar framework.
 
@@ -18,6 +18,16 @@ Ela **não** existe para:
 - virar framework genérico
 - prometer cobertura total do projeto
 - substituir validação manual quando o caso ainda é fronteira de parser
+
+## Fechamento final auditado
+
+Esta base mínima protege a leitura final da linha 1.x:
+
+- suportado agora: Arch/derivadas mutáveis, Debian/Ubuntu/derivadas mutáveis e Fedora mutável
+- suportado contido: OpenSUSE mutável
+- bloqueado por política: Atomic, Universal Blue, `opensuse-microos`, `microos` e equivalentes
+- observado, mas fora do contrato ativo: `flatpak` e `rpm-ostree`
+- handoff para a Aurora: software do usuário, múltiplas origens, política de origem/source/trust e suporte operacional real a hosts imutáveis pertencem à Aurora, não à Aury 1.x
 
 ## Execução mínima hoje
 
@@ -98,11 +108,11 @@ Hoje ele cobre de forma executável:
 
 ### `audit_public_coherence.py`
 
-Este auditor pequeno verifica o chão público mínimo que a continuidade incremental da v1.9.6 precisa manter coerente:
+Este auditor pequeno verifica o chão público mínimo que o encerramento canônico da v1.9.8 precisa manter coerente:
 
 - `VERSION` preenchida
 - `resources/help.txt` com placeholder de versão e nota honesta sobre `aury dev`
-- `README.md` e `CHANGELOG.md` alinhados à versão pública atual e à continuidade pública contida da v1.9.1
+- `README.md`, `CHANGELOG.md`, `docs/ARCHITECTURE.md` e `tests/README.md` alinhados à versão pública atual, à matriz final da linha 1.x e ao handoff limpo para a Aurora
 - ausência de hardcode de versão no runtime público e nos scripts de instalação
 - renderização real de `help` e `version` via entrada pública Fish
 
@@ -114,7 +124,7 @@ Este auditor pequeno verifica um recorte de paridade operacional entre:
 - o executor realmente observado no modo normal
 
 O foco é manter auditáveis as rotas já assumidas como Python e as que seguem canonicamente no adaptador Fish.
-Na v1.9.6, isso passa a incluir o enquadramento de `atualizar` / `otimizar` como manutenção do host local, sem paridade portátil com o domínio de pacote.
+Na v1.9.8, isso inclui o enquadramento de `atualizar` / `otimizar` como manutenção do host local, sem paridade portátil com o domínio de pacote, e a distinção entre backends ativos do contrato e ferramentas apenas observadas.
 
 ### `audit_exit_surfaces.py`
 
@@ -130,9 +140,11 @@ Este auditor pequeno verifica um recorte canônico de status de saída e superf�
 - OpenSUSE mutável com execução real contida de `procurar`, `instalar` e `remover`
 - OpenSUSE mutável com busca sem resultado honesta e distinção entre backend ausente e sonda auxiliar ausente
 - Atomic preservado em bloqueio honesto de pacote do host, distinto de backend ausente e de sonda auxiliar ausente
+- `flatpak` / `rpm-ostree` observados apenas fora do contrato ativo, sem parecer instalação operacional implícita
 - manutenção do host em Arch preservada como rota local no Fish, sem fingir rota Python portátil
 - manutenção do host em Debian saindo como fora do recorte equivalente, e não como backend ausente
 - manutenção do host em Atomic preservada como bloqueio por política
+- help público com matriz final explícita da linha 1.x e handoff limpo para a Aurora
 
 ### `release_gate_minimo.sh`
 

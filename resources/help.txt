@@ -56,6 +56,10 @@ aury dev
 NOTA
 aury dev <frase> continua como relatório canônico da linha 1.x.
 aury dev sem frase fica como verificação local curta do adaptador Fish, em uso secundário nesta linha.
-procurar, instalar e remover usam contrato de pacote por família/host.
+procurar, instalar e remover usam o contrato final de pacote do host por família/host.
+Esse trio não significa software do usuário, app store, múltiplas rotas nem política de origem nesta linha.
+flatpak e rpm-ostree podem ser observados no ambiente, mas ficam fora do contrato ativo.
 atualizar e otimizar pertencem à manutenção do host: continuam locais em Arch/derivadas mutáveis, ficam fora do recorte equivalente em Debian/Fedora/OpenSUSE e seguem bloqueados por política em Atomic/imutáveis.
-Suportado agora: Arch, Debian/Ubuntu e Fedora mutável. Suportado contido: OpenSUSE mutável. Bloqueado por política: Atomic, Universal Blue, opensuse-microos, microos e equivalentes.
+A compatibilidade Linux da Aury 1.x se encerra nesta matriz final.
+Matriz final da linha 1.x: suportado agora em Arch, Debian/Ubuntu e Fedora mutável; suportado contido em OpenSUSE mutável; bloqueado por política em Atomic, Universal Blue, opensuse-microos, microos e equivalentes.
+Handoff: software do usuário, múltiplas origens, política de origem/source/trust e suporte operacional real a hosts imutáveis pertencem à Aurora, não à Aury 1.x.

@@ -2,7 +2,51 @@
 
 Todas as mudanças importantes da **💜 Aury** são documentadas neste arquivo.
 
-A linha pública da **💜 Aury** continua incremental na série **v1.9.x**. Este changelog registra apenas versões lançadas.
+A linha pública da **💜 Aury** se encerra canonicamente na série **v1.9.x**. Este changelog registra apenas versões lançadas.
+
+---
+
+## v1.9.8
+
+### Consolidado
+- fechamento canônico da **v1.9.8** como encerramento da compatibilidade Linux da **Aury 1.x**, sem abrir backend, família, operação ou host novo
+- versão, narrativa, arquitetura, ajuda, auditorias e gate final passam a refletir a **v1.9.8** como fechamento explícito da linha, sem cheiro de transição infinita
+
+### Matriz final e superfície pública
+- a matriz pública final da linha fica congelada como: **suportado agora** em Arch/derivadas mutáveis, Debian/Ubuntu/derivadas mutáveis e Fedora mutável; **suportado contido** em OpenSUSE mutável; **bloqueado por política** em Atomic, Universal Blue, `opensuse-microos`, `microos` e equivalentes
+- `aury dev`, `README`, `ARCHITECTURE`, `help` e a base mínima de testes passam a contar exatamente a mesma história final da linha 1.x
+- `flatpak` e `rpm-ostree` permanecem apenas como ferramentas observadas fora do contrato ativo, sem parecer suporte parcial implícito
+
+### Handoff para a Aurora
+- a **Aury 1.x** encerra o contrato de host, o contrato de pacote do host, o contrato de manutenção do host, a fronteira com imutáveis e a taxonomia pública estável da compatibilidade Linux
+- software do usuário, múltiplas origens, política de origem/source/trust, suporte operacional real a hosts imutáveis e rotas mais altas de decisão/mediação ficam explicitamente enquadrados como matéria da **Aurora**
+
+### Compatibilidade e limites
+- OpenSUSE mutável termina a linha como útil, real e contido, sem promoção a Tier 1 pleno
+- Atomic, Universal Blue, `opensuse-microos`, `microos` e equivalentes terminam a linha claramente fora por política, sem quase-suporte
+- continuam fora desta release: `flatpak` operacional real, `rpm-ostree` operacional real, AUR/COPR/PPA/AppImage/GitHub Releases como contrato público, toolbox, distrobox e política pública de origem de software
+
+---
+
+## v1.9.7
+
+### Consolidado
+- fechamento público da **v1.9.7** como congelamento explícito do contrato final de pacote do host, sem abrir compatibilidade Linux nova
+- versão, narrativa, arquitetura, ajuda e metadados passam a refletir a **v1.9.7** como continuação incremental contida da base pública já consolidada na **v1.9.6**
+
+### Contrato final de pacote do host
+- `procurar`, `instalar` e `remover` passam a aparecer explicitamente como **pacote do host por família/host**
+- esse trio deixa de permitir inferência pública de software do usuário, app store, múltiplas rotas, política de origem ou instalação cross-source
+- `aury dev` passa a separar contrato de pacote, backends ativos e ferramentas observadas fora do contrato ativo
+
+### Ferramentas observadas e fronteiras
+- `flatpak` e `rpm-ostree` podem continuar observados no ambiente, mas deixam de soar como suporte parcial implícito e permanecem fora do contrato ativo da linha 1.x
+- OpenSUSE mutável permanece útil, real e contido em `procurar`, `instalar` e `remover`, sem promoção a paridade total com o Tier 1
+- Atomic, Universal Blue, `opensuse-microos`, `microos` e equivalentes continuam bloqueados por política para pacote do host
+
+### Compatibilidade e limites
+- `atualizar` e `otimizar` permanecem como manutenção do host, sem equivalência multi-distro nova nesta release
+- continuam fora desta release: `flatpak` operacional real, `rpm-ostree` operacional real, AUR/COPR/PPA/AppImage/GitHub Releases como contrato público, toolbox, distrobox, política de origem de software e suporte cross-distro amplo
 
 ---
 

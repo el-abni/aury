@@ -424,7 +424,8 @@ chmod +x "$remove_policy_tmp/bin/pacman"
 remove_policy_dev_output="$(ROOT="$ROOT" TMP="$remove_policy_tmp" AURY_OS_RELEASE_PATH="$remove_policy_tmp/os-release" fish -c 'source $ROOT/bin/aury.fish; cd $TMP; aury dev remover vlc' 2>&1 || true)"
 require_in_output "$remove_policy_dev_output" "domínio:                       pacote" "'aury dev remover vlc' precisa assumir a política canônica de pacote"
 require_in_output "$remove_policy_dev_output" "estado:                        CONSISTENTE" "'aury dev remover vlc' não pode continuar parcial"
-require_in_output "$remove_policy_dev_output" "resumo:                        Remover 'vlc'." "'aury dev remover vlc' precisa expor o alvo de pacote com clareza"
+require_in_output "$remove_policy_dev_output" "resumo:                        Remover o pacote do host 'vlc'." "'aury dev remover vlc' precisa expor o alvo de pacote do host com clareza"
+require_in_output "$remove_policy_dev_output" "contrato público:              pacote do host por família/host" "'aury dev remover vlc' precisa congelar o contrato público de pacote"
 
 remove_policy_pkg_output="$(ROOT="$ROOT" TMP="$remove_policy_tmp" PATH="$remove_policy_tmp/bin:$PATH" AURY_OS_RELEASE_PATH="$remove_policy_tmp/os-release" fish -c 'source $ROOT/bin/aury.fish; cd $TMP; aury remover vlc; if test -e vlc; echo FILE_STILL_PRESENT; else; echo FILE_REMOVED; end' 2>&1 || true)"
 require_in_output "$remove_policy_pkg_output" "SUDO_STUB pacman -Rns -- vlc" "'aury remover vlc' deve seguir a política determinística de pacote"
@@ -439,6 +440,85 @@ require_in_output "$remove_policy_file_output" "Confirma? [s/N]" "forma explíci
 require_in_output "$remove_policy_file_output" "eu não removi 'vlc'." "negação de confirmação precisa cancelar a remoção explícita de arquivo"
 require_not_in_output "$remove_policy_file_output" "SUDO_STUB" "forma explícita de arquivo não pode cair no backend de pacote"
 require_in_output "$remove_policy_file_output" "FILE_STILL_PRESENT" "forma explícita de arquivo negada deve preservar o alvo"
+
+observed_tools_tmp="$(mktemp -d /tmp/aury-public-ux-XXXXXX)"
+tmpdirs+=("$observed_tools_tmp")
+mkdir -p "$observed_tools_tmp/bin"
+
+cat > "$observed_tools_tmp/os-release" <<'EOF'
+ID=cachyos
+ID_LIKE="arch"
+NAME="CachyOS"
+EOF
+
+cat > "$observed_tools_tmp/bin/sudo" <<'EOF'
+#!/usr/bin/bash
+"$@"
+EOF
+chmod +x "$observed_tools_tmp/bin/sudo"
+
+cat > "$observed_tools_tmp/bin/pacman" <<EOF
+#!/usr/bin/bash
+state="$observed_tools_tmp/firefox.installed"
+if [[ "\$1" == "-Q" && "\$3" == "firefox" ]]; then
+    [[ -f "\$state" ]] && exit 0 || exit 1
+fi
+if [[ "\$1" == "-S" && "\$4" == "firefox" ]]; then
+    : > "\$state"
+    printf 'PACMAN_INSTALL_STUB %s\n' "\$*"
+    exit 0
+fi
+exit 12
+EOF
+chmod +x "$observed_tools_tmp/bin/pacman"
+
+cat > "$observed_tools_tmp/bin/flatpak" <<'EOF'
+#!/usr/bin/bash
+printf 'FLATPAK_SHOULD_NOT_RUN %s\n' "$*"
+exit 0
+EOF
+chmod +x "$observed_tools_tmp/bin/flatpak"
+
+cat > "$observed_tools_tmp/bin/rpm-ostree" <<'EOF'
+#!/usr/bin/bash
+printf 'RPM_OSTREE_SHOULD_NOT_RUN %s\n' "$*"
+exit 0
+EOF
+chmod +x "$observed_tools_tmp/bin/rpm-ostree"
+
+cat > "$observed_tools_tmp/bin/python3" <<EOF
+#!/usr/bin/bash
+exec "$(command -v python3)" "\$@"
+EOF
+chmod +x "$observed_tools_tmp/bin/python3"
+
+cat > "$observed_tools_tmp/bin/python" <<EOF
+#!/usr/bin/bash
+exec "$(command -v python3)" "\$@"
+EOF
+chmod +x "$observed_tools_tmp/bin/python"
+
+cat > "$observed_tools_tmp/bin/dirname" <<EOF
+#!/usr/bin/bash
+exec "$(command -v dirname)" "\$@"
+EOF
+chmod +x "$observed_tools_tmp/bin/dirname"
+
+cat > "$observed_tools_tmp/bin/env" <<'EOF'
+#!/usr/bin/bash
+exec /usr/bin/env "$@"
+EOF
+chmod +x "$observed_tools_tmp/bin/env"
+
+observed_tools_output="$(ROOT="$ROOT" TMP="$observed_tools_tmp" PATH="$observed_tools_tmp/bin" AURY_OS_RELEASE_PATH="$observed_tools_tmp/os-release" "$FISH_BIN" -c 'source $ROOT/bin/aury.fish; cd $TMP; aury dev instalar firefox; echo ---RUN---; aury instalar firefox' 2>&1 || true)"
+require_in_output "$observed_tools_output" "tier de suporte:               Tier 1 canônico" "famílias já abertas precisam aparecer como Tier 1 canônico no fechamento da linha"
+require_in_output "$observed_tools_output" "contrato de pacote:            pacote do host por família/host" "aury dev precisa explicitar o contrato final de pacote do host"
+require_in_output "$observed_tools_output" "backends ativos:               pacman" "aury dev precisa separar os backends ativos do contrato"
+require_in_output "$observed_tools_output" "ferramentas observadas:        flatpak, rpm-ostree (fora do contrato ativo)" "aury dev precisa enquadrar flatpak e rpm-ostree como ferramentas observadas fora do contrato"
+require_in_output "$observed_tools_output" "contrato público:              pacote do host por família/host" "aury dev precisa congelar instalar como pacote do host"
+require_in_output "$observed_tools_output" "PACMAN_INSTALL_STUB -S --needed -- firefox" "instalar pacote do host precisa continuar usando o backend ativo da família"
+require_not_in_output "$observed_tools_output" "FLATPAK_SHOULD_NOT_RUN" "flatpak observado não pode parecer rota operacional implícita"
+require_not_in_output "$observed_tools_output" "RPM_OSTREE_SHOULD_NOT_RUN" "rpm-ostree observado não pode parecer rota operacional implícita"
 
 opensuse_pkg_tmp="$(mktemp -d /tmp/aury-public-ux-XXXXXX)"
 tmpdirs+=("$opensuse_pkg_tmp")
@@ -500,6 +580,7 @@ chmod +x "$opensuse_pkg_tmp/bin/rpm"
 opensuse_pkg_output="$(ROOT="$ROOT" TMP="$opensuse_pkg_tmp" PATH="$opensuse_pkg_tmp/bin:$PATH" AURY_OS_RELEASE_PATH="$opensuse_pkg_tmp/os-release" fish -c 'source $ROOT/bin/aury.fish; cd $TMP; aury dev procurar steam; echo ---SEARCH---; aury procurar steam; echo ---EMPTY---; aury procurar nada; echo ---INSTALL---; rm -f firefox.installed; aury instalar firefox; echo ---REMOVE---; touch vlc.installed; aury remover vlc' 2>&1 || true)"
 require_in_output "$opensuse_pkg_output" "família linux:                 opensuse" "OpenSUSE mutável precisa aparecer como família explícita em aury dev"
 require_in_output "$opensuse_pkg_output" "tier de suporte:               Tier 2 útil contido" "OpenSUSE mutável precisa aparecer como recorte útil contido em aury dev"
+require_in_output "$opensuse_pkg_output" "contrato público:              pacote do host por família/host" "OpenSUSE mutável precisa manter o trio como pacote do host"
 require_in_output "$opensuse_pkg_output" "backend necessário:            zypper" "aury dev procurar em OpenSUSE mutável precisa expor o backend correto"
 require_in_output "$opensuse_pkg_output" "decisão:                       executar no Python" "aury dev em OpenSUSE mutável precisa permanecer alinhado ao runtime Python"
 require_in_output "$opensuse_pkg_output" "ZYPPER_SEARCH_STUB search -- steam" "OpenSUSE mutável precisa executar a busca pública com zypper"
@@ -527,6 +608,7 @@ atomic_pkg_output="$(ROOT="$ROOT" TMP="$atomic_pkg_tmp" PATH="$atomic_pkg_tmp/bi
 require_in_output "$atomic_pkg_output" "mutabilidade:                  Atomic" "host Atomic precisa continuar explícito em aury dev"
 require_in_output "$atomic_pkg_output" "tier de suporte:               suporte limitado" "host Atomic precisa continuar aparecendo como suporte limitado no perfil do host"
 require_in_output "$atomic_pkg_output" "fronteira:                     bloqueado por política" "aury dev em host Atomic precisa explicitar a fronteira de compatibilidade"
+require_in_output "$atomic_pkg_output" "contrato público:              pacote do host por família/host" "host Atomic precisa continuar enquadrado no mesmo contrato, ainda que bloqueado por política"
 require_in_output "$atomic_pkg_output" "compatibilidade:               bloqueado por política" "aury dev em host Atomic precisa alinhar a taxonomia da ação de pacote"
 require_in_output "$atomic_pkg_output" "detectado como Atomic/imutável" "host Atomic precisa expor bloqueio honesto na superfície pública"
 require_in_output "$atomic_pkg_output" "bloqueado por política" "host Atomic precisa explicitar a natureza do bloqueio"
@@ -778,6 +860,11 @@ help_output="$(fish -c "source '$ROOT/bin/aury.fish'; aury ajuda" 2>&1 || true)"
 require_in_output "$help_output" "💜 Aury" "ajuda precisa continuar disponível"
 require_in_output "$help_output" "aury dev <frase> continua como relatório canônico da linha 1.x." "ajuda precisa manter 'aury dev <frase>' como relatório principal"
 require_in_output "$help_output" "aury dev sem frase fica como verificação local curta do adaptador Fish, em uso secundário nesta linha." "ajuda precisa declarar o enquadramento final de 'aury dev' sem frase"
+require_in_output "$help_output" "procurar, instalar e remover usam o contrato final de pacote do host por família/host." "ajuda precisa congelar o trio como pacote do host"
+require_in_output "$help_output" "Esse trio não significa software do usuário, app store, múltiplas rotas nem política de origem nesta linha." "ajuda precisa bloquear inferência de app store ou múltiplas rotas"
+require_in_output "$help_output" "flatpak e rpm-ostree podem ser observados no ambiente, mas ficam fora do contrato ativo." "ajuda precisa enquadrar ferramentas observadas fora do contrato"
+require_in_output "$help_output" "A compatibilidade Linux da Aury 1.x se encerra nesta matriz final." "ajuda precisa declarar o encerramento canônico da linha 1.x"
+require_in_output "$help_output" "Handoff: software do usuário, múltiplas origens, política de origem/source/trust e suporte operacional real a hosts imutáveis pertencem à Aurora, não à Aury 1.x." "ajuda precisa deixar o handoff para a Aurora explícito"
 require_not_in_output "$help_output" "provisório" "ajuda não deve mais tratar 'aury dev' sem frase como provisório"
 
 version_expected="$(cat "$ROOT/VERSION")"
