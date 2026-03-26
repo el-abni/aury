@@ -16,6 +16,7 @@ from .host import (
     build_package_execution_plan,
     package_no_results_message,
     package_noop_message,
+    package_state_probe_missing_message,
     package_state_confirmation_message,
     package_success_message,
     resolve_package_action_policy,
@@ -41,6 +42,11 @@ def _run(args: Sequence[str]) -> subprocess.CompletedProcess[str]:
 
 def _backend_missing(name: str) -> int:
     print(f"❌ backend '{name}' não está disponível")
+    return 1
+
+
+def _state_probe_missing(backend_label: str, probe_label: str) -> int:
+    print(package_state_probe_missing_message(backend_label, probe_label))
     return 1
 
 
@@ -540,7 +546,7 @@ def _ensure_package_backends(analysis: Analysis) -> int:
             return _backend_missing(required_command)
     for required_command in execution_plan.state_probe_required_commands:
         if shutil.which(required_command) is None:
-            return _backend_missing(required_command)
+            return _state_probe_missing(execution_plan.policy.backend_label, execution_plan.state_probe_label or required_command)
     return 0
 
 

@@ -60,7 +60,7 @@ class HostProfile:
         if self.support_tier == "tier_1":
             return "Tier 1 inicial"
         if self.support_tier == "tier_2":
-            return "Tier 2 inicial"
+            return "Tier 2 útil contido"
         if self.support_tier == "limited":
             return "suporte limitado"
         return "fora do recorte"
@@ -89,6 +89,7 @@ class PackageExecutionPlan:
     package_target: str = ""
     command: tuple[str, ...] = ()
     required_commands: tuple[str, ...] = ()
+    state_probe_label: str = ""
     state_probe_command: tuple[str, ...] = ()
     state_probe_required_commands: tuple[str, ...] = ()
 
@@ -214,10 +215,42 @@ def _package_block_reason(profile: HostProfile) -> tuple[str, str]:
     return reason, message
 
 
-def _supported_package_reason(intent: str) -> str:
+def _package_backend_label(intent: str, profile: HostProfile) -> str:
+    backends = set(profile.package_backends)
+    if profile.linux_family == "arch":
+        if intent == "procurar":
+            if "pacman" in backends:
+                return "pacman"
+            if "paru" in backends:
+                return "paru"
+            return "pacman"
+        if intent == "instalar":
+            return "paru + pacman" if "paru" in backends else "sudo + pacman"
+        if "pacman" in backends:
+            return "sudo + pacman"
+        if "paru" in backends:
+            return "paru + pacman"
+        return "sudo + pacman"
+    if profile.linux_family == "debian":
+        return "apt-cache" if intent == "procurar" else "sudo + apt-get"
+    if profile.linux_family == "opensuse":
+        return "zypper" if intent == "procurar" else "sudo + zypper"
+    return "dnf" if intent == "procurar" else "sudo + dnf"
+
+
+def _supported_package_reason(intent: str, profile: HostProfile) -> str:
+    scope = "neste recorte contido" if profile.support_tier == "tier_2" else "nesta fase"
     if intent == "procurar":
-        return "o perfil do host Linux já resolve esta busca de pacote com backend explícito nesta fase, e a execução real trata ausência de resultado com saída honesta."
-    return "o perfil do host Linux já resolve esta ação de pacote com backend explícito nesta fase, e a execução real verifica o estado do pacote antes de agir e confirma o resultado depois."
+        return f"o perfil do host Linux já resolve esta busca de pacote com backend explícito {scope}, e a execução real trata ausência de resultado com saída honesta."
+    return f"o perfil do host Linux já resolve esta ação de pacote com backend explícito {scope}, e a execução real verifica o estado do pacote antes de agir e confirma o resultado depois."
+
+
+def _package_state_probe_spec(profile: HostProfile, target: str) -> tuple[str, tuple[str, ...], tuple[str, ...]]:
+    if profile.linux_family == "arch":
+        return "pacman", ("pacman", "-Q", "--", target), ("pacman",)
+    if profile.linux_family == "debian":
+        return "dpkg", ("dpkg", "-s", target), ("dpkg",)
+    return "rpm", ("rpm", "-q", target), ("rpm",)
 
 
 def resolve_package_action_policy(
@@ -240,36 +273,12 @@ def resolve_package_action_policy(
             block_message=message,
         )
 
-    if resolved_profile.linux_family == "arch":
-        if intent == "procurar":
-            if "pacman" in resolved_profile.package_backends:
-                backend_label = "pacman"
-            elif "paru" in resolved_profile.package_backends:
-                backend_label = "paru"
-            else:
-                backend_label = "pacman"
-        elif intent == "instalar":
-            backend_label = "paru + pacman" if "paru" in resolved_profile.package_backends else "sudo + pacman"
-        else:
-            if "pacman" in resolved_profile.package_backends:
-                backend_label = "sudo + pacman"
-            elif "paru" in resolved_profile.package_backends:
-                backend_label = "paru + pacman"
-            else:
-                backend_label = "sudo + pacman"
-    elif resolved_profile.linux_family == "debian":
-        backend_label = "apt-cache" if intent == "procurar" else "sudo + apt-get"
-    elif resolved_profile.linux_family == "opensuse":
-        backend_label = "zypper" if intent == "procurar" else "sudo + zypper"
-    else:
-        backend_label = "dnf" if intent == "procurar" else "sudo + dnf"
-
     return PackageActionPolicy(
         intent=intent,
         route=route,
         status="SUPPORTED_NOW",
-        backend_label=backend_label,
-        reason=_supported_package_reason(intent),
+        backend_label=_package_backend_label(intent, resolved_profile),
+        reason=_supported_package_reason(intent, resolved_profile),
         host_profile=resolved_profile,
     )
 
@@ -288,6 +297,10 @@ def package_state_confirmation_message(intent: str, target: str, backend_label: 
     if intent == "instalar":
         return f"❌ o backend '{backend_label}' terminou sem eu conseguir confirmar a instalação de '{target}'."
     return f"❌ o backend '{backend_label}' terminou sem eu conseguir confirmar a remoção de '{target}'."
+
+
+def package_state_probe_missing_message(backend_label: str, probe_label: str) -> str:
+    return f"❌ a confirmação de estado para o backend '{backend_label}' depende da ferramenta auxiliar '{probe_label}', que não está disponível."
 
 
 def package_success_message(intent: str, target: str) -> str:
@@ -318,6 +331,14 @@ def build_package_execution_plan(
 
     package_target = _normalize_package_target(intent, target)
     backends = set(policy.host_profile.package_backends)
+    state_probe_label = ""
+    state_probe_command: tuple[str, ...] = ()
+    state_probe_required_commands: tuple[str, ...] = ()
+    if intent in {"instalar", "remover"}:
+        state_probe_label, state_probe_command, state_probe_required_commands = _package_state_probe_spec(
+            policy.host_profile,
+            package_target,
+        )
 
     if policy.host_profile.linux_family == "arch":
         if intent == "procurar":
@@ -348,16 +369,18 @@ def build_package_execution_plan(
                     package_target=package_target,
                     command=("paru", "-S", "--needed", "--", package_target),
                     required_commands=("paru", "pacman"),
-                    state_probe_command=("pacman", "-Q", "--", package_target),
-                    state_probe_required_commands=("pacman",),
+                    state_probe_label=state_probe_label,
+                    state_probe_command=state_probe_command,
+                    state_probe_required_commands=state_probe_required_commands,
                 )
             return PackageExecutionPlan(
                 policy=policy,
                 package_target=package_target,
                 command=("sudo", "pacman", "-S", "--needed", "--", package_target),
                 required_commands=("pacman", "sudo"),
-                state_probe_command=("pacman", "-Q", "--", package_target),
-                state_probe_required_commands=("pacman",),
+                state_probe_label=state_probe_label,
+                state_probe_command=state_probe_command,
+                state_probe_required_commands=state_probe_required_commands,
             )
         if "pacman" in backends:
             return PackageExecutionPlan(
@@ -365,8 +388,9 @@ def build_package_execution_plan(
                 package_target=package_target,
                 command=("sudo", "pacman", "-Rns", "--", package_target),
                 required_commands=("pacman", "sudo"),
-                state_probe_command=("pacman", "-Q", "--", package_target),
-                state_probe_required_commands=("pacman",),
+                state_probe_label=state_probe_label,
+                state_probe_command=state_probe_command,
+                state_probe_required_commands=state_probe_required_commands,
             )
         if "paru" in backends:
             return PackageExecutionPlan(
@@ -374,16 +398,18 @@ def build_package_execution_plan(
                 package_target=package_target,
                 command=("paru", "-Rns", "--", package_target),
                 required_commands=("paru", "pacman"),
-                state_probe_command=("pacman", "-Q", "--", package_target),
-                state_probe_required_commands=("pacman",),
+                state_probe_label=state_probe_label,
+                state_probe_command=state_probe_command,
+                state_probe_required_commands=state_probe_required_commands,
             )
         return PackageExecutionPlan(
             policy=policy,
             package_target=package_target,
             command=("sudo", "pacman", "-Rns", "--", package_target),
             required_commands=("pacman", "sudo"),
-            state_probe_command=("pacman", "-Q", "--", package_target),
-            state_probe_required_commands=("pacman",),
+            state_probe_label=state_probe_label,
+            state_probe_command=state_probe_command,
+            state_probe_required_commands=state_probe_required_commands,
         )
 
     if policy.host_profile.linux_family == "debian":
@@ -400,16 +426,18 @@ def build_package_execution_plan(
                 package_target=package_target,
                 command=("sudo", "apt-get", "install", "-y", package_target),
                 required_commands=("apt-get", "sudo"),
-                state_probe_command=("dpkg", "-s", package_target),
-                state_probe_required_commands=("dpkg",),
+                state_probe_label=state_probe_label,
+                state_probe_command=state_probe_command,
+                state_probe_required_commands=state_probe_required_commands,
             )
         return PackageExecutionPlan(
             policy=policy,
             package_target=package_target,
             command=("sudo", "apt-get", "remove", "-y", package_target),
             required_commands=("apt-get", "sudo"),
-            state_probe_command=("dpkg", "-s", package_target),
-            state_probe_required_commands=("dpkg",),
+            state_probe_label=state_probe_label,
+            state_probe_command=state_probe_command,
+            state_probe_required_commands=state_probe_required_commands,
         )
 
     if policy.host_profile.linux_family == "opensuse":
@@ -426,16 +454,18 @@ def build_package_execution_plan(
                 package_target=package_target,
                 command=("sudo", "zypper", "--non-interactive", "install", "--", package_target),
                 required_commands=("zypper", "sudo"),
-                state_probe_command=("rpm", "-q", package_target),
-                state_probe_required_commands=("rpm",),
+                state_probe_label=state_probe_label,
+                state_probe_command=state_probe_command,
+                state_probe_required_commands=state_probe_required_commands,
             )
         return PackageExecutionPlan(
             policy=policy,
             package_target=package_target,
             command=("sudo", "zypper", "--non-interactive", "remove", "--", package_target),
             required_commands=("zypper", "sudo"),
-            state_probe_command=("rpm", "-q", package_target),
-            state_probe_required_commands=("rpm",),
+            state_probe_label=state_probe_label,
+            state_probe_command=state_probe_command,
+            state_probe_required_commands=state_probe_required_commands,
         )
 
     if intent == "procurar":
@@ -451,14 +481,16 @@ def build_package_execution_plan(
             package_target=package_target,
             command=("sudo", "dnf", "install", "-y", package_target),
             required_commands=("dnf", "sudo"),
-            state_probe_command=("rpm", "-q", package_target),
-            state_probe_required_commands=("rpm",),
+            state_probe_label=state_probe_label,
+            state_probe_command=state_probe_command,
+            state_probe_required_commands=state_probe_required_commands,
         )
     return PackageExecutionPlan(
         policy=policy,
         package_target=package_target,
         command=("sudo", "dnf", "remove", "-y", package_target),
         required_commands=("dnf", "sudo"),
-        state_probe_command=("rpm", "-q", package_target),
-        state_probe_required_commands=("rpm",),
+        state_probe_label=state_probe_label,
+        state_probe_command=state_probe_command,
+        state_probe_required_commands=state_probe_required_commands,
     )

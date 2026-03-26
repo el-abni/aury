@@ -170,10 +170,11 @@ def test_dev_package_opensuse_search_alignment() -> None:
         assert_in(proc.stdout, "alvo principal:                steam")
         assert_in(proc.stdout, "família linux:                 opensuse")
         assert_in(proc.stdout, "mutabilidade:                  mutável")
-        assert_in(proc.stdout, "tier de suporte:               Tier 2 inicial")
+        assert_in(proc.stdout, "tier de suporte:               Tier 2 útil contido")
         assert_in(proc.stdout, "suportada agora")
         assert_in(proc.stdout, "rota suportada:                package_search")
         assert_in(proc.stdout, "backend necessário:            zypper")
+        assert_in(proc.stdout, "recorte contido")
         assert_in(proc.stdout, "decisão:                       executar no Python")
 
 
@@ -193,7 +194,7 @@ def test_dev_package_opensuse_install_alignment() -> None:
         assert_in(proc.stdout, "domínio:                       pacote")
         assert_in(proc.stdout, "alvo principal:                firefox")
         assert_in(proc.stdout, "família linux:                 opensuse")
-        assert_in(proc.stdout, "tier de suporte:               Tier 2 inicial")
+        assert_in(proc.stdout, "tier de suporte:               Tier 2 útil contido")
         assert_in(proc.stdout, "suportada agora")
         assert_in(proc.stdout, "rota suportada:                package_install")
         assert_in(proc.stdout, "backend necessário:            sudo + zypper")
@@ -216,7 +217,7 @@ def test_dev_package_opensuse_remove_alignment() -> None:
         assert_in(proc.stdout, "domínio:                       pacote")
         assert_in(proc.stdout, "alvo principal:                vlc")
         assert_in(proc.stdout, "família linux:                 opensuse")
-        assert_in(proc.stdout, "tier de suporte:               Tier 2 inicial")
+        assert_in(proc.stdout, "tier de suporte:               Tier 2 útil contido")
         assert_in(proc.stdout, "suportada agora")
         assert_in(proc.stdout, "rota suportada:                package_remove")
         assert_in(proc.stdout, "backend necessário:            sudo + zypper")
@@ -1119,6 +1120,19 @@ def test_runtime_package_search_no_results() -> None:
         assert_in(proc.stdout, "não encontrei resultados para 'steam' no backend 'pacman'")
 
 
+def test_runtime_package_search_debian_no_results() -> None:
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        bin_dir = root / "bin"
+        bin_dir.mkdir(parents=True, exist_ok=True)
+        write_stub(bin_dir, "apt-cache", "#!/usr/bin/env bash\nexit 0\n")
+        os_release = write_os_release(root, distro_id="ubuntu", distro_like="debian", name="Ubuntu")
+        env = {"PATH": f"{bin_dir}:{os.environ['PATH']}", "AURY_OS_RELEASE_PATH": str(os_release)}
+        proc = run("procurar", "steam", env=env)
+        assert proc.returncode == 0
+        assert_in(proc.stdout, "não encontrei resultados para 'steam' no backend 'apt-cache'")
+
+
 def test_runtime_package_search_opensuse() -> None:
     with tempfile.TemporaryDirectory() as tmp:
         root = Path(tmp)
@@ -1355,6 +1369,35 @@ def test_runtime_package_remove_opensuse_noop_when_not_installed() -> None:
             raise AssertionError("a remoção em OpenSUSE não deveria chamar o backend quando o pacote já está ausente")
 
 
+def test_runtime_package_remove_opensuse_requires_state_confirmation() -> None:
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        bin_dir = root / "bin"
+        bin_dir.mkdir(parents=True, exist_ok=True)
+        rpm_state = root / "rpm.state"
+        rpm_state.write_text("installed\n", encoding="utf-8")
+        write_stub(bin_dir, "sudo", "#!/usr/bin/env bash\n\"$@\"\n")
+        write_stub(bin_dir, "zypper", "#!/usr/bin/env bash\necho 'ZYPPER_REMOVE_STUB --non-interactive remove -- vlc'\n")
+        write_stub(
+            bin_dir,
+            "rpm",
+            "#!/usr/bin/env bash\n"
+            f"state={rpm_state!s}\n"
+            "if [ \"$1\" = \"-q\" ] && [ \"$2\" = \"vlc\" ]; then\n"
+            "  if [ -f \"$state\" ]; then\n"
+            "    exit 0\n"
+            "  fi\n"
+            "  exit 1\n"
+            "fi\n"
+            "exit 1\n",
+        )
+        os_release = write_os_release(root, distro_id="opensuse-tumbleweed", distro_like="opensuse suse", name="openSUSE Tumbleweed")
+        env = {"PATH": f"{bin_dir}:{os.environ['PATH']}", "AURY_OS_RELEASE_PATH": str(os_release)}
+        proc = run("remover", "vlc", env=env)
+        assert proc.returncode == 1
+        assert_in(proc.stdout, "terminou sem eu conseguir confirmar a remoção de 'vlc'")
+
+
 def test_runtime_package_opensuse_backend_missing() -> None:
     with tempfile.TemporaryDirectory() as tmp:
         root = Path(tmp)
@@ -1362,6 +1405,22 @@ def test_runtime_package_opensuse_backend_missing() -> None:
         proc = run("procurar", "steam", env={"PATH": "", "AURY_OS_RELEASE_PATH": str(os_release)})
         assert proc.returncode == 1
         assert_in(proc.stdout, "backend 'zypper' não está disponível")
+
+
+def test_runtime_package_opensuse_requires_auxiliary_state_probe() -> None:
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        bin_dir = root / "bin"
+        bin_dir.mkdir(parents=True, exist_ok=True)
+        write_stub(bin_dir, "sudo", "#!/usr/bin/env bash\n\"$@\"\n")
+        write_stub(bin_dir, "zypper", "#!/usr/bin/env bash\necho 'ZYPPER_SHOULD_NOT_RUN'\n")
+        os_release = write_os_release(root, distro_id="opensuse-tumbleweed", distro_like="opensuse suse", name="openSUSE Tumbleweed")
+        env = {"PATH": f"{bin_dir}:{os.environ['PATH']}", "AURY_OS_RELEASE_PATH": str(os_release)}
+        proc = run("instalar", "firefox", env=env)
+        assert proc.returncode == 1
+        assert_in(proc.stdout, "ferramenta auxiliar 'rpm'")
+        if "ZYPPER_SHOULD_NOT_RUN" in proc.stdout:
+            raise AssertionError("instalação em OpenSUSE não deveria rodar sem a ferramenta auxiliar de confirmação")
 
 
 def test_runtime_create_file() -> None:
@@ -2141,6 +2200,8 @@ def test_detect_host_profile_tiers() -> None:
             raise AssertionError(f"família inesperada: {host_profile.linux_family!r}")
         if host_profile.support_tier != "tier_2":
             raise AssertionError(f"tier inesperado: {host_profile.support_tier!r}")
+        if host_profile.support_tier_label != "Tier 2 útil contido":
+            raise AssertionError(f"rótulo inesperado: {host_profile.support_tier_label!r}")
         if "zypper" not in host_profile.package_backends:
             raise AssertionError(f"backend inesperado: {host_profile.package_backends!r}")
 
@@ -2181,18 +2242,197 @@ def test_package_policy_opensuse_supported_now() -> None:
             raise AssertionError(f"classificação inesperada na busca: {search_policy.status!r}")
         if search_policy.backend_label != "zypper":
             raise AssertionError(f"backend inesperado na busca: {search_policy.backend_label!r}")
+        if "recorte contido" not in search_policy.reason:
+            raise AssertionError(f"motivo inesperado na busca: {search_policy.reason!r}")
         if install_policy.backend_label != "sudo + zypper":
             raise AssertionError(f"backend inesperado na instalação: {install_policy.backend_label!r}")
         if remove_policy.backend_label != "sudo + zypper":
             raise AssertionError(f"backend inesperado na remoção: {remove_policy.backend_label!r}")
         if install_plan.command != ("sudo", "zypper", "--non-interactive", "install", "--", "firefox"):
             raise AssertionError(f"comando inesperado na instalação: {install_plan.command!r}")
+        if install_plan.state_probe_label != "rpm":
+            raise AssertionError(f"sonda auxiliar inesperada na instalação: {install_plan.state_probe_label!r}")
         if install_plan.state_probe_command != ("rpm", "-q", "firefox"):
             raise AssertionError(f"sonda inesperada na instalação: {install_plan.state_probe_command!r}")
         if remove_plan.command != ("sudo", "zypper", "--non-interactive", "remove", "--", "vlc"):
             raise AssertionError(f"comando inesperado na remoção: {remove_plan.command!r}")
+        if remove_plan.state_probe_label != "rpm":
+            raise AssertionError(f"sonda auxiliar inesperada na remoção: {remove_plan.state_probe_label!r}")
         if remove_plan.state_probe_command != ("rpm", "-q", "vlc"):
             raise AssertionError(f"sonda inesperada na remoção: {remove_plan.state_probe_command!r}")
+
+
+def test_package_policy_matrix_mutable_hosts() -> None:
+    cases = (
+        (
+            "arch",
+            {"distro_id": "cachyos", "distro_like": "arch", "name": "CachyOS"},
+            {
+                "procurar": {
+                    "target": "steam",
+                    "backend_label": "pacman",
+                    "command": ("pacman", "-Ss", "--", "steam"),
+                    "required_commands": ("pacman",),
+                    "state_probe_label": "",
+                    "state_probe_command": (),
+                },
+                "instalar": {
+                    "target": "obs studio",
+                    "backend_label": "sudo + pacman",
+                    "command": ("sudo", "pacman", "-S", "--needed", "--", "obs-studio"),
+                    "required_commands": ("pacman", "sudo"),
+                    "state_probe_label": "pacman",
+                    "state_probe_command": ("pacman", "-Q", "--", "obs-studio"),
+                },
+                "remover": {
+                    "target": "obs studio",
+                    "backend_label": "sudo + pacman",
+                    "command": ("sudo", "pacman", "-Rns", "--", "obs-studio"),
+                    "required_commands": ("pacman", "sudo"),
+                    "state_probe_label": "pacman",
+                    "state_probe_command": ("pacman", "-Q", "--", "obs-studio"),
+                },
+            },
+        ),
+        (
+            "debian",
+            {"distro_id": "ubuntu", "distro_like": "debian", "name": "Ubuntu"},
+            {
+                "procurar": {
+                    "target": "steam",
+                    "backend_label": "apt-cache",
+                    "command": ("apt-cache", "search", "steam"),
+                    "required_commands": ("apt-cache",),
+                    "state_probe_label": "",
+                    "state_probe_command": (),
+                },
+                "instalar": {
+                    "target": "obs studio",
+                    "backend_label": "sudo + apt-get",
+                    "command": ("sudo", "apt-get", "install", "-y", "obs-studio"),
+                    "required_commands": ("apt-get", "sudo"),
+                    "state_probe_label": "dpkg",
+                    "state_probe_command": ("dpkg", "-s", "obs-studio"),
+                },
+                "remover": {
+                    "target": "obs studio",
+                    "backend_label": "sudo + apt-get",
+                    "command": ("sudo", "apt-get", "remove", "-y", "obs-studio"),
+                    "required_commands": ("apt-get", "sudo"),
+                    "state_probe_label": "dpkg",
+                    "state_probe_command": ("dpkg", "-s", "obs-studio"),
+                },
+            },
+        ),
+        (
+            "fedora",
+            {"distro_id": "fedora", "distro_like": "fedora", "name": "Fedora Linux"},
+            {
+                "procurar": {
+                    "target": "steam",
+                    "backend_label": "dnf",
+                    "command": ("dnf", "search", "steam"),
+                    "required_commands": ("dnf",),
+                    "state_probe_label": "",
+                    "state_probe_command": (),
+                },
+                "instalar": {
+                    "target": "obs studio",
+                    "backend_label": "sudo + dnf",
+                    "command": ("sudo", "dnf", "install", "-y", "obs-studio"),
+                    "required_commands": ("dnf", "sudo"),
+                    "state_probe_label": "rpm",
+                    "state_probe_command": ("rpm", "-q", "obs-studio"),
+                },
+                "remover": {
+                    "target": "obs studio",
+                    "backend_label": "sudo + dnf",
+                    "command": ("sudo", "dnf", "remove", "-y", "obs-studio"),
+                    "required_commands": ("dnf", "sudo"),
+                    "state_probe_label": "rpm",
+                    "state_probe_command": ("rpm", "-q", "obs-studio"),
+                },
+            },
+        ),
+        (
+            "opensuse",
+            {"distro_id": "opensuse-tumbleweed", "distro_like": "opensuse suse", "name": "openSUSE Tumbleweed"},
+            {
+                "procurar": {
+                    "target": "steam",
+                    "backend_label": "zypper",
+                    "command": ("zypper", "search", "--", "steam"),
+                    "required_commands": ("zypper",),
+                    "state_probe_label": "",
+                    "state_probe_command": (),
+                },
+                "instalar": {
+                    "target": "obs studio",
+                    "backend_label": "sudo + zypper",
+                    "command": ("sudo", "zypper", "--non-interactive", "install", "--", "obs-studio"),
+                    "required_commands": ("zypper", "sudo"),
+                    "state_probe_label": "rpm",
+                    "state_probe_command": ("rpm", "-q", "obs-studio"),
+                },
+                "remover": {
+                    "target": "obs studio",
+                    "backend_label": "sudo + zypper",
+                    "command": ("sudo", "zypper", "--non-interactive", "remove", "--", "obs-studio"),
+                    "required_commands": ("zypper", "sudo"),
+                    "state_probe_label": "rpm",
+                    "state_probe_command": ("rpm", "-q", "obs-studio"),
+                },
+            },
+        ),
+    )
+    stub_bodies = {
+        "pacman": "#!/usr/bin/env bash\nexit 0\n",
+        "apt-cache": "#!/usr/bin/env bash\nexit 0\n",
+        "apt-get": "#!/usr/bin/env bash\nexit 0\n",
+        "dnf": "#!/usr/bin/env bash\nexit 0\n",
+        "zypper": "#!/usr/bin/env bash\nexit 0\n",
+        "sudo": "#!/usr/bin/env bash\nexit 0\n",
+        "dpkg": "#!/usr/bin/env bash\nexit 0\n",
+        "rpm": "#!/usr/bin/env bash\nexit 0\n",
+    }
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        bin_dir = root / "bin"
+        bin_dir.mkdir(parents=True, exist_ok=True)
+        for name, body in stub_bodies.items():
+            write_stub(bin_dir, name, body)
+        for family, os_release_kwargs, expectations in cases:
+            os_release = write_os_release(root, **os_release_kwargs)
+            with temporary_env({"PATH": str(bin_dir), "AURY_OS_RELEASE_PATH": str(os_release)}):
+                profile = detect_host_profile()
+                for intent, expected in expectations.items():
+                    policy = resolve_package_action_policy(intent)
+                    plan = build_package_execution_plan(intent, expected["target"])
+                    if policy.status != "SUPPORTED_NOW":
+                        raise AssertionError(f"classificação inesperada em {family}/{intent}: {policy.status!r}")
+                    if plan.policy.status != "SUPPORTED_NOW":
+                        raise AssertionError(f"plano inesperado em {family}/{intent}: {plan.policy.status!r}")
+                    if policy.backend_label != expected["backend_label"]:
+                        raise AssertionError(f"backend inesperado em {family}/{intent}: {policy.backend_label!r}")
+                    if plan.policy.backend_label != expected["backend_label"]:
+                        raise AssertionError(f"backend do plano inesperado em {family}/{intent}: {plan.policy.backend_label!r}")
+                    if plan.command != expected["command"]:
+                        raise AssertionError(f"comando inesperado em {family}/{intent}: {plan.command!r}")
+                    if plan.required_commands != expected["required_commands"]:
+                        raise AssertionError(f"requisitos inesperados em {family}/{intent}: {plan.required_commands!r}")
+                    if plan.state_probe_label != expected["state_probe_label"]:
+                        raise AssertionError(f"sonda auxiliar inesperada em {family}/{intent}: {plan.state_probe_label!r}")
+                    if plan.state_probe_command != expected["state_probe_command"]:
+                        raise AssertionError(f"sonda inesperada em {family}/{intent}: {plan.state_probe_command!r}")
+                    if plan.policy.host_profile.linux_family != family:
+                        raise AssertionError(f"família inesperada em {family}/{intent}: {plan.policy.host_profile.linux_family!r}")
+                    if family == "opensuse":
+                        if profile.support_tier_label != "Tier 2 útil contido":
+                            raise AssertionError(f"tier inesperado no OpenSUSE: {profile.support_tier_label!r}")
+                        if "recorte contido" not in policy.reason:
+                            raise AssertionError(f"motivo inesperado no OpenSUSE/{intent}: {policy.reason!r}")
+                    elif "recorte contido" in policy.reason:
+                        raise AssertionError(f"tier 1 não pode parecer contido em {family}/{intent}: {policy.reason!r}")
 
 
 def test_dev_destructive_remove_without_safe_antecedent_blocks_local_reference() -> None:
@@ -2397,6 +2637,7 @@ def main() -> int:
         test_runtime_ping,
         test_runtime_package_search,
         test_runtime_package_search_no_results,
+        test_runtime_package_search_debian_no_results,
         test_runtime_package_search_opensuse,
         test_runtime_package_search_opensuse_no_results,
         test_runtime_package_install_debian,
@@ -2408,7 +2649,9 @@ def main() -> int:
         test_runtime_package_remove_noop_when_not_installed,
         test_runtime_package_remove_opensuse,
         test_runtime_package_remove_opensuse_noop_when_not_installed,
+        test_runtime_package_remove_opensuse_requires_state_confirmation,
         test_runtime_package_opensuse_backend_missing,
+        test_runtime_package_opensuse_requires_auxiliary_state_probe,
         test_runtime_create_file,
         test_runtime_create_folder_located,
         test_dev_search_inflected_alignment,
@@ -2448,6 +2691,7 @@ def main() -> int:
         test_detect_host_profile_tiers,
         test_detect_host_profile_opensuse_microos_is_atomic,
         test_package_policy_opensuse_supported_now,
+        test_package_policy_matrix_mutable_hosts,
         test_dev_destructive_remove_without_safe_antecedent_blocks_local_reference,
         test_dev_destructive_remove_chain_local_reference_alignment,
         test_dev_destructive_remove_chain_local_reference_inflected_alignment,

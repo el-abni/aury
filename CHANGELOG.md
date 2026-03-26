@@ -6,6 +6,26 @@ A linha pública da **💜 Aury** continua incremental na série **v1.9.x**. Est
 
 ---
 
+## v1.9.4
+
+### Consolidado
+- fechamento público da **v1.9.4** como consolidação pós-OpenSUSE do domínio de pacote por família/host, sem abrir nova frente geral de compatibilidade
+- versão, narrativa, arquitetura, ajuda e metadados passam a refletir a **v1.9.4** como continuação incremental contida da base pública já expandida na **v1.9.3**
+
+### Domínio de pacote por família/host
+- a política de pacote fica mais coerente entre detecção do host, classificação de suporte, plano de execução e runtime real nas famílias mutáveis já abertas
+- `aury dev` passa a expor OpenSUSE mutável de forma alinhada à narrativa pública como **Tier 2 útil contido**
+- backend ausente e ferramenta auxiliar de confirmação ausente passam a sair com superfícies distintas e honestas
+- o recorte RPM da linha continua explícito: Fedora mutável e OpenSUSE mutável confirmam estado com `rpm -q` em `instalar` e `remover`
+
+### Compatibilidade e limites
+- Arch e derivadas, Debian/Ubuntu e derivadas, e Fedora mutável permanecem como Tier 1 inicial de pacote
+- OpenSUSE mutável permanece como ganho útil contido, sem ser descrito como paridade total com o Tier 1
+- Atomic, Universal Blue e perfis equivalentes permanecem em suporte limitado com bloqueio honesto de pacote do host
+- continuam fora desta release: `update` multi-distro, `optimize` multi-distro, `rpm-ostree`, toolbox, distrobox, tradução de nomes de pacote e suporte cross-distro amplo
+
+---
+
 ## v1.9.3
 
 ### Consolidado

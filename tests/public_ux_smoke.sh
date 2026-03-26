@@ -465,6 +465,10 @@ if [[ "\$1" == "search" && "\$3" == "steam" ]]; then
     printf 'ZYPPER_SEARCH_STUB %s\n' "\$*"
     exit 0
 fi
+if [[ "\$1" == "search" && "\$3" == "nada" ]]; then
+    printf 'No matching items found.\n'
+    exit 104
+fi
 if [[ "\$1" == "--non-interactive" && "\$2" == "install" && "\$4" == "firefox" ]]; then
     : > "\$firefox_state"
     printf 'ZYPPER_INSTALL_STUB %s\n' "\$*"
@@ -493,14 +497,16 @@ exit 1
 EOF
 chmod +x "$opensuse_pkg_tmp/bin/rpm"
 
-opensuse_pkg_output="$(ROOT="$ROOT" TMP="$opensuse_pkg_tmp" PATH="$opensuse_pkg_tmp/bin:$PATH" AURY_OS_RELEASE_PATH="$opensuse_pkg_tmp/os-release" fish -c 'source $ROOT/bin/aury.fish; cd $TMP; aury dev procurar steam; echo ---SEARCH---; aury procurar steam; echo ---INSTALL---; rm -f firefox.installed; aury instalar firefox; echo ---REMOVE---; touch vlc.installed; aury remover vlc' 2>&1 || true)"
+opensuse_pkg_output="$(ROOT="$ROOT" TMP="$opensuse_pkg_tmp" PATH="$opensuse_pkg_tmp/bin:$PATH" AURY_OS_RELEASE_PATH="$opensuse_pkg_tmp/os-release" fish -c 'source $ROOT/bin/aury.fish; cd $TMP; aury dev procurar steam; echo ---SEARCH---; aury procurar steam; echo ---EMPTY---; aury procurar nada; echo ---INSTALL---; rm -f firefox.installed; aury instalar firefox; echo ---REMOVE---; touch vlc.installed; aury remover vlc' 2>&1 || true)"
 require_in_output "$opensuse_pkg_output" "família linux:                 opensuse" "OpenSUSE mutável precisa aparecer como família explícita em aury dev"
-require_in_output "$opensuse_pkg_output" "tier de suporte:               Tier 2 inicial" "OpenSUSE mutável precisa continuar explícito como Tier 2 inicial"
+require_in_output "$opensuse_pkg_output" "tier de suporte:               Tier 2 útil contido" "OpenSUSE mutável precisa aparecer como recorte útil contido em aury dev"
 require_in_output "$opensuse_pkg_output" "backend necessário:            zypper" "aury dev procurar em OpenSUSE mutável precisa expor o backend correto"
 require_in_output "$opensuse_pkg_output" "decisão:                       executar no Python" "aury dev em OpenSUSE mutável precisa permanecer alinhado ao runtime Python"
 require_in_output "$opensuse_pkg_output" "ZYPPER_SEARCH_STUB search -- steam" "OpenSUSE mutável precisa executar a busca pública com zypper"
+require_in_output "$opensuse_pkg_output" "não encontrei resultados para 'nada' no backend 'zypper'" "OpenSUSE mutável precisa manter a mensagem honesta de busca sem resultado"
 require_in_output "$opensuse_pkg_output" "ZYPPER_INSTALL_STUB --non-interactive install -- firefox" "OpenSUSE mutável precisa executar a instalação pública com sudo + zypper"
 require_in_output "$opensuse_pkg_output" "ZYPPER_REMOVE_STUB --non-interactive remove -- vlc" "OpenSUSE mutável precisa executar a remoção pública com sudo + zypper"
+require_not_in_output "$opensuse_pkg_output" "No matching items found." "OpenSUSE mutável não pode vazar a saída crua do zypper em busca sem resultado"
 require_not_in_output "$opensuse_pkg_output" "não sustenta pacote do host nesta família" "OpenSUSE mutável não pode continuar fingindo bloqueio honesto quando o backend está disponível"
 
 atomic_pkg_tmp="$(mktemp -d /tmp/aury-public-ux-XXXXXX)"

@@ -397,6 +397,49 @@ def main() -> int:
     ok("OpenSUSE mutável entra com execução real contida de pacote do host")
 
     with tempfile.TemporaryDirectory() as tmp:
+        workdir = Path(tmp)
+        bin_dir = workdir / "bin"
+        bin_dir.mkdir(parents=True, exist_ok=True)
+        write_stub(bin_dir, "zypper", "#!/usr/bin/env bash\nprintf 'No matching items found.\\n'\nexit 104\n")
+        os_release = write_os_release(workdir, distro_id="opensuse-tumbleweed", distro_like="opensuse suse", name="openSUSE Tumbleweed")
+        env = {"PATH": f"{bin_dir}:{os.environ['PATH']}", "AURY_OS_RELEASE_PATH": str(os_release)}
+
+        direct_proc = run_python(["procurar", "steam"], env=env, cwd=workdir)
+        ensure(direct_proc.returncode == 0, "busca sem resultado em OpenSUSE mutável precisa sair com 0 no runtime Python direto")
+        ensure("não encontrei resultados para 'steam' no backend 'zypper'" in direct_proc.stdout, "busca sem resultado em OpenSUSE mutável precisa expor a superfície honesta da Aury")
+        ensure("No matching items found." not in direct_proc.stdout, "busca sem resultado em OpenSUSE mutável não pode vazar a saída crua do zypper")
+        ensure(not direct_proc.stderr.strip(), "busca sem resultado em OpenSUSE mutável não pode vazar stderr")
+
+        status, output, stderr = run_public(["procurar", "steam"], env=env, cwd=workdir)
+        ensure(status == 0, "entrada pública precisa sair com 0 para busca sem resultado em OpenSUSE mutável")
+        ensure("não encontrei resultados para 'steam' no backend 'zypper'" in output, "entrada pública precisa preservar a mensagem honesta de busca sem resultado em OpenSUSE mutável")
+        ensure("No matching items found." not in output, "entrada pública não pode vazar a saída crua do zypper em busca sem resultado")
+        ensure(not stderr, "entrada pública não pode vazar stderr em busca sem resultado em OpenSUSE mutável")
+    ok("OpenSUSE mutável mantém saída honesta para busca sem resultado")
+
+    with tempfile.TemporaryDirectory() as tmp:
+        workdir = Path(tmp)
+        bin_dir = workdir / "bin"
+        bin_dir.mkdir(parents=True, exist_ok=True)
+        write_stub(bin_dir, "sudo", "#!/usr/bin/env bash\n\"$@\"\n")
+        write_stub(bin_dir, "zypper", "#!/usr/bin/env bash\nprintf 'ZYPPER_SHOULD_NOT_RUN\\n'\n")
+        os_release = write_os_release(workdir, distro_id="opensuse-tumbleweed", distro_like="opensuse suse", name="openSUSE Tumbleweed")
+        env = {"PATH": f"{bin_dir}:{os.environ['PATH']}", "AURY_OS_RELEASE_PATH": str(os_release)}
+
+        direct_proc = run_python(["instalar", "firefox"], env=env, cwd=workdir)
+        ensure(direct_proc.returncode == 1, "OpenSUSE mutável sem sonda auxiliar precisa sair com status 1 no runtime Python direto")
+        ensure("ferramenta auxiliar 'rpm'" in direct_proc.stdout, "OpenSUSE mutável sem sonda auxiliar precisa expor a dependência de confirmação de estado")
+        ensure("ZYPPER_SHOULD_NOT_RUN" not in direct_proc.stdout, "OpenSUSE mutável sem sonda auxiliar não pode tentar instalar sem a confirmação necessária")
+        ensure(not direct_proc.stderr.strip(), "OpenSUSE mutável sem sonda auxiliar não pode vazar stderr no runtime Python direto")
+
+        status, output, stderr = run_public(["instalar", "firefox"], env=env, cwd=workdir)
+        ensure(status == 1, "entrada pública precisa sair com status 1 quando falta a sonda auxiliar em OpenSUSE mutável")
+        ensure("ferramenta auxiliar 'rpm'" in output, "entrada pública precisa preservar a explicação honesta da sonda auxiliar ausente")
+        ensure("ZYPPER_SHOULD_NOT_RUN" not in output, "entrada pública não pode tentar instalar pacote sem a sonda auxiliar")
+        ensure(not stderr, "entrada pública não pode vazar stderr quando falta a sonda auxiliar em OpenSUSE mutável")
+    ok("OpenSUSE mutável distingue backend ausente de sonda auxiliar ausente")
+
+    with tempfile.TemporaryDirectory() as tmp:
         bin_dir = Path(tmp) / "bin"
         bin_dir.mkdir(parents=True, exist_ok=True)
         write_stub(bin_dir, "python3", "#!/usr/bin/env bash\nexit 127\n")
