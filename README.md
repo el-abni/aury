@@ -7,8 +7,6 @@
 
 **Aury** é uma assistente de terminal para **Linux** com linha pública **host-centric** e superfície deliberadamente pequena. Hoje ela continua híbrida: o entrypoint público segue em Fish, e o runtime Python rastreado já sustenta `help`, `version`, `aury dev <frase>` e as rotas normais explicitamente migradas.
 
-> Estado público da `v1.9.9`: a release pública atual é `💜 v1.9.9`. A linha `1.x` segue encerrada canonicamente no mesmo contrato fechado na `v1.9.8`, sem abrir backend, família, operação, multi-source, IA/local_model ou redesign funcional. `procurar`, `instalar` e `remover` significam **pacote do host por família/host**. Arch, Debian/Ubuntu e Fedora mutável seguem como **suportado agora**; OpenSUSE mutável fica como **suportado contido**; Atomic, Universal Blue, `opensuse-microos`, `microos` e equivalentes seguem **bloqueados por política**. `flatpak` e `rpm-ostree` podem ser observados no ambiente, mas continuam **fora do contrato ativo**. Software do usuário, múltiplas origens, política de origem/source/trust e suporte operacional real a hosts imutáveis pertencem à Aurora.
-
 ## O que a Aury é hoje
 
 A Aury não tenta virar uma Aurora menor. A linha `1.x` fecha um recorte pequeno, útil e auditável: pacote do host por família, leituras simples de sistema/rede, arquivos básicos, extração e compactação local simples, com handoff explícito quando o pedido já pertence ao domínio da Aurora.
