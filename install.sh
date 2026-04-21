@@ -22,7 +22,7 @@ cp VERSION "$SHARE_DIR/"
 cp LICENSE.md "$SHARE_DIR/"
 
 echo ""
-echo "✅ A Aury foi instalada com sucesso!"
+echo "✅ | 💜 A Aury foi instalada com sucesso!"
 echo ""
 echo "Base instalada em:"
 echo ""
