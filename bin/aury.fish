@@ -20,21 +20,44 @@ end
 # 1.1 Mensagens
 # ==========================================================
 
+function __aury_public_text --argument-names text
+    set -l normalized (string trim -- "$text")
+
+    if test -z "$normalized"
+        echo ""
+        return 0
+    end
+
+    set -l first (string sub -s 1 -l 1 -- "$normalized")
+    set -l rest (string sub -s 2 -- "$normalized")
+
+    if string match -rq '[[:alpha:]]' -- "$first"
+        set first (string upper -- "$first")
+    end
+
+    printf '%s%s\n' "$first" "$rest"
+end
+
+function __aury_msg_voice --argument-names icon text
+    set -l rendered (__aury_public_text "$text")
+    echo "$icon | 💜 $rendered"
+end
+
 function __aury_msg_error --argument-names text
     set -g __aury_action_had_error 1
-    echo "❌ $text"
+    __aury_msg_voice "❌" "$text"
 end
 
 function __aury_msg_ok --argument-names text
-    echo "✅ $text"
+    __aury_msg_voice "✅" "$text"
 end
 
 function __aury_msg_info --argument-names text
-    echo "ℹ️ $text"
+    __aury_msg_voice "ℹ️" "$text"
 end
 
 function __aury_msg_warn --argument-names text
-    echo "⚠️ $text"
+    __aury_msg_info "$text"
 end
 
 function __aury_clear_action_error_state
@@ -43,7 +66,7 @@ function __aury_clear_action_error_state
 end
 
 function __aury_msg_help_hint
-    __aury_msg_info "se quiser, use 'aury ajuda' para ver exemplos que eu aceito."
+    __aury_msg_info "use 'aury ajuda' para ver o recorte atual."
 end
 
 function __aury_msg_ambiguous --argument-names role value
@@ -51,11 +74,18 @@ function __aury_msg_ambiguous --argument-names role value
 end
 
 function __aury_msg_blocked --argument-names text
-    __aury_msg_error $text
+    set -l normalized (string trim -- "$text")
+
+    if string match -iqr '^bloqueado' -- "$normalized"
+        __aury_msg_error "$normalized"
+        return 0
+    end
+
+    __aury_msg_error "bloqueado $normalized"
 end
 
 function __aury_confirm_prompt --argument-names action target
-    echo "⚠️ vou $action '$target'. Confirma? [s/N]"
+    __aury_msg_info "vou $action '$target'. Confirma? [s/N]"
 end
 
 function __aury_read_confirmation --argument-names action target
@@ -162,17 +192,38 @@ function __aury_host_maintenance_family_label --argument-names family
 end
 
 function __aury_guard_host_maintenance --argument-names intent
+    if functions -q __aury_fish_bridge_invoke
+        set -l bridge_output (__aury_fish_bridge_invoke $intent sistema 2>/dev/null)
+        set -l bridge_status $status
+
+        switch $bridge_status
+            case 120
+                return 0
+            case 127
+            case 1
+                if test (count $bridge_output) -gt 0
+                    printf '%s\n' (string join \n -- $bridge_output)
+                end
+                return 1
+            case '*'
+                if test (count $bridge_output) -gt 0
+                    printf '%s\n' (string join \n -- $bridge_output)
+                end
+                return 1
+        end
+    end
+
     set -l family (__aury_detect_host_maintenance_family)
 
     switch $family
         case arch
             return 0
         case atomic
-            __aury_msg_blocked "'$intent' pertence à manutenção do host e fica bloqueado por política em hosts Atomic/imutáveis nesta linha."
+            __aury_msg_blocked "por política neste host Atomic/imutável: '$intent' pertence à manutenção do host nesta linha."
             return 1
         case '*'
             set -l family_label (__aury_host_maintenance_family_label $family)
-            __aury_msg_blocked "'$intent' pertence à manutenção do host e continua fora do recorte equivalente em $family_label nesta linha."
+            __aury_msg_blocked "por política: '$intent' pertence à manutenção do host e continua fora do recorte equivalente em $family_label nesta linha."
             return 1
     end
 end
@@ -237,24 +288,24 @@ function __aury_infer_path_kind --argument-names path fallback_kind
     return 1
 end
 
-function __aury_msg_file_success --argument-names lead action kind source dest
+function __aury_msg_file_success --argument-names action kind source dest
     set -l label (__aury_path_label $kind)
 
     switch $action
         case criar
-            __aury_msg_ok "$lead, eu criei $label '$source'."
+            __aury_msg_ok "pronto, eu criei $label '$source'."
 
         case remover
-            __aury_msg_ok "$lead, eu removi $label '$source'."
+            __aury_msg_ok "pronto, eu removi $label '$source'."
 
         case copiar
-            __aury_msg_ok "$lead, eu copiei $label '$source' para '$dest'."
+            __aury_msg_ok "pronto, eu copiei $label '$source' para '$dest'."
 
         case mover
-            __aury_msg_ok "$lead, eu movi $label '$source' para '$dest'."
+            __aury_msg_ok "pronto, eu movi $label '$source' para '$dest'."
 
         case renomear
-            __aury_msg_ok "$lead, eu renomeei $label '$source' para '$dest'."
+            __aury_msg_ok "pronto, eu renomeei $label '$source' para '$dest'."
     end
 end
 
@@ -332,8 +383,8 @@ function __aury_show_help
     echo "
 💜 Aury versão-indisponível
 
-❌ não encontrei resources/help.txt na base ativa.
-Use: aury ajuda a partir de uma instalação íntegra ou do checkout canônico.
+❌ | 💜 Não encontrei resources/help.txt na base ativa.
+ℹ️ | 💜 Use a Aury a partir de uma instalação íntegra ou do checkout canônico.
 "
 end
 
@@ -3229,12 +3280,12 @@ function __aury_archive_entries_are_safe --argument-names archive_path archive_t
         set -l normalized (string replace -a '\\' '/' -- $entry)
 
         if string match -rq '^/' -- $normalized
-            __aury_msg_error "extração bloqueada por segurança: o arquivo compactado contém caminhos absolutos"
+            __aury_msg_blocked "por segurança: o arquivo compactado contém caminhos absolutos."
             return 1
         end
 
         if test "$normalized" = ".."; or string match -rq '(^|/)\.\.(/|$)' -- $normalized
-            __aury_msg_error "extração bloqueada por segurança: o arquivo compactado contém caminhos inseguros"
+            __aury_msg_blocked "por segurança: o arquivo compactado contém caminhos inseguros."
             return 1
         end
     end
@@ -3610,7 +3661,7 @@ end
 function __aury_exec_internal --argument-names intent
     switch $intent
         case ajuda
-            __aury_show_shared_help
+            __aury_fish_bridge_show_shared_help
             return 0
 
         case reload
@@ -3789,7 +3840,7 @@ end
 
 function __aury_exec_network_speedtest
     if not command -sq librespeed-cli
-        __aury_msg_error "não consegui medir a velocidade da internet porque o backend 'librespeed-cli' não está disponível"
+        __aury_msg_error "não consegui medir a velocidade da internet porque o backend 'librespeed-cli' não está disponível."
         return 0
     end
 
@@ -3797,12 +3848,12 @@ function __aury_exec_network_speedtest
     set -l backend_status $status
 
     if test $backend_status -ne 0
-        __aury_msg_error "não consegui medir a velocidade da internet porque o backend 'librespeed-cli' retornou erro operacional"
+        __aury_msg_error "não consegui medir a velocidade da internet porque o backend 'librespeed-cli' retornou erro operacional."
         return 0
     end
 
     if not command -sq python3
-        __aury_msg_error "não consegui ler o retorno do librespeed-cli com confiança"
+        __aury_msg_error "não consegui ler o retorno do librespeed-cli com confiança."
         return 0
     end
 
@@ -3860,7 +3911,7 @@ if jitter:
     set -l parse_status $status
 
     if test $parse_status -ne 0
-        __aury_msg_error "não consegui ler o retorno do librespeed-cli com confiança"
+        __aury_msg_error "não consegui ler o retorno do librespeed-cli com confiança."
         return 0
     end
 
@@ -3892,11 +3943,11 @@ if jitter:
     end
 
     if test -z "$ping_value"; or test -z "$download_value"; or test -z "$upload_value"
-        __aury_msg_error "não consegui ler o retorno do librespeed-cli com confiança"
+        __aury_msg_error "não consegui ler o retorno do librespeed-cli com confiança."
         return 0
     end
 
-    echo "✅ velocidade da internet"
+    __aury_msg_ok "pronto, eu medi a velocidade da internet."
     echo "ping: $ping_value ms"
     echo "download: $download_value Mbps"
     echo "upload: $upload_value Mbps"
@@ -3948,7 +3999,7 @@ end
 # -------------------------------------------------
 
 function __aury_exec_packages
-    __aury_run_python --version >/dev/null 2>/dev/null
+    __aury_fish_bridge_invoke --version >/dev/null 2>/dev/null
     if test $status -ne 0
         __aury_msg_error "não consegui aplicar a política canônica de pacote porque o runtime Python não está disponível."
         return 1
@@ -4022,7 +4073,7 @@ function __aury_exec_files
 
                 if test $status -eq 0
                     __aury_update_local_reference $__aury_arg_target pasta
-                    __aury_msg_file_success "Pronto" criar pasta $__aury_arg_target
+                    __aury_msg_file_success criar pasta $__aury_arg_target
                 else
                     __aury_reset_local_reference_state
                     __aury_msg_file_failure criar pasta $__aury_arg_target
@@ -4044,7 +4095,7 @@ function __aury_exec_files
             if test $status -eq 0
                 set -l created_target (__aury_file_result_target criar '' '' '' "$__aury_arg_target")
                 __aury_update_local_reference $created_target arquivo
-                __aury_msg_file_success "Pronto" criar arquivo $created_target
+                __aury_msg_file_success criar arquivo $created_target
             else
                 __aury_reset_local_reference_state
                 __aury_msg_file_failure criar arquivo $__aury_arg_target
@@ -4077,7 +4128,7 @@ function __aury_exec_files
 
                 if test $status -eq 0
                     __aury_reset_local_reference_state
-                    __aury_msg_file_success "Feito" remover $target_kind $__aury_arg_target
+                    __aury_msg_file_success remover $target_kind $__aury_arg_target
                 else
                     __aury_reset_local_reference_state
                     __aury_msg_file_failure remover $target_kind $__aury_arg_target
@@ -4118,7 +4169,7 @@ function __aury_exec_files
             if test $status -eq 0
                 set -l effective_copy_target (__aury_file_result_target copiar "$__aury_arg_source" "$__aury_arg_dest" '' '')
                 __aury_update_local_reference $effective_copy_target $copy_type
-                __aury_msg_file_success "Pronto" copiar $copy_type $__aury_arg_source $effective_copy_target
+                __aury_msg_file_success copiar $copy_type $__aury_arg_source $effective_copy_target
             else
                 __aury_reset_local_reference_state
                 __aury_msg_file_failure copiar $copy_type $__aury_arg_source
@@ -4155,7 +4206,7 @@ function __aury_exec_files
             if test $status -eq 0
                 set -l effective_move_target (__aury_file_result_target mover "$__aury_arg_source" "$__aury_arg_dest" '' '')
                 __aury_update_local_reference $effective_move_target $move_type
-                __aury_msg_file_success "Feito" mover $move_type $__aury_arg_source $effective_move_target
+                __aury_msg_file_success mover $move_type $__aury_arg_source $effective_move_target
             else
                 __aury_reset_local_reference_state
                 __aury_msg_file_failure mover $move_type $__aury_arg_source
@@ -4302,7 +4353,7 @@ function __aury_exec_files
             rm -rf -- "$temp_dir_abs"
 
             __aury_update_local_reference "$__aury_arg_dest" arquivo
-            __aury_msg_ok "Pronto, eu compactei '$__aury_arg_source' em '$__aury_arg_dest'."
+            __aury_msg_ok "pronto, eu compactei '$__aury_arg_source' em '$__aury_arg_dest'."
             return 0
 
         case extrair
@@ -4387,7 +4438,7 @@ function __aury_exec_files
                 end
             end
 
-            __aury_msg_ok "Pronto, eu extraí o arquivo compactado '$__aury_arg_source' para a pasta '$__aury_arg_dest'."
+            __aury_msg_ok "pronto, eu extraí o arquivo compactado '$__aury_arg_source' para a pasta '$__aury_arg_dest'."
             __aury_msg_info "itens extraídos: $extracted_files arquivo(s) e $extracted_dirs pasta(s)"
             return 0
 
@@ -4411,7 +4462,7 @@ function __aury_exec_files
             if test $status -eq 0
                 set -l renamed_target (__aury_file_result_target renomear "$__aury_arg_source" '' "$__aury_arg_newname" '')
                 __aury_update_local_reference $renamed_target $rename_type
-                __aury_msg_file_success "Tudo certo" renomear $rename_type $__aury_arg_source $renamed_target
+                __aury_msg_file_success renomear $rename_type $__aury_arg_source $renamed_target
             else
                 __aury_reset_local_reference_state
                 __aury_msg_file_failure renomear $rename_type $__aury_arg_source
@@ -4453,7 +4504,7 @@ function __aury_dispatch_current_action
     if test "$intent" = "remover"; and test "$domain" = "geral"
         if __aury_has_local_anaphor $norm_words_global
             __aury_reset_local_reference_state
-            __aury_msg_blocked "não vou remover nada sem um alvo explícito."
+            __aury_msg_blocked "por segurança, eu preciso de um alvo explícito para remover."
             return 0
         end
     end
@@ -4525,16 +4576,24 @@ end
 # -------------------------------------------------
 
 # -------------------------------------------------
-# 6.2 Função principal
+# 6.2 Fronteira híbrida Fish -> python/aury/fish_bridge.py
 # -------------------------------------------------
 
+
+function __aury_is_live_share_root --argument-names root
+    if test -f "$root/VERSION"; and test -f "$root/resources/help.txt"; and test -f "$root/python/aury/core_api.py"
+        return 0
+    end
+
+    return 1
+end
 
 function __aury_share_root
     set -l loaded $__aury_loaded_from
     set -l loaded_dir (dirname -- $loaded)
     set -l repo_root (dirname -- $loaded_dir)
 
-    if test -f "$repo_root/VERSION"; and test -d "$repo_root/resources"; and test -d "$repo_root/python"
+    if __aury_is_live_share_root "$repo_root"
         echo $repo_root
         return 0
     end
@@ -4542,7 +4601,7 @@ function __aury_share_root
     echo ~/.local/share/aury
 end
 
-function __aury_python_bin
+function __aury_fish_bridge_python_bin
     if command -sq python3
         echo python3
         return 0
@@ -4556,16 +4615,16 @@ function __aury_python_bin
     return 1
 end
 
-function __aury_run_python
+function __aury_fish_bridge_invoke
     set -l root (__aury_share_root)
-    set -l pybin (__aury_python_bin)
+    set -l pybin (__aury_fish_bridge_python_bin)
     or return 127
 
     env PYTHONPATH="$root/python" AURY_SHARE_DIR="$root" $pybin -m aury $argv
     return $status
 end
 
-function __aury_show_shared_version
+function __aury_fish_bridge_show_shared_version
     set -l root (__aury_share_root)
     if test -f "$root/VERSION"
         set -l aury_version (string trim -- (cat "$root/VERSION"))
@@ -4576,7 +4635,7 @@ function __aury_show_shared_version
     echo "💜 Aury versão-indisponível"
 end
 
-function __aury_show_shared_help
+function __aury_fish_bridge_show_shared_help
     set -l root (__aury_share_root)
     set -l help_file "$root/resources/help.txt"
     set -l aury_version "versão-indisponível"
@@ -4606,24 +4665,24 @@ function aury
     set -l first_raw (string lower -- (string trim -- $argv[1]))
 
     if contains -- $first_raw ajuda help --help -h
-        __aury_run_python ajuda >/dev/null 2>/dev/null
+        __aury_fish_bridge_invoke ajuda >/dev/null 2>/dev/null
         if test $status -eq 0
-            __aury_run_python ajuda
+            __aury_fish_bridge_invoke ajuda
             return $status
         end
 
-        __aury_show_shared_help
+        __aury_fish_bridge_show_shared_help
         return 0
     end
 
     if contains -- $first_raw version --version -v
-        __aury_run_python --version >/dev/null 2>/dev/null
+        __aury_fish_bridge_invoke --version >/dev/null 2>/dev/null
         if test $status -eq 0
-            __aury_run_python --version
+            __aury_fish_bridge_invoke --version
             return $status
         end
 
-        __aury_show_shared_version
+        __aury_fish_bridge_show_shared_version
         return 0
     end
 
@@ -4643,7 +4702,7 @@ function aury
     set -l first_norm (__aury_normalize_token $raw_tokens[1])
     if test "$first_norm" = "dev"
         if test (count $raw_tokens) -gt 1
-            __aury_run_python dev $raw_tokens[2..-1]
+            __aury_fish_bridge_invoke dev $raw_tokens[2..-1]
             switch $status
                 case 0
                     return 0
@@ -4660,7 +4719,7 @@ function aury
         return $status
     end
 
-    __aury_run_python $raw_tokens
+    __aury_fish_bridge_invoke $raw_tokens
     switch $status
         case 0
             return 0

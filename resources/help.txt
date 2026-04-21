@@ -1,65 +1,33 @@
 💜 Aury {version}
 
-PACOTES
+CHAMADA
+aury <pedido>
+ay <pedido>
+aury ajuda
+ay ajuda
+
+O QUE ELA FAZ
+- pacote do host: procurar, instalar e remover
+- sistema e rede: status, cpu, memória, ip, ping e velocidade da internet
+- arquivos: criar, copiar, mover, renomear e remover
+- extração e compactação local simples
+- leitura técnica: aury dev <frase>
+
+EXEMPLOS
 aury instalar firefox
-aury instala firefox
-aury baixa o firefox
-aury pode instalar firefox
-aury quero instalar obs studio
-aury Aury, instala o obs studio.
-aury remover vlc
-aury procurar steam
-
-SISTEMA
-aury atualizar sistema
-aury otimizar sistema
-aury atualiza e otimiza
-aury status
+ay procurar steam
 aury mostrar cpu
-aury mostrar o status do sistema
-aury checar memória
-aury ver cpu e memória
-
-REDE
-aury ver ip
-aury testar internet
-aury velocidade da internet
-aury ping google.com
-
-ARQUIVOS
 aury criar arquivo teste.txt
-aury criar teste.txt
-aury criar pasta projetos
-aury copiar arquivo teste.txt para backup.txt
-aury mover arquivo teste.txt para pasta/teste.txt
-aury renomear arquivo teste.txt para novo.txt
-aury cria um arquivo teste.txt
-aury cria a pasta projetos
-aury apaga o arquivo teste.txt
-aury deleta backup.txt
-aury remove o arquivo teste.txt
-
-EXTRAÇÃO
-aury extrair teste.zip
-aury descompacte backup.tar.gz
-aury extraia teste.tar para a pasta que fica em /usr/steam
-
-COMPACTAÇÃO
-aury compactar arquivo teste.txt para teste.zip
 aury compactar pasta projetos/ para projetos.tar.gz
+aury dev "instalar firefox"
 
-EXTRAS
-aury reload
-aury dev <frase>
-aury dev
+RECORTE DA LINHA
+- procurar, instalar e remover significam pacote do host.
+- software do usuário, múltiplas origens e hosts imutáveis ficam fora desta linha.
+- aury dev <frase> é o relatório canônico da linha 1.x.
+- aury dev sem frase fica como verificação local curta do adaptador Fish, em uso secundário nesta linha.
 
-NOTA
-aury dev <frase> continua como relatório canônico da linha 1.x.
-aury dev sem frase fica como verificação local curta do adaptador Fish, em uso secundário nesta linha.
-procurar, instalar e remover usam o contrato final de pacote do host por família/host.
-Esse trio não significa software do usuário, app store, múltiplas rotas nem política de origem nesta linha.
-flatpak e rpm-ostree podem ser observados no ambiente, mas ficam fora do contrato ativo.
-atualizar e otimizar pertencem à manutenção do host: continuam locais em Arch/derivadas mutáveis, ficam fora do recorte equivalente em Debian/Fedora/OpenSUSE e seguem bloqueados por política em Atomic/imutáveis.
-A compatibilidade Linux da Aury 1.x se encerra nesta matriz final.
-Matriz final da linha 1.x: suportado agora em Arch, Debian/Ubuntu e Fedora mutável; suportado contido em OpenSUSE mutável; bloqueado por política em Atomic, Universal Blue, opensuse-microos, microos e equivalentes.
-Handoff: software do usuário, múltiplas origens, política de origem/source/trust e suporte operacional real a hosts imutáveis pertencem à Aurora, não à Aury 1.x.
+MAIS LEITURA
+README.md
+docs/COMPATIBILITY.md
+docs/WORKFLOW.md

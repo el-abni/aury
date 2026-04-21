@@ -6,6 +6,8 @@ import shutil
 from dataclasses import dataclass
 from pathlib import Path
 
+from .public_voice import blocked, failure, info, success
+
 _OS_RELEASE_ENV = "AURY_OS_RELEASE_PATH"
 _OSTREE_BOOTED_ENV = "AURY_OSTREE_BOOTED"
 _HOST_PACKAGE_BACKENDS = ("pacman", "paru", "apt-cache", "apt-get", "dnf", "zypper")
@@ -146,6 +148,70 @@ class HostMaintenanceActionPolicy:
         return "manutenção local do host"
 
 
+@dataclass(frozen=True)
+class _PackageCommandTemplate:
+    backend_label: str
+    command_prefix: tuple[str, ...]
+    required_commands: tuple[str, ...]
+
+    def build_command(self, package_target: str) -> tuple[str, ...]:
+        return (*self.command_prefix, package_target)
+
+
+_STANDARD_PACKAGE_COMMAND_TEMPLATES = {
+    ("debian", "procurar"): _PackageCommandTemplate(
+        backend_label="apt-cache",
+        command_prefix=("apt-cache", "search"),
+        required_commands=("apt-cache",),
+    ),
+    ("debian", "instalar"): _PackageCommandTemplate(
+        backend_label="sudo + apt-get",
+        command_prefix=("sudo", "apt-get", "install", "-y"),
+        required_commands=("apt-get", "sudo"),
+    ),
+    ("debian", "remover"): _PackageCommandTemplate(
+        backend_label="sudo + apt-get",
+        command_prefix=("sudo", "apt-get", "remove", "-y"),
+        required_commands=("apt-get", "sudo"),
+    ),
+    ("opensuse", "procurar"): _PackageCommandTemplate(
+        backend_label="zypper",
+        command_prefix=("zypper", "search", "--"),
+        required_commands=("zypper",),
+    ),
+    ("opensuse", "instalar"): _PackageCommandTemplate(
+        backend_label="sudo + zypper",
+        command_prefix=("sudo", "zypper", "--non-interactive", "install", "--"),
+        required_commands=("zypper", "sudo"),
+    ),
+    ("opensuse", "remover"): _PackageCommandTemplate(
+        backend_label="sudo + zypper",
+        command_prefix=("sudo", "zypper", "--non-interactive", "remove", "--"),
+        required_commands=("zypper", "sudo"),
+    ),
+    ("fedora", "procurar"): _PackageCommandTemplate(
+        backend_label="dnf",
+        command_prefix=("dnf", "search"),
+        required_commands=("dnf",),
+    ),
+    ("fedora", "instalar"): _PackageCommandTemplate(
+        backend_label="sudo + dnf",
+        command_prefix=("sudo", "dnf", "install", "-y"),
+        required_commands=("dnf", "sudo"),
+    ),
+    ("fedora", "remover"): _PackageCommandTemplate(
+        backend_label="sudo + dnf",
+        command_prefix=("sudo", "dnf", "remove", "-y"),
+        required_commands=("dnf", "sudo"),
+    ),
+}
+_PACKAGE_STATE_PROBE_TEMPLATES = {
+    "arch": ("pacman", ("pacman", "-Q", "--"), ("pacman",)),
+    "debian": ("dpkg", ("dpkg", "-s"), ("dpkg",)),
+    "rpm": ("rpm", ("rpm", "-q"), ("rpm",)),
+}
+
+
 def _read_os_release(environ: dict[str, str]) -> dict[str, str]:
     path = Path(environ.get(_OS_RELEASE_ENV, "/etc/os-release"))
     try:
@@ -261,11 +327,13 @@ def detect_host_profile(environ: dict[str, str] | None = None) -> HostProfile:
 def _package_block_reason(profile: HostProfile) -> tuple[str, str]:
     if profile.mutability == "atomic":
         reason = "o host Linux foi detectado como Atomic/imutável, e a política atual da linha 1.x bloqueia pacote do host nesse perfil mesmo quando há backend instalado."
-        message = "❌ este host Linux foi detectado como Atomic/imutável; nesta linha o pacote do host fica bloqueado por política nesse perfil, mesmo com backend instalado."
+        message = blocked(
+            "por política neste host detectado como Atomic/imutável: pacote do host fica fora desta linha, mesmo com backend instalado."
+        )
         return reason, message
 
     reason = "a família Linux deste host ficou fora do recorte atual de pacote da linha 1.x."
-    message = "❌ a família Linux deste host ficou fora do recorte atual de pacote da linha 1.x."
+    message = blocked("por política: a família Linux deste host ficou fora do recorte atual de pacote da linha 1.x.")
     return reason, message
 
 
@@ -292,8 +360,8 @@ def _host_maintenance_block_reason(intent: str, profile: HostProfile) -> tuple[s
             f"o host Linux foi detectado como Atomic/imutável, e {action_label} fica bloqueado por política nesta linha "
             "por pertencer à manutenção do host."
         )
-        message = (
-            f"❌ {action_label} pertence à manutenção do host e fica bloqueado por política em hosts Atomic/imutáveis nesta linha."
+        message = blocked(
+            f"por política neste host Atomic/imutável: {action_label} pertence à manutenção do host nesta linha."
         )
         return reason, message
 
@@ -301,33 +369,76 @@ def _host_maintenance_block_reason(intent: str, profile: HostProfile) -> tuple[s
     reason = (
         f"{action_label} pertence à manutenção do host e não tem equivalência prometida em hosts {family_label} mutáveis nesta linha."
     )
-    message = (
-        f"❌ {action_label} pertence à manutenção do host e continua fora do recorte equivalente em hosts {family_label} mutáveis nesta linha."
+    message = blocked(
+        f"por política: {action_label} pertence à manutenção do host e continua fora do recorte equivalente em hosts {family_label} mutáveis nesta linha."
     )
     return reason, message
 
 
-def _package_backend_label(intent: str, profile: HostProfile) -> str:
-    backends = set(profile.package_backends)
-    if profile.linux_family == "arch":
-        if intent == "procurar":
-            if "pacman" in backends:
-                return "pacman"
-            if "paru" in backends:
-                return "paru"
-            return "pacman"
-        if intent == "instalar":
-            return "paru + pacman" if "paru" in backends else "sudo + pacman"
+def _arch_package_command_template(intent: str, backends: set[str]) -> _PackageCommandTemplate:
+    if intent == "procurar":
         if "pacman" in backends:
-            return "sudo + pacman"
+            return _PackageCommandTemplate(
+                backend_label="pacman",
+                command_prefix=("pacman", "-Ss", "--"),
+                required_commands=("pacman",),
+            )
         if "paru" in backends:
-            return "paru + pacman"
-        return "sudo + pacman"
-    if profile.linux_family == "debian":
-        return "apt-cache" if intent == "procurar" else "sudo + apt-get"
-    if profile.linux_family == "opensuse":
-        return "zypper" if intent == "procurar" else "sudo + zypper"
-    return "dnf" if intent == "procurar" else "sudo + dnf"
+            return _PackageCommandTemplate(
+                backend_label="paru",
+                command_prefix=("paru", "-Ss", "--"),
+                required_commands=("paru",),
+            )
+        return _PackageCommandTemplate(
+            backend_label="pacman",
+            command_prefix=("pacman", "-Ss", "--"),
+            required_commands=("pacman",),
+        )
+
+    if intent == "instalar":
+        if "paru" in backends:
+            return _PackageCommandTemplate(
+                backend_label="paru + pacman",
+                command_prefix=("paru", "-S", "--needed", "--"),
+                required_commands=("paru", "pacman"),
+            )
+        return _PackageCommandTemplate(
+            backend_label="sudo + pacman",
+            command_prefix=("sudo", "pacman", "-S", "--needed", "--"),
+            required_commands=("pacman", "sudo"),
+        )
+
+    if "pacman" in backends:
+        return _PackageCommandTemplate(
+            backend_label="sudo + pacman",
+            command_prefix=("sudo", "pacman", "-Rns", "--"),
+            required_commands=("pacman", "sudo"),
+        )
+    if "paru" in backends:
+        return _PackageCommandTemplate(
+            backend_label="paru + pacman",
+            command_prefix=("paru", "-Rns", "--"),
+            required_commands=("paru", "pacman"),
+        )
+    return _PackageCommandTemplate(
+        backend_label="sudo + pacman",
+        command_prefix=("sudo", "pacman", "-Rns", "--"),
+        required_commands=("pacman", "sudo"),
+    )
+
+
+def _package_command_template(intent: str, profile: HostProfile) -> _PackageCommandTemplate:
+    if profile.linux_family == "arch":
+        return _arch_package_command_template(intent, set(profile.package_backends))
+
+    family = profile.linux_family
+    if family not in {"debian", "opensuse", "fedora"}:
+        family = "fedora"
+    return _STANDARD_PACKAGE_COMMAND_TEMPLATES[(family, intent)]
+
+
+def _package_backend_label(intent: str, profile: HostProfile) -> str:
+    return _package_command_template(intent, profile).backend_label
 
 
 def _supported_package_reason(intent: str, profile: HostProfile) -> str:
@@ -344,11 +455,13 @@ def _supported_package_reason(intent: str, profile: HostProfile) -> str:
 
 
 def _package_state_probe_spec(profile: HostProfile, target: str) -> tuple[str, tuple[str, ...], tuple[str, ...]]:
-    if profile.linux_family == "arch":
-        return "pacman", ("pacman", "-Q", "--", target), ("pacman",)
+    template_key = "arch"
     if profile.linux_family == "debian":
-        return "dpkg", ("dpkg", "-s", target), ("dpkg",)
-    return "rpm", ("rpm", "-q", target), ("rpm",)
+        template_key = "debian"
+    elif profile.linux_family != "arch":
+        template_key = "rpm"
+    label, command_prefix, required_commands = _PACKAGE_STATE_PROBE_TEMPLATES[template_key]
+    return label, (*command_prefix, target), required_commands
 
 
 def resolve_package_action_policy(
@@ -411,29 +524,31 @@ def resolve_host_maintenance_action_policy(
 
 
 def package_no_results_message(target: str, backend_label: str) -> str:
-    return f"ℹ️ não encontrei resultados para '{target}' no backend '{backend_label}'."
+    return info(f"Não encontrei resultados para '{target}' no backend '{backend_label}'.")
 
 
 def package_noop_message(intent: str, target: str) -> str:
     if intent == "instalar":
-        return f"ℹ️ o pacote '{target}' já está instalado neste host. Nada foi feito."
-    return f"ℹ️ o pacote '{target}' não está instalado neste host. Nada foi feito."
+        return info(f"O pacote '{target}' já está instalado neste host. Nada foi feito.")
+    return info(f"O pacote '{target}' não está instalado neste host. Nada foi feito.")
 
 
 def package_state_confirmation_message(intent: str, target: str, backend_label: str) -> str:
     if intent == "instalar":
-        return f"❌ o backend '{backend_label}' terminou sem eu conseguir confirmar a instalação de '{target}'."
-    return f"❌ o backend '{backend_label}' terminou sem eu conseguir confirmar a remoção de '{target}'."
+        return failure(f"Não consegui confirmar a instalação de '{target}' depois que o backend '{backend_label}' terminou.")
+    return failure(f"Não consegui confirmar a remoção de '{target}' depois que o backend '{backend_label}' terminou.")
 
 
 def package_state_probe_missing_message(backend_label: str, probe_label: str) -> str:
-    return f"❌ a confirmação de estado para o backend '{backend_label}' depende da ferramenta auxiliar '{probe_label}', que não está disponível."
+    return failure(
+        f"Não consegui confirmar o estado no backend '{backend_label}' porque a ferramenta auxiliar '{probe_label}' não está disponível."
+    )
 
 
 def package_success_message(intent: str, target: str) -> str:
     if intent == "instalar":
-        return f"✅ pronto, o pacote '{target}' está instalado."
-    return f"✅ pronto, o pacote '{target}' foi removido."
+        return success(f"Pronto, eu confirmei que o pacote '{target}' está instalado.")
+    return success(f"Pronto, eu confirmei que o pacote '{target}' foi removido.")
 
 
 def _normalize_package_target(intent: str, target: str) -> str:
@@ -457,7 +572,6 @@ def build_package_execution_plan(
         return PackageExecutionPlan(policy=policy)
 
     package_target = _normalize_package_target(intent, target)
-    backends = set(policy.host_profile.package_backends)
     state_probe_label = ""
     state_probe_command: tuple[str, ...] = ()
     state_probe_required_commands: tuple[str, ...] = ()
@@ -466,157 +580,12 @@ def build_package_execution_plan(
             policy.host_profile,
             package_target,
         )
-
-    if policy.host_profile.linux_family == "arch":
-        if intent == "procurar":
-            if "pacman" in backends:
-                return PackageExecutionPlan(
-                    policy=policy,
-                    package_target=package_target,
-                    command=("pacman", "-Ss", "--", package_target),
-                    required_commands=("pacman",),
-                )
-            if "paru" in backends:
-                return PackageExecutionPlan(
-                    policy=policy,
-                    package_target=package_target,
-                    command=("paru", "-Ss", "--", package_target),
-                    required_commands=("paru",),
-                )
-            return PackageExecutionPlan(
-                policy=policy,
-                package_target=package_target,
-                command=("pacman", "-Ss", "--", package_target),
-                required_commands=("pacman",),
-            )
-        if intent == "instalar":
-            if "paru" in backends:
-                return PackageExecutionPlan(
-                    policy=policy,
-                    package_target=package_target,
-                    command=("paru", "-S", "--needed", "--", package_target),
-                    required_commands=("paru", "pacman"),
-                    state_probe_label=state_probe_label,
-                    state_probe_command=state_probe_command,
-                    state_probe_required_commands=state_probe_required_commands,
-                )
-            return PackageExecutionPlan(
-                policy=policy,
-                package_target=package_target,
-                command=("sudo", "pacman", "-S", "--needed", "--", package_target),
-                required_commands=("pacman", "sudo"),
-                state_probe_label=state_probe_label,
-                state_probe_command=state_probe_command,
-                state_probe_required_commands=state_probe_required_commands,
-            )
-        if "pacman" in backends:
-            return PackageExecutionPlan(
-                policy=policy,
-                package_target=package_target,
-                command=("sudo", "pacman", "-Rns", "--", package_target),
-                required_commands=("pacman", "sudo"),
-                state_probe_label=state_probe_label,
-                state_probe_command=state_probe_command,
-                state_probe_required_commands=state_probe_required_commands,
-            )
-        if "paru" in backends:
-            return PackageExecutionPlan(
-                policy=policy,
-                package_target=package_target,
-                command=("paru", "-Rns", "--", package_target),
-                required_commands=("paru", "pacman"),
-                state_probe_label=state_probe_label,
-                state_probe_command=state_probe_command,
-                state_probe_required_commands=state_probe_required_commands,
-            )
-        return PackageExecutionPlan(
-            policy=policy,
-            package_target=package_target,
-            command=("sudo", "pacman", "-Rns", "--", package_target),
-            required_commands=("pacman", "sudo"),
-            state_probe_label=state_probe_label,
-            state_probe_command=state_probe_command,
-            state_probe_required_commands=state_probe_required_commands,
-        )
-
-    if policy.host_profile.linux_family == "debian":
-        if intent == "procurar":
-            return PackageExecutionPlan(
-                policy=policy,
-                package_target=package_target,
-                command=("apt-cache", "search", package_target),
-                required_commands=("apt-cache",),
-            )
-        if intent == "instalar":
-            return PackageExecutionPlan(
-                policy=policy,
-                package_target=package_target,
-                command=("sudo", "apt-get", "install", "-y", package_target),
-                required_commands=("apt-get", "sudo"),
-                state_probe_label=state_probe_label,
-                state_probe_command=state_probe_command,
-                state_probe_required_commands=state_probe_required_commands,
-            )
-        return PackageExecutionPlan(
-            policy=policy,
-            package_target=package_target,
-            command=("sudo", "apt-get", "remove", "-y", package_target),
-            required_commands=("apt-get", "sudo"),
-            state_probe_label=state_probe_label,
-            state_probe_command=state_probe_command,
-            state_probe_required_commands=state_probe_required_commands,
-        )
-
-    if policy.host_profile.linux_family == "opensuse":
-        if intent == "procurar":
-            return PackageExecutionPlan(
-                policy=policy,
-                package_target=package_target,
-                command=("zypper", "search", "--", package_target),
-                required_commands=("zypper",),
-            )
-        if intent == "instalar":
-            return PackageExecutionPlan(
-                policy=policy,
-                package_target=package_target,
-                command=("sudo", "zypper", "--non-interactive", "install", "--", package_target),
-                required_commands=("zypper", "sudo"),
-                state_probe_label=state_probe_label,
-                state_probe_command=state_probe_command,
-                state_probe_required_commands=state_probe_required_commands,
-            )
-        return PackageExecutionPlan(
-            policy=policy,
-            package_target=package_target,
-            command=("sudo", "zypper", "--non-interactive", "remove", "--", package_target),
-            required_commands=("zypper", "sudo"),
-            state_probe_label=state_probe_label,
-            state_probe_command=state_probe_command,
-            state_probe_required_commands=state_probe_required_commands,
-        )
-
-    if intent == "procurar":
-        return PackageExecutionPlan(
-            policy=policy,
-            package_target=package_target,
-            command=("dnf", "search", package_target),
-            required_commands=("dnf",),
-        )
-    if intent == "instalar":
-        return PackageExecutionPlan(
-            policy=policy,
-            package_target=package_target,
-            command=("sudo", "dnf", "install", "-y", package_target),
-            required_commands=("dnf", "sudo"),
-            state_probe_label=state_probe_label,
-            state_probe_command=state_probe_command,
-            state_probe_required_commands=state_probe_required_commands,
-        )
+    command_template = _package_command_template(intent, policy.host_profile)
     return PackageExecutionPlan(
         policy=policy,
         package_target=package_target,
-        command=("sudo", "dnf", "remove", "-y", package_target),
-        required_commands=("dnf", "sudo"),
+        command=command_template.build_command(package_target),
+        required_commands=command_template.required_commands,
         state_probe_label=state_probe_label,
         state_probe_command=state_probe_command,
         state_probe_required_commands=state_probe_required_commands,

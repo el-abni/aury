@@ -12,6 +12,7 @@ from typing import Sequence
 from .analyzer import prepare_analyses
 from .contracts import ActionExecutionPlan, Analysis, SequenceExecutionPlan, SupportedRuntimeRoute
 from .host import (
+    HostProfile,
     PackageExecutionPlan,
     build_package_execution_plan,
     package_no_results_message,
@@ -22,6 +23,7 @@ from .host import (
     resolve_host_maintenance_action_policy,
     resolve_package_action_policy,
 )
+from .public_voice import failure, success
 
 UNSUPPORTED_EXIT = 120
 _PYTHON_RUNTIME_BACKEND = "runtime Python"
@@ -42,7 +44,7 @@ def _run(args: Sequence[str]) -> subprocess.CompletedProcess[str]:
 
 
 def _backend_missing(name: str) -> int:
-    print(f"❌ backend '{name}' não está disponível")
+    print(failure(f"Não consegui usar o backend '{name}' porque ele não está disponível."))
     return 1
 
 
@@ -52,7 +54,7 @@ def _state_probe_missing(backend_label: str, probe_label: str) -> int:
 
 
 def _backend_failed(name: str) -> int:
-    print(f"❌ backend '{name}' retornou erro operacional")
+    print(failure(f"Não consegui concluir a operação no backend '{name}' porque ele retornou erro operacional."))
     return 1
 
 
@@ -194,12 +196,12 @@ def _file_kind_label(kind: str) -> str:
 
 
 def _created_path_success(kind: str, target: str) -> int:
-    print(f"✅ Pronto, eu criei {_file_kind_label(kind)} '{target}'.")
+    print(success(f"Pronto, eu criei {_file_kind_label(kind)} '{target}'."))
     return 0
 
 
 def _created_path_failure(kind: str, target: str) -> int:
-    print(f"❌ não consegui criar {_file_kind_label(kind)} '{target}'")
+    print(failure(f"Não consegui criar {_file_kind_label(kind)} '{target}'."))
     return 1
 
 
@@ -275,9 +277,9 @@ def _handle_network_speedtest(_analysis: Analysis, action_plan: ActionExecutionP
         upload = payload["upload"]
         jitter = payload["jitter"]
     except Exception:
-        print("❌ não consegui ler o retorno do librespeed-cli com confiança")
+        print(failure("Não consegui ler o retorno do librespeed-cli com confiança."))
         return 1
-    print("✅ velocidade da internet")
+    print(success("Pronto, eu medi a velocidade da internet."))
     print(f"ping: {ping} ms")
     print(f"download: {download} Mbps")
     print(f"upload: {upload} Mbps")
@@ -488,9 +490,9 @@ def _route_spec_for_plan(action_plan: ActionExecutionPlan) -> _RuntimeRouteSpec 
     return None
 
 
-def plan_action_execution(analysis: Analysis) -> ActionExecutionPlan:
+def plan_action_execution(analysis: Analysis, *, profile: HostProfile | None = None) -> ActionExecutionPlan:
     if analysis.status == "CONSISTENTE" and analysis.domain == "pacote" and analysis.intent in {"procurar", "instalar", "remover"}:
-        package_policy = resolve_package_action_policy(analysis.intent)
+        package_policy = resolve_package_action_policy(analysis.intent, profile=profile)
         supported_runtime_route = SupportedRuntimeRoute(route=package_policy.route, backend=package_policy.backend_label)
         if package_policy.status == "SUPPORTED_WITH_POLICY_BLOCK":
             return ActionExecutionPlan.supported_with_policy_block(
@@ -503,7 +505,7 @@ def plan_action_execution(analysis: Analysis) -> ActionExecutionPlan:
         )
 
     if analysis.status == "CONSISTENTE" and analysis.domain == "sistema" and analysis.intent in {"atualizar", "otimizar"}:
-        maintenance_policy = resolve_host_maintenance_action_policy(analysis.intent)
+        maintenance_policy = resolve_host_maintenance_action_policy(analysis.intent, profile=profile)
         if maintenance_policy.status == "SUPPORTED_WITH_POLICY_BLOCK":
             return ActionExecutionPlan.supported_with_policy_block(
                 SupportedRuntimeRoute(route=maintenance_policy.route, backend=maintenance_policy.backend_label),
@@ -527,29 +529,34 @@ def plan_action_execution(analysis: Analysis) -> ActionExecutionPlan:
     )
 
 
-def plan_sequence_execution(analyses: list[Analysis]) -> SequenceExecutionPlan:
-    action_plans = tuple(plan_action_execution(analysis) for analysis in analyses)
-    if not action_plans:
+def plan_sequence_execution(
+    analyses: list[Analysis],
+    *,
+    action_plans: tuple[ActionExecutionPlan, ...] | None = None,
+    profile: HostProfile | None = None,
+) -> SequenceExecutionPlan:
+    resolved_action_plans = action_plans or tuple(plan_action_execution(analysis, profile=profile) for analysis in analyses)
+    if not resolved_action_plans:
         return SequenceExecutionPlan(reason="não há ações preparadas para executar.")
 
-    for index, (analysis, action_plan) in enumerate(zip(analyses, action_plans), start=1):
+    for index, (analysis, action_plan) in enumerate(zip(analyses, resolved_action_plans), start=1):
         if action_plan.executes_in_python:
             continue
         return SequenceExecutionPlan(
-            action_plans=action_plans,
+            action_plans=resolved_action_plans,
             decision="RETURN_TO_FISH",
             reason=_sequence_return_reason(index, analysis, action_plan),
         )
 
-    if any(action_plan.status == "SUPPORTED_WITH_POLICY_BLOCK" for action_plan in action_plans):
+    if any(action_plan.status == "SUPPORTED_WITH_POLICY_BLOCK" for action_plan in resolved_action_plans):
         return SequenceExecutionPlan(
-            action_plans=action_plans,
+            action_plans=resolved_action_plans,
             decision="EXECUTE_IN_PYTHON",
             reason="todas as ações ficam dentro do runtime Python atual, inclusive os bloqueios honestos exigidos pela política de host.",
         )
 
     return SequenceExecutionPlan(
-        action_plans=action_plans,
+        action_plans=resolved_action_plans,
         decision="EXECUTE_IN_PYTHON",
         reason="todas as ações têm rota explícita no runtime Python atual.",
     )

@@ -6,11 +6,38 @@ A linha pública da **💜 Aury** se encerra canonicamente na série **v1.9.x**.
 
 ---
 
+## 💜 v1.9.9
+
+Micro-corte final de paridade GitHub da Aury. Esta release encurta a home pública, deixa a indexação de docs mais clara e fecha o shape de release sem reabrir o contrato funcional já encerrado na **v1.9.8**.
+
+### Alterado
+- `README.md` passa a ser superfície curta de repositório: estado atual, o que a linha `1.x` faz, instalação, uso, limites honestos e documentação indexada
+- docs centrais e `tests/README.md` passam a responder com papéis mais claros a contrato, workflow, arquitetura e base executável
+- `CHANGELOG.md`, `VERSION`, `resources/help.txt` e a leitura pública mínima permanecem sincronizados com a `v1.9.9`
+- o fechamento público passa a adotar commit curto `Aury v1.9.9` e título de release `💜 v1.9.9`
+
+### Mantido
+- a linha 1.x encerrada canonicamente continua a mesma; `procurar`, `instalar` e `remover` seguem como **pacote do host por família/host**
+- **suportado agora** continua em Arch/derivadas mutáveis, Debian/Ubuntu/derivadas mutáveis e Fedora mutável
+- **suportado contido** continua em OpenSUSE mutável
+- **bloqueado por política** continua em Atomic, Universal Blue, `opensuse-microos`, `microos` e equivalentes
+- `flatpak` e `rpm-ostree` seguem observados fora do contrato ativo
+- software do usuário, múltiplas origens, política de origem/source/trust e suporte operacional real a hosts imutáveis continuam no handoff para a Aurora
+
+### Continua fora da v1.9.9
+- multi-source e política pública de origem
+- IA/local_model
+- software do usuário e app store dentro da Aury `1.x`
+- redesign funcional
+- suporte operacional real a hosts imutáveis dentro da Aury
+
 ## v1.9.8
 
 ### Consolidado
 - fechamento canônico da **v1.9.8** como encerramento da compatibilidade Linux da **Aury 1.x**, sem abrir backend, família, operação ou host novo
 - versão, narrativa, arquitetura, ajuda, auditorias e gate final passam a refletir a **v1.9.8** como fechamento explícito da linha, sem cheiro de transição infinita
+- help, README, workflow e checklist de release convergem na mesma leitura curta do fechamento da linha
+- mensagens públicas curtas de sucesso ficam padronizadas na forma `✅ pronto, ...`, sem abrir contrato novo
 
 ### Matriz final e superfície pública
 - a matriz pública final da linha fica congelada como: **suportado agora** em Arch/derivadas mutáveis, Debian/Ubuntu/derivadas mutáveis e Fedora mutável; **suportado contido** em OpenSUSE mutável; **bloqueado por política** em Atomic, Universal Blue, `opensuse-microos`, `microos` e equivalentes

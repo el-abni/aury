@@ -1,12 +1,13 @@
 # Arquitetura da 💜 Aury
 
-Este documento descreve o estado público real sustentado pela **💜 Aury v1.9.8** no repositório canônico local.
+Este documento descreve o estado público real sustentado pela **💜 Aury v1.9.9** no repositório canônico local.
+O `README.md` mantém a superfície curta do repositório; este arquivo responde por fronteiras e ownership. O contrato host-centric da linha vive em `docs/COMPATIBILITY.md`; a ladder mínima de validação vive em `docs/WORKFLOW.md`.
 
-A proposta do projeto não mudou: Aury continua recebendo frases humanas, fechando uma leitura segura e escolhendo entre executar, bloquear ou cair em fallback honesto. O que a linha 1.6.x consolidou foi a distribuição de responsabilidade entre o adaptador Fish e o núcleo Python. A v1.7.0 abriu e estabilizou a superfície pública híbrida atual; a v1.8.0 endureceu o contrato observável dessa mesma base; a v1.9.0 fechou a base híbrida contida; a v1.9.1 abriu a frente inicial de compatibilidade Linux com perfil mínimo de host e política de pacote por família; a v1.9.2 fechou o hardening representacional curto de `aury dev`; a v1.9.3 abriu OpenSUSE mutável em pacote do host; a v1.9.4 consolidou esse mesmo domínio por família/host; a v1.9.5 endureceu a fronteira entre famílias mutáveis abertas e hosts imutáveis conscientemente bloqueados; a v1.9.6 enquadrou `atualizar` e `otimizar` como manutenção do host; a v1.9.7 congela explicitamente o contrato final de pacote do host; e a v1.9.8 fecha canonicamente a compatibilidade Linux da Aury 1.x com handoff explícito para a Aurora.
+A proposta do projeto não mudou: Aury continua recebendo frases humanas, fechando uma leitura segura e escolhendo entre executar, bloquear ou cair em fallback honesto. O que a linha 1.6.x consolidou foi a distribuição de responsabilidade entre o adaptador Fish e o núcleo Python. A v1.7.0 abriu e estabilizou a superfície pública híbrida atual; a v1.8.0 endureceu o contrato observável dessa mesma base; a v1.9.0 fechou a base híbrida contida; a v1.9.1 abriu a frente inicial de compatibilidade Linux com perfil mínimo de host e política de pacote por família; a v1.9.2 fechou o hardening representacional curto de `aury dev`; a v1.9.3 abriu OpenSUSE mutável em pacote do host; a v1.9.4 consolidou esse mesmo domínio por família/host; a v1.9.5 endureceu a fronteira entre famílias mutáveis abertas e hosts imutáveis conscientemente bloqueados; a v1.9.6 enquadrou `atualizar` e `otimizar` como manutenção do host; a v1.9.7 congelou explicitamente o contrato final de pacote do host; a v1.9.8 encerrou canonicamente a compatibilidade Linux da Aury 1.x com handoff explícito para a Aurora; e a v1.9.9 fecha o micro-acabamento final de UX/persona/help/release hygiene sobre essa mesma base.
 
 ## Entrada pública e base instalada
 
-Na v1.9.8, a entrada pública continua sendo Fish:
+Na v1.9.9, a entrada pública continua sendo Fish:
 
 - `aury` é exposto por `bin/aury.fish`
 - `ay` continua sendo um atalho fino para `aury`
@@ -24,10 +25,17 @@ Quando instalada pelo fluxo público, a base ativa fica em:
 
 Quando o adaptador é carregado direto do checkout com `source bin/aury.fish`, ele usa o próprio root do repositório como share root ativo. No modo instalado, ele usa `~/.local/share/aury`. Essa base é passada ao núcleo Python via `PYTHONPATH` e `AURY_SHARE_DIR`.
 
+## Raiz canônica e artefato histórico
+
+Na linha viva atual, a raiz canônica é sempre o checkout Git de topo do repositório. O diretório `./aury/` fica classificado apenas como **artefato histórico/aninhado** e não entra como base viva de leitura, import ou workflow.
+
+O adaptador Fish e o runtime Python agora aceitam como base ativa apenas um share root que contenha a superfície canônica atual, inclusive `python/aury/core_api.py`. Isso impede que o artefato aninhado seja lido como canon vivo por acidente.
+
 ## Contratos públicos explícitos
 
 - `aury ajuda` e `ay ajuda` renderizam `resources/help.txt` com a `VERSION` da base ativa.
 - `aury --version` e `ay --version` imprimem `💜 Aury <VERSION>` a partir da mesma base.
+- a UX pública curta usa o mesmo shape em Fish e Python: `✅ | 💜`, `❌ | 💜` e `ℹ️ | 💜`.
 - `aury dev <frase>` usa o núcleo Python e já expõe plano da sequência, enquadramento por ação, plano de execução e decisão de sequência.
 - `aury dev` sem frase fica mantido como verificação local curta e utilitário secundário do adaptador Fish.
 - o gate final mínimo canônico da linha 1.x é `bash tests/release_gate_minimo.sh`.
@@ -55,18 +63,59 @@ Se o Python devolver erro operacional próprio: erro exposto ao usuário
 
 Na prática, o adaptador Fish deixou de ser a única implementação da Aury. Ele agora coordena a execução pública, preserva compatibilidade e atende o recorte que permanece nele nesta linha.
 
+## Ownership Fish / Python
+
+- `bin/aury.fish` pertence ao lado Fish: entrypoint público, integração com shell, fallback honesto, confirmações destrutivas, domínio legado de arquivos, extração, compactação e manutenção local do host em Arch.
+- `python/aury/runtime.py` pertence ao lado Python: planejamento e execução das rotas explicitamente sustentadas no runtime, além do retorno controlado `120` para o que ainda volta ao Fish.
+- `python/aury/host.py` pertence ao lado Python: perfil mínimo de host Linux, política de pacote por família/host e policy gate de manutenção do host.
+- `python/aury/core_api.py` é a superfície interna canônica para consumo do núcleo vivo e de auditorias do ecossistema.
+
+Na base viva atual, a política de manutenção do host continua sendo decidida primeiro no lado Python sempre que o bridge está disponível. O Fish preserva apenas um guard local de fallback para o caso de indisponibilidade do Python, sem voltar a ser a fonte canônica dessa política.
+
+## Hotspot híbrido e bounded context
+
+O principal hotspot híbrido desta linha continua sendo a fronteira `bin/aury.fish` -> runtime Python. Ela é deliberada, mas não é terra sem dono.
+
+- Fish continua dono da entrada pública e do que ficou local por decisão de produto.
+- Python continua dono da política canônica de pacote do host e das rotas explicitamente migradas.
+- qualquer mudança que atravesse essa fronteira precisa atualizar docs, testes e a ladder de workflow na mesma rodada.
+
+## Fronteira executável explícita
+
+Na árvore viva atual, a fronteira híbrida fica organizada assim:
+
+```text
+bin/aury.fish
+-> python/aury/fish_bridge.py
+-> python/aury/runtime.py
+-> python/aury/host.py
+-> python/aury/resources.py
+```
+
+Classificação estrutural atual:
+
+- `bin/aury.fish` = entrypoint vivo, integração com shell e fallback local
+- `python/aury/fish_bridge.py` = bridge Python vivo consumido pelo entrypoint Fish
+- `python/aury/cli.py` = shim de compatibilidade mantido para imports históricos; não é a fronteira canônica
+- `python/aury/runtime.py` = runtime Python das rotas explicitamente sustentadas
+- `python/aury/host.py` = policy do host e plano canônico de pacote/manutenção
+- `python/aury/resources.py` = helper vivo de share root, version e help
+- `python/aury/core_api.py` = superfície mínima auditável do núcleo vivo
+
+Essa nomeação reduz uma ambiguidade antiga: `cli.py` parecia entrypoint canônico quando, na prática, o entrypoint público continua sendo Fish e o alvo Python real da borda é o bridge acima.
+
 ## Escopo Python atual
 
-No recorte final da v1.9.8, o núcleo Python já cobre `help`, `version`, `dev`, preparação/análise interna, múltiplas ações no diagnóstico e um conjunto explícito de execuções normais já sustentadas diretamente.
+No recorte final da v1.9.9, o núcleo Python já cobre `help`, `version`, `dev`, preparação/análise interna, múltiplas ações no diagnóstico e um conjunto explícito de execuções normais já sustentadas diretamente.
 Entre elas estão IP, teste simples de internet, velocidade da internet, algumas leituras simples de sistema, `criar arquivo` / `criar pasta` e o contrato final de pacote do host para `procurar`, `instalar` e `remover`.
 Nesse domínio, o runtime Python já concentra a decisão de backend, a fronteira de compatibilidade por perfil de host e o endurecimento operacional incremental desta linha: ausência de resultado em busca, no-op honesto, distinção entre backend ausente e ferramenta auxiliar de confirmação ausente, erro operacional e confirmação de estado quando o backend suportado permite isso. Em OpenSUSE mutável, `zypper` entra como backend real de busca e `sudo + zypper` entra como backend real de instalação e remoção, com confirmação de estado por `rpm -q` em `instalar` e `remover`.
-Na leitura diagnóstica de `aury dev`, a v1.9.8 fecha a linguagem pública auditável e separa explicitamente o perfil do host entre contrato de pacote, backends ativos do contrato e ferramentas observadas fora do contrato ativo. `flatpak` e `rpm-ostree` podem ser observados no ambiente, mas não entram como rota operacional pública nesta linha. O domínio de pacote mantém a taxonomia final entre **suportado agora**, **suportado contido**, **bloqueado por política** e **impossibilidade operacional**. Já `atualizar` e `otimizar` aparecem explicitamente como **manutenção do host**: local em Arch/derivadas mutáveis no adaptador Fish, fora do recorte equivalente em Debian/Fedora/OpenSUSE e bloqueada por política em Atomic/imutáveis.
+Na leitura diagnóstica de `aury dev`, a v1.9.9 fecha a linguagem pública auditável e separa explicitamente o perfil do host entre contrato de pacote, backends ativos do contrato e ferramentas observadas fora do contrato ativo. `flatpak` e `rpm-ostree` podem ser observados no ambiente, mas não entram como rota operacional pública nesta linha. O domínio de pacote mantém a taxonomia final entre **suportado agora**, **suportado contido**, **bloqueado por política** e **impossibilidade operacional**. Já `atualizar` e `otimizar` aparecem explicitamente como **manutenção do host**: local em Arch/derivadas mutáveis no adaptador Fish, fora do recorte equivalente em Debian/Fedora/OpenSUSE e bloqueada por política em Atomic/imutáveis.
 Compactação local simples continua sendo uma rota híbrida: o relatório `dev` a observa com honestidade, mas a execução normal permanece no adaptador Fish.
 Casos fora desse recorte podem retornar integralmente ao adaptador Fish, de forma explícita e sem execução parcial obscura.
 
 ## O que continua no Fish
 
-Na v1.9.8, continuam no adaptador Fish:
+Na v1.9.9, continuam no adaptador Fish:
 
 - atualização e otimização
 - copiar, mover, renomear, remover e a maior parte do domínio de arquivos
@@ -75,7 +124,7 @@ Na v1.9.8, continuam no adaptador Fish:
 - bloqueios e ambiguidades públicas do legado
 - fallback honesto fora do recorte atual
 
-Isso permanece deliberado no fechamento canônico. A v1.9.8 preserva a compatibilidade inicial no domínio de pacote aberta na v1.9.1, carrega o hardening curto de `aury dev` fechado na v1.9.2, preserva o ganho útil de OpenSUSE mutável da v1.9.3, mantém a fronteira dos hosts imutáveis endurecida pela v1.9.5, conserva `atualizar` / `otimizar` como manutenção do host local e fecha explicitamente `procurar` / `instalar` / `remover` como pacote do host por família/host.
+Isso permanece deliberado no fechamento canônico. A v1.9.9 preserva a compatibilidade inicial no domínio de pacote aberta na v1.9.1, carrega o hardening curto de `aury dev` fechado na v1.9.2, preserva o ganho útil de OpenSUSE mutável da v1.9.3, mantém a fronteira dos hosts imutáveis endurecida pela v1.9.5, conserva `atualizar` / `otimizar` como manutenção do host local e fecha explicitamente `procurar` / `instalar` / `remover` como pacote do host por família/host.
 
 No domínio de pacote, porém, o Fish não volta a concentrar política: ele continua sendo a entrada pública, mas a política canônica de backend e suporte vive no Python. Se essa política não puder subir, a superfície pública bloqueia honestamente em vez de improvisar fallback localista.
 
@@ -88,17 +137,18 @@ A compactação herdada da v1.7.0 também permanece com recorte curto de propós
 - `aury dev` sem frase fica restrito a verificação local curta e secundária do adaptador Fish
 - a instalação pública precisa manter `~/.local/share/aury` coerente com o conteúdo canônico do repositório
 - o perfil mínimo de host Linux cobre família, mutabilidade, backends ativos do contrato de pacote e ferramentas observadas fora do contrato; Arch, Debian/Ubuntu e Fedora mutável fecham a linha como Tier 1 canônico em `procurar`, `instalar` e `remover`; OpenSUSE mutável termina como Tier 2 útil contido; Atomic, Universal Blue, `opensuse-microos` e `microos` permanecem bloqueados por política
-- a v1.9.8 mantém compatibilidade Linux contida só no domínio de pacote; ela não deve ser descrita como suporte cross-distro amplo, software do usuário, app store nem paridade total entre famílias
+- a v1.9.9 mantém compatibilidade Linux contida só no domínio de pacote; ela não deve ser descrita como suporte cross-distro amplo, software do usuário, app store nem paridade total entre famílias
 - `atualizar` e `otimizar` pertencem à manutenção do host: continuam locais em Arch/derivadas mutáveis, ficam fora do recorte equivalente em Debian/Fedora/OpenSUSE e permanecem bloqueados por política em Atomic/imutáveis
 - `flatpak` e `rpm-ostree` não entram como contrato público operacional de instalação nesta linha, mesmo quando observados no ambiente
 - software do usuário, múltiplas origens, política de origem/source/trust e suporte operacional real a hosts imutáveis pertencem à Aurora, não à Aury 1.x
-- a v1.9.8 não trata hosts Atomic como equivalentes a Fedora mutável
-- a v1.9.8 não fecha por inferência casos de `mover arquivo ... para destino nu` quando a leitura correta depende do estado do filesystem
+- a v1.9.9 não trata hosts Atomic como equivalentes a Fedora mutável
+- a v1.9.9 não fecha por inferência casos de `mover arquivo ... para destino nu` quando a leitura correta depende do estado do filesystem
 - dependências operacionais como `pacman`, `paru`, `apt-cache`, `apt-get`, `dnf`, `ping`, `ip`, `lscpu`, `free`, `df`, `uptime`, `lspci` e `librespeed-cli` continuam sendo responsabilidades do host
+- a v1.9.9 não autoriza mover domínio entre Fish e Python sem atravessar esse bounded context de forma explícita
 
 ## Resumo
 
-A **💜 Aury v1.9.8** fecha a linha 1.x com entrada pública em Fish, mas já não pode ser descrita como uma base exclusivamente Fish. O estado real final é:
+A **💜 Aury v1.9.9** mantém a linha 1.x encerrada com entrada pública em Fish, mas já não pode ser descrita como uma base exclusivamente Fish. O estado real final é:
 
 - Fish como adaptador e camada de compatibilidade
 - Python como núcleo rastreado para `help`, `version`, `dev` e rotas explícitas de runtime
@@ -112,6 +162,7 @@ A **💜 Aury v1.9.8** fecha a linha 1.x com entrada pública em Fish, mas já n
 - frente curta local de `aury dev` fechada com renomeação localizada, `copiar -> mover`, `copiar -> renomear` e `mover -> renomear` nos recortes explícitos seguros
 - share root instalado como fonte pública de versão e recursos
 - fallback controlado para o que permanece fora do núcleo Python nesta linha
-- inferência de destino nu dependente do filesystem conscientemente fora da v1.9.8
+- inferência de destino nu dependente do filesystem conscientemente fora da v1.9.9
 - handoff explícito para a Aurora no que já saiu do contrato da Aury 1.x
+- micro-fechamento final de UX/persona/help/release hygiene sem redesign funcional novo
 - gate final mínimo canônico explicitado em `bash tests/release_gate_minimo.sh`

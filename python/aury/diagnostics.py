@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from .analyzer import prepare_analyses
 from .contracts import ActionExecutionPlan, Analysis, PreparedAction, SequenceExecutionPlan
-from .host import detect_host_profile, resolve_host_maintenance_action_policy, resolve_package_action_policy
+from .host import HostProfile, detect_host_profile, resolve_host_maintenance_action_policy, resolve_package_action_policy
 from .runtime import plan_action_execution, plan_sequence_execution
 
 _FIELD_WIDTH = 30
@@ -70,8 +70,7 @@ def _needs_host_profile(analyses: list[Analysis]) -> bool:
     )
 
 
-def _render_host_profile() -> list[str]:
-    host_profile = detect_host_profile()
+def _render_host_profile(host_profile: HostProfile) -> list[str]:
     return [
         "Perfil do host",
         _field("família linux", host_profile.linux_family_label),
@@ -97,14 +96,19 @@ def _lacunas_label(analysis: Analysis) -> str:
     return "pedido fora do recorte"
 
 
-def _render_action_report(action: PreparedAction, analysis: Analysis, action_plan: ActionExecutionPlan) -> list[str]:
+def _render_action_report(
+    action: PreparedAction,
+    analysis: Analysis,
+    action_plan: ActionExecutionPlan,
+    host_profile: HostProfile | None = None,
+) -> list[str]:
     entities = analysis.entities
     package_policy = None
     maintenance_policy = None
     if analysis.domain == "pacote" and analysis.intent in {"procurar", "instalar", "remover"}:
-        package_policy = resolve_package_action_policy(analysis.intent)
+        package_policy = resolve_package_action_policy(analysis.intent, profile=host_profile)
     if analysis.domain == "sistema" and analysis.intent in {"atualizar", "otimizar"}:
-        maintenance_policy = resolve_host_maintenance_action_policy(analysis.intent)
+        maintenance_policy = resolve_host_maintenance_action_policy(analysis.intent, profile=host_profile)
     compatibility_label = "-"
     contract_label = "-"
     route_label = action_plan.route
@@ -169,17 +173,18 @@ def _render_action_report(action: PreparedAction, analysis: Analysis, action_pla
 
 def render_dev_report(text: str) -> str:
     _phrase, actions, analyses = prepare_analyses(text)
-    sequence_plan = plan_sequence_execution(analyses)
-    action_plans = [plan_action_execution(analysis) for analysis in analyses]
+    host_profile = detect_host_profile() if _needs_host_profile(analyses) else None
+    action_plans = tuple(plan_action_execution(analysis, profile=host_profile) for analysis in analyses)
+    sequence_plan = plan_sequence_execution(analyses, action_plans=action_plans)
     lines = [""]
     lines.extend(_render_sequence_plan(sequence_plan))
-    if _needs_host_profile(analyses):
+    if host_profile is not None:
         lines.append("")
-        lines.extend(_render_host_profile())
+        lines.extend(_render_host_profile(host_profile))
     if actions:
         lines.append("")
     for index, (action, analysis, action_plan) in enumerate(zip(actions, analyses, action_plans)):
         if index > 0:
             lines.append("")
-        lines.extend(_render_action_report(action, analysis, action_plan))
+        lines.extend(_render_action_report(action, analysis, action_plan, host_profile))
     return "\n".join(lines)

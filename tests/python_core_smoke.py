@@ -1241,7 +1241,7 @@ def test_runtime_package_search_no_results() -> None:
         env = {"PATH": f"{bin_dir}:{os.environ['PATH']}", "AURY_OS_RELEASE_PATH": str(os_release)}
         proc = run("procurar", "steam", env=env)
         assert proc.returncode == 0
-        assert_in(proc.stdout, "não encontrei resultados para 'steam' no backend 'pacman'")
+        assert_in(proc.stdout, "Não encontrei resultados para 'steam' no backend 'pacman'")
 
 
 def test_runtime_package_search_debian_no_results() -> None:
@@ -1254,7 +1254,7 @@ def test_runtime_package_search_debian_no_results() -> None:
         env = {"PATH": f"{bin_dir}:{os.environ['PATH']}", "AURY_OS_RELEASE_PATH": str(os_release)}
         proc = run("procurar", "steam", env=env)
         assert proc.returncode == 0
-        assert_in(proc.stdout, "não encontrei resultados para 'steam' no backend 'apt-cache'")
+        assert_in(proc.stdout, "Não encontrei resultados para 'steam' no backend 'apt-cache'")
 
 
 def test_runtime_package_search_opensuse() -> None:
@@ -1280,7 +1280,7 @@ def test_runtime_package_search_opensuse_no_results() -> None:
         env = {"PATH": f"{bin_dir}:{os.environ['PATH']}", "AURY_OS_RELEASE_PATH": str(os_release)}
         proc = run("procurar", "steam", env=env)
         assert proc.returncode == 0
-        assert_in(proc.stdout, "não encontrei resultados para 'steam' no backend 'zypper'")
+        assert_in(proc.stdout, "Não encontrei resultados para 'steam' no backend 'zypper'")
         if "No matching items found." in proc.stdout:
             raise AssertionError("a busca sem resultado em OpenSUSE deve sair com a superfície honesta da Aury")
 
@@ -1323,7 +1323,7 @@ def test_runtime_package_install_noop_when_already_installed() -> None:
         env = {"PATH": f"{bin_dir}:{os.environ['PATH']}", "AURY_OS_RELEASE_PATH": str(os_release)}
         proc = run("instalar", "firefox", env=env)
         assert proc.returncode == 0
-        assert_in(proc.stdout, "o pacote 'firefox' já está instalado neste host. Nada foi feito.")
+        assert_in(proc.stdout, "O pacote 'firefox' já está instalado neste host. Nada foi feito.")
         if "APT_SHOULD_NOT_RUN" in proc.stdout:
             raise AssertionError("a instalação não deveria chamar o backend quando o pacote já está instalado")
 
@@ -1340,7 +1340,7 @@ def test_runtime_package_install_requires_state_confirmation() -> None:
         env = {"PATH": f"{bin_dir}:{os.environ['PATH']}", "AURY_OS_RELEASE_PATH": str(os_release)}
         proc = run("instalar", "firefox", env=env)
         assert proc.returncode == 1
-        assert_in(proc.stdout, "terminou sem eu conseguir confirmar a instalação de 'firefox'")
+        assert_in(proc.stdout, "Não consegui confirmar a instalação de 'firefox'")
 
 
 def test_runtime_package_install_opensuse() -> None:
@@ -1392,7 +1392,7 @@ def test_runtime_package_install_opensuse_requires_state_confirmation() -> None:
         env = {"PATH": f"{bin_dir}:{os.environ['PATH']}", "AURY_OS_RELEASE_PATH": str(os_release)}
         proc = run("instalar", "firefox", env=env)
         assert proc.returncode == 1
-        assert_in(proc.stdout, "terminou sem eu conseguir confirmar a instalação de 'firefox'")
+        assert_in(proc.stdout, "Não consegui confirmar a instalação de 'firefox'")
 
 
 def test_runtime_package_remove_fedora() -> None:
@@ -1433,7 +1433,7 @@ def test_runtime_package_remove_noop_when_not_installed() -> None:
         env = {"PATH": f"{bin_dir}:{os.environ['PATH']}", "AURY_OS_RELEASE_PATH": str(os_release)}
         proc = run("remover", "vlc", env=env)
         assert proc.returncode == 0
-        assert_in(proc.stdout, "o pacote 'vlc' não está instalado neste host. Nada foi feito.")
+        assert_in(proc.stdout, "O pacote 'vlc' não está instalado neste host. Nada foi feito.")
         if "DNF_SHOULD_NOT_RUN" in proc.stdout:
             raise AssertionError("a remoção não deveria chamar o backend quando o pacote já está ausente")
 
@@ -1488,7 +1488,7 @@ def test_runtime_package_remove_opensuse_noop_when_not_installed() -> None:
         env = {"PATH": f"{bin_dir}:{os.environ['PATH']}", "AURY_OS_RELEASE_PATH": str(os_release)}
         proc = run("remover", "vlc", env=env)
         assert proc.returncode == 0
-        assert_in(proc.stdout, "o pacote 'vlc' não está instalado neste host. Nada foi feito.")
+        assert_in(proc.stdout, "O pacote 'vlc' não está instalado neste host. Nada foi feito.")
         if "ZYPPER_SHOULD_NOT_RUN" in proc.stdout:
             raise AssertionError("a remoção em OpenSUSE não deveria chamar o backend quando o pacote já está ausente")
 
@@ -1519,7 +1519,7 @@ def test_runtime_package_remove_opensuse_requires_state_confirmation() -> None:
         env = {"PATH": f"{bin_dir}:{os.environ['PATH']}", "AURY_OS_RELEASE_PATH": str(os_release)}
         proc = run("remover", "vlc", env=env)
         assert proc.returncode == 1
-        assert_in(proc.stdout, "terminou sem eu conseguir confirmar a remoção de 'vlc'")
+        assert_in(proc.stdout, "Não consegui confirmar a remoção de 'vlc'")
 
 
 def test_runtime_package_opensuse_backend_missing() -> None:
@@ -1528,7 +1528,7 @@ def test_runtime_package_opensuse_backend_missing() -> None:
         os_release = write_os_release(root, distro_id="opensuse-tumbleweed", distro_like="opensuse suse", name="openSUSE Tumbleweed")
         proc = run("procurar", "steam", env={"PATH": "", "AURY_OS_RELEASE_PATH": str(os_release)})
         assert proc.returncode == 1
-        assert_in(proc.stdout, "backend 'zypper' não está disponível")
+        assert_in(proc.stdout, "Não consegui usar o backend 'zypper' porque ele não está disponível.")
 
 
 def test_runtime_package_opensuse_requires_auxiliary_state_probe() -> None:
@@ -1554,7 +1554,7 @@ def test_runtime_package_atomic_without_backend_stays_policy_block() -> None:
         env = {"PATH": "", "AURY_OS_RELEASE_PATH": str(os_release)}
         proc = run("procurar", "steam", env=env)
         assert proc.returncode == 1
-        assert_in(proc.stdout, "bloqueado por política")
+        assert_in(proc.stdout, "Bloqueado por política")
         if "backend '" in proc.stdout:
             raise AssertionError("host Atomic não pode parecer simples ausência de backend")
 
@@ -1569,7 +1569,7 @@ def test_runtime_package_atomic_without_probe_stays_policy_block() -> None:
         env = {"PATH": str(bin_dir), "AURY_OS_RELEASE_PATH": str(os_release)}
         proc = run("instalar", "firefox", env=env)
         assert proc.returncode == 1
-        assert_in(proc.stdout, "bloqueado por política")
+        assert_in(proc.stdout, "Bloqueado por política")
         if "ferramenta auxiliar" in proc.stdout:
             raise AssertionError("host Atomic não pode parecer ausência de sonda auxiliar")
         if "DNF_SHOULD_NOT_RUN" in proc.stdout:
@@ -2550,7 +2550,7 @@ def test_package_policy_atomic_blocked_by_policy_even_with_backend() -> None:
             raise AssertionError(f"backend inesperado: {install_policy.backend_label!r}")
         if "bloqueia pacote do host" not in install_policy.reason:
             raise AssertionError(f"motivo inesperado: {install_policy.reason!r}")
-        if install_policy.block_message is None or "bloqueado por política" not in install_policy.block_message:
+        if install_policy.block_message is None or "Bloqueado por política" not in install_policy.block_message:
             raise AssertionError(f"mensagem inesperada: {install_policy.block_message!r}")
         if install_plan.required_commands:
             raise AssertionError(f"requisitos inesperados: {install_plan.required_commands!r}")
@@ -2819,9 +2819,9 @@ def test_host_maintenance_policy_matrix() -> None:
                 if update_policy.block_message is not None or optimize_policy.block_message is not None:
                     raise AssertionError("manutenção local em Arch não deve vir com bloqueio")
             elif family == "atomic":
-                if update_policy.block_message is None or "bloqueado por política" not in update_policy.block_message:
+                if update_policy.block_message is None or "Bloqueado por política" not in update_policy.block_message:
                     raise AssertionError(f"mensagem inesperada em {family}/atualizar: {update_policy.block_message!r}")
-                if optimize_policy.block_message is None or "bloqueado por política" not in optimize_policy.block_message:
+                if optimize_policy.block_message is None or "Bloqueado por política" not in optimize_policy.block_message:
                     raise AssertionError(f"mensagem inesperada em {family}/otimizar: {optimize_policy.block_message!r}")
             else:
                 if update_policy.block_message is None or "fora do recorte equivalente" not in update_policy.block_message:
@@ -2865,7 +2865,7 @@ def test_run_host_maintenance_atomic_blocked_by_policy() -> None:
         os_release = write_os_release(root, distro_id="bazzite", distro_like="fedora", name="Bazzite")
         proc = run("atualizar", "sistema", env={"PATH": str(bin_dir), "AURY_OS_RELEASE_PATH": str(os_release)})
         assert proc.returncode == 1
-        assert_in(proc.stdout, "bloqueado por política")
+        assert_in(proc.stdout, "Bloqueado por política")
         assert_in(proc.stdout, "Atomic/imutáveis")
         assert "DNF_SHOULD_NOT_RUN" not in proc.stdout
         assert "backend '" not in proc.stdout

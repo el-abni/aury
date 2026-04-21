@@ -15,7 +15,7 @@ require_in_output() {
     local expected="$2"
     local label="$3"
 
-    if ! grep -F -- "$expected" <<<"$output" >/dev/null; then
+    if ! grep -Fi -- "$expected" <<<"$output" >/dev/null; then
         fail "$label"
     fi
 }
@@ -25,7 +25,7 @@ require_not_in_output() {
     local unexpected="$2"
     local label="$3"
 
-    if grep -F -- "$unexpected" <<<"$output" >/dev/null; then
+    if grep -Fi -- "$unexpected" <<<"$output" >/dev/null; then
         fail "$label"
     fi
 }
@@ -43,9 +43,10 @@ trap cleanup EXIT
 fallback_output="$(fish -c "source '$ROOT/bin/aury.fish'; aury abra o arquivo relatorio.pdf" 2>&1 || true)"
 require_in_output "$fallback_output" "não consegui entender esse pedido com segurança" "fallback precisa ser honesto"
 require_in_output "$fallback_output" "aury ajuda" "fallback precisa oferecer ajuda"
+require_in_output "$fallback_output" "Use 'aury ajuda' para ver o recorte atual." "fallback precisa usar a dica curta final de ajuda"
 
 blocked_output="$(fish -c "source '$ROOT/bin/aury.fish'; aury remover ela" 2>&1 || true)"
-require_in_output "$blocked_output" "não vou remover nada sem um alvo explícito." "remoção sem alvo seguro deve bloquear explicitamente"
+require_in_output "$blocked_output" "Bloqueado por segurança, eu preciso de um alvo explícito para remover." "remoção sem alvo seguro deve bloquear explicitamente"
 
 dev_diag_speed_extract_output="$(ROOT="$ROOT" fish -c 'source $ROOT/bin/aury.fish; aury dev velocidade da rede; echo ---CASE2---; aury dev extrair pacote.zip' 2>&1 || true)"
 require_in_output "$dev_diag_speed_extract_output" "trecho original:               velocidade da rede" "'aury dev velocidade da rede' precisa expor o trecho original correto"
@@ -109,6 +110,8 @@ tmpdirs+=("$create_located_tmp")
 mkdir -p "$create_located_tmp/Downloads"
 
 create_located_output="$(ROOT="$ROOT" TMP="$create_located_tmp" fish -c 'source $ROOT/bin/aury.fish; cd $TMP; aury criar pasta Relatorios em Downloads; aury criar arquivo teste.txt em Downloads; echo ---DEV1---; aury dev criar pasta Relatorios em Downloads; echo ---DEV2---; aury dev crie a pasta Relatorios em Downloads; echo ---DEV3---; aury dev criar arquivo teste.txt em Downloads; echo ---DEV4---; aury dev crie um arquivo teste.txt em Downloads' 2>&1 || true)"
+require_in_output "$create_located_output" "✅ | 💜 Pronto, eu criei a pasta 'Downloads/Relatorios'." "criação localizada de pasta no modo normal precisa usar a forma curta final de sucesso"
+require_in_output "$create_located_output" "✅ | 💜 Pronto, eu criei o arquivo 'Downloads/teste.txt'." "criação localizada de arquivo no modo normal precisa usar a forma curta final de sucesso"
 require_in_output "$create_located_output" "eu criei a pasta 'Downloads/Relatorios'" "criação localizada de pasta no modo normal deve materializar o alvo recomposto"
 require_in_output "$create_located_output" "eu criei o arquivo 'Downloads/teste.txt'" "criação localizada de arquivo no modo normal deve materializar o alvo recomposto"
 require_in_output "$create_located_output" "trecho original:               criar pasta Relatorios em Downloads" "'aury dev criar pasta ... em Downloads' precisa fechar a leitura localizada"
@@ -132,6 +135,8 @@ tmpdirs+=("$create_implicit_tmp")
 mkdir -p "$create_implicit_tmp/Downloads"
 
 create_implicit_output="$(ROOT="$ROOT" TMP="$create_implicit_tmp" fish -c 'source $ROOT/bin/aury.fish; cd $TMP; aury criar teste.txt; aury crie teste.txt; aury criar teste.txt em Downloads; aury crie teste.txt em Downloads; echo ---DEV1---; aury dev criar teste.txt; echo ---DEV2---; aury dev crie teste.txt; echo ---DEV3---; aury dev criar teste.txt em Downloads; echo ---DEV4---; aury dev crie teste.txt em Downloads' 2>&1 || true)"
+require_in_output "$create_implicit_output" "✅ | 💜 Pronto, eu criei o arquivo 'teste.txt'." "criação implícita simples no modo normal precisa usar a forma curta final de sucesso"
+require_in_output "$create_implicit_output" "✅ | 💜 Pronto, eu criei o arquivo 'Downloads/teste.txt'." "criação implícita localizada no modo normal precisa usar a forma curta final de sucesso"
 require_in_output "$create_implicit_output" "eu criei o arquivo 'teste.txt'" "criação implícita simples no modo normal deve continuar tratando o alvo como arquivo"
 require_in_output "$create_implicit_output" "eu criei o arquivo 'Downloads/teste.txt'" "criação implícita localizada no modo normal deve continuar tratando o alvo como arquivo"
 require_in_output "$create_implicit_output" "trecho original:               criar teste.txt" "'aury dev criar teste.txt' precisa fechar a leitura implícita de arquivo"
@@ -155,6 +160,8 @@ tmpdirs+=("$create_implicit_folder_tmp")
 mkdir -p "$create_implicit_folder_tmp/Downloads"
 
 create_implicit_folder_output="$(ROOT="$ROOT" TMP="$create_implicit_folder_tmp" fish -c 'source $ROOT/bin/aury.fish; cd $TMP; aury criar projetos/; aury crie projetos/; aury criar projetos/ em Downloads; aury crie projetos/ em Downloads; aury criar pasta projetos/ em Downloads; echo ---DEV1---; aury dev criar projetos/; echo ---DEV2---; aury dev crie projetos/; echo ---DEV3---; aury dev criar projetos/ em Downloads; echo ---DEV4---; aury dev crie projetos/ em Downloads; echo ---DEV5---; aury dev criar pasta projetos/ em Downloads' 2>&1 || true)"
+require_in_output "$create_implicit_folder_output" "✅ | 💜 Pronto, eu criei a pasta 'projetos/'." "criação implícita simples de pasta no modo normal precisa usar a forma curta final de sucesso"
+require_in_output "$create_implicit_folder_output" "✅ | 💜 Pronto, eu criei a pasta 'Downloads/projetos/'." "criação implícita localizada de pasta no modo normal precisa usar a forma curta final de sucesso"
 require_in_output "$create_implicit_folder_output" "eu criei a pasta 'projetos/'" "criação implícita simples de pasta no modo normal deve continuar inferindo pasta"
 require_in_output "$create_implicit_folder_output" "eu criei a pasta 'Downloads/projetos/'" "criação implícita localizada de pasta no modo normal deve recompôr a base correta"
 require_in_output "$create_implicit_folder_output" "trecho original:               criar projetos/" "'aury dev criar projetos/' precisa fechar a inferência implícita de pasta"
@@ -799,7 +806,7 @@ EOF
 chmod +x "$speed_bad_json_tmp/bin/librespeed-cli"
 
 speed_bad_json_output="$(ROOT="$ROOT" PATH="$speed_bad_json_tmp/bin:$PATH" fish -c 'source $ROOT/bin/aury.fish; aury velocidade da internet' 2>&1 || true)"
-require_in_output "$speed_bad_json_output" "não consegui ler o retorno do librespeed-cli com confiança" "JSON incompleto deve falhar com erro de leitura honesto"
+require_in_output "$speed_bad_json_output" "Não consegui ler o retorno do librespeed-cli com confiança." "JSON incompleto deve falhar com erro de leitura honesto"
 
 download_guard_tmp="$(mktemp -d /tmp/aury-public-ux-XXXXXX)"
 tmpdirs+=("$download_guard_tmp")
@@ -827,7 +834,7 @@ EOF
 chmod +x "$compact_zip_tmp/bin/zip"
 
 compact_zip_output="$(ROOT="$ROOT" TMP="$compact_zip_tmp" PATH="$compact_zip_tmp/bin:$PATH" fish -c 'source $ROOT/bin/aury.fish; cd $TMP; aury compactar arquivo teste.txt para teste.zip; if test -f teste.zip; echo ZIP_CREATED; else; echo ZIP_MISSING; end' 2>&1 || true)"
-require_in_output "$compact_zip_output" "Pronto, eu compactei 'teste.txt' em 'teste.zip'." "compactação simples em zip precisa materializar a mensagem pública de sucesso"
+require_in_output "$compact_zip_output" "✅ | 💜 Pronto, eu compactei 'teste.txt' em 'teste.zip'." "compactação simples em zip precisa materializar a mensagem pública de sucesso"
 require_in_output "$compact_zip_output" "ZIP_CREATED" "compactação simples em zip precisa criar o arquivo final"
 
 if compgen -G "$compact_zip_tmp/.aury-compact.*" >/dev/null; then
@@ -846,7 +853,7 @@ EOF
 chmod +x "$compact_tar_tmp/bin/tar"
 
 compact_tar_output="$(ROOT="$ROOT" TMP="$compact_tar_tmp" PATH="$compact_tar_tmp/bin:$PATH" fish -c 'source $ROOT/bin/aury.fish; cd $TMP; aury compactar pasta projetos/ para projetos.tar.gz; if test -f projetos.tar.gz; echo TAR_CREATED; else; echo TAR_MISSING; end' 2>&1 || true)"
-require_in_output "$compact_tar_output" "Pronto, eu compactei 'projetos/' em 'projetos.tar.gz'." "compactação simples em tar.gz precisa materializar a mensagem pública de sucesso"
+require_in_output "$compact_tar_output" "✅ | 💜 Pronto, eu compactei 'projetos/' em 'projetos.tar.gz'." "compactação simples em tar.gz precisa materializar a mensagem pública de sucesso"
 require_in_output "$compact_tar_output" "TAR_CREATED" "compactação simples em tar.gz precisa criar o arquivo final"
 
 compact_missing_output="$(ROOT="$ROOT" TMP="$compact_zip_tmp" fish -c 'source $ROOT/bin/aury.fish; cd $TMP; aury compactar arquivo ausente.txt para teste.zip' 2>&1 || true)"
@@ -858,13 +865,15 @@ require_in_output "$compact_invalid_output" "o arquivo de saída precisa ser um 
 
 help_output="$(fish -c "source '$ROOT/bin/aury.fish'; aury ajuda" 2>&1 || true)"
 require_in_output "$help_output" "💜 Aury" "ajuda precisa continuar disponível"
-require_in_output "$help_output" "aury dev <frase> continua como relatório canônico da linha 1.x." "ajuda precisa manter 'aury dev <frase>' como relatório principal"
+require_in_output "$help_output" "CHAMADA" "ajuda precisa abrir pela chamada curta"
+require_in_output "$help_output" "aury <pedido>" "ajuda precisa mostrar a chamada com aury"
+require_in_output "$help_output" "ay <pedido>" "ajuda precisa mostrar a chamada com ay"
+require_in_output "$help_output" "O QUE ELA FAZ" "ajuda precisa manter a superfície prática"
+require_in_output "$help_output" "aury dev <frase> é o relatório canônico da linha 1.x." "ajuda precisa manter 'aury dev <frase>' como relatório principal"
 require_in_output "$help_output" "aury dev sem frase fica como verificação local curta do adaptador Fish, em uso secundário nesta linha." "ajuda precisa declarar o enquadramento final de 'aury dev' sem frase"
-require_in_output "$help_output" "procurar, instalar e remover usam o contrato final de pacote do host por família/host." "ajuda precisa congelar o trio como pacote do host"
-require_in_output "$help_output" "Esse trio não significa software do usuário, app store, múltiplas rotas nem política de origem nesta linha." "ajuda precisa bloquear inferência de app store ou múltiplas rotas"
-require_in_output "$help_output" "flatpak e rpm-ostree podem ser observados no ambiente, mas ficam fora do contrato ativo." "ajuda precisa enquadrar ferramentas observadas fora do contrato"
-require_in_output "$help_output" "A compatibilidade Linux da Aury 1.x se encerra nesta matriz final." "ajuda precisa declarar o encerramento canônico da linha 1.x"
-require_in_output "$help_output" "Handoff: software do usuário, múltiplas origens, política de origem/source/trust e suporte operacional real a hosts imutáveis pertencem à Aurora, não à Aury 1.x." "ajuda precisa deixar o handoff para a Aurora explícito"
+require_in_output "$help_output" "procurar, instalar e remover significam pacote do host." "ajuda precisa congelar o trio como pacote do host"
+require_in_output "$help_output" "software do usuário, múltiplas origens e hosts imutáveis ficam fora desta linha." "ajuda precisa manter o recorte curto da linha"
+require_in_output "$help_output" "MAIS LEITURA" "ajuda precisa apontar para README/docs quando a leitura longa for necessária"
 require_not_in_output "$help_output" "provisório" "ajuda não deve mais tratar 'aury dev' sem frase como provisório"
 
 version_expected="$(cat "$ROOT/VERSION")"

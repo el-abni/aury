@@ -171,13 +171,13 @@ def main() -> int:
 
         assert_executor("abra o arquivo relatorio.pdf", "fish")
         output = run_fish_public_error(["abra", "o", "arquivo", "relatorio.pdf"], env=path_env)
-        if "não consegui entender esse pedido com segurança" not in output:
+        if "❌ | 💜 Não consegui entender esse pedido com segurança" not in output:
             fail("modo normal não preservou o fallback honesto para pedido fora do recorte")
         ok("abra o arquivo relatorio.pdf alinhado em Fish")
 
         assert_executor("remover ela", "fish")
         output = run_fish_public_error(["remover", "ela"], env=path_env)
-        if "não vou remover nada sem um alvo explícito." not in output:
+        if "❌ | 💜 Bloqueado por segurança, eu preciso de um alvo explícito para remover." not in output:
             fail("modo normal não preservou o bloqueio destrutivo explícito")
         ok("remover ela alinhado em Fish")
 
@@ -244,7 +244,7 @@ def main() -> int:
         if "compatibilidade:               bloqueado por política" not in dev_output:
             fail("aury dev precisa explicitar bloqueio por política para otimizar sistema em host Atomic")
         output = run_fish_public_error(["otimizar", "sistema"], env=path_env)
-        if "bloqueado por política" not in output or "DNF_SHOULD_NOT_RUN" in output:
+        if "Bloqueado por política" not in output or "DNF_SHOULD_NOT_RUN" in output:
             fail("modo normal não pode tratar manutenção em host Atomic como backend simplesmente executável")
         ok("otimizar sistema permanece bloqueado por política em host Atomic")
 

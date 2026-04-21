@@ -1,3 +1,3 @@
-from .cli import main
+from .fish_bridge import main
 
 raise SystemExit(main())

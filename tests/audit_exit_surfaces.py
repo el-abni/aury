@@ -108,23 +108,24 @@ def main() -> int:
     status, output, stderr = run_public(["ajuda"])
     ensure(status == 0, "aury ajuda precisa sair com status 0")
     ensure(f"💜 Aury {CURRENT_VERSION}" in output, "aury ajuda precisa expor a versão ativa")
-    ensure("contrato final de pacote do host por família/host" in output, "aury ajuda precisa congelar o trio como pacote do host")
-    ensure("flatpak e rpm-ostree podem ser observados no ambiente, mas ficam fora do contrato ativo." in output, "aury ajuda precisa enquadrar flatpak e rpm-ostree como observados fora do contrato")
-    ensure("A compatibilidade Linux da Aury 1.x se encerra nesta matriz final." in output, "aury ajuda precisa declarar o encerramento canônico da compatibilidade Linux")
-    ensure("Handoff: software do usuário, múltiplas origens, política de origem/source/trust e suporte operacional real a hosts imutáveis pertencem à Aurora, não à Aury 1.x." in output, "aury ajuda precisa deixar o handoff para a Aurora explícito")
+    ensure("aury <pedido>" in output and "ay <pedido>" in output, "aury ajuda precisa mostrar como chamar a Aury por 'aury' e 'ay'")
+    ensure("pacote do host" in output, "aury ajuda precisa manter o trio como pacote do host")
+    ensure("software do usuário, múltiplas origens e hosts imutáveis ficam fora desta linha." in output, "aury ajuda precisa manter o recorte curto da linha")
+    ensure("aury dev <frase>" in output, "aury ajuda precisa apontar para 'aury dev <frase>'")
     ensure(not stderr, "aury ajuda não pode vazar stderr no caminho nominal")
     ok("ajuda pública sai com 0 e sem ruído")
 
     status, output, stderr = run_public(["abra", "o", "arquivo", "relatorio.pdf"])
     ensure(status == 1, "fallback honesto precisa sair com status 1")
-    ensure("não consegui entender esse pedido com segurança" in output, "fallback honesto precisa expor a mensagem pública esperada")
+    ensure("❌ | 💜 Não consegui entender esse pedido com segurança" in output, "fallback honesto precisa expor a mensagem pública esperada")
     ensure("aury ajuda" in output, "fallback honesto precisa oferecer dica de ajuda")
+    ensure("ℹ️ | 💜 Use 'aury ajuda' para ver o recorte atual." in output, "fallback honesto precisa usar a dica curta final")
     ensure(not stderr, "fallback honesto não pode vazar stderr")
     ok("fallback honesto sai com 1")
 
     status, output, stderr = run_public(["remover", "ela"])
     ensure(status == 1, "bloqueio destrutivo sem alvo seguro precisa sair com status 1")
-    ensure("não vou remover nada sem um alvo explícito." in output, "bloqueio destrutivo precisa expor a mensagem pública esperada")
+    ensure("Bloqueado por segurança, eu preciso de um alvo explícito para remover." in output, "bloqueio destrutivo precisa expor a mensagem pública esperada")
     ensure(not stderr, "bloqueio destrutivo não pode vazar stderr")
     ok("bloqueio destrutivo sai com 1")
 
@@ -143,13 +144,13 @@ def main() -> int:
         workdir = Path(tmp)
         direct_proc = run_python(["criar", "arquivo", "teste.txt"], cwd=workdir)
         ensure(direct_proc.returncode == 0, "runtime Python direto precisa sair com 0 para criar arquivo suportado agora")
-        ensure("eu criei o arquivo 'teste.txt'" in direct_proc.stdout, "runtime Python direto precisa materializar a criação simples de arquivo")
+        ensure("✅ | 💜 Pronto, eu criei o arquivo 'teste.txt'." in direct_proc.stdout, "runtime Python direto precisa materializar a criação simples de arquivo com a superfície pública canônica")
         ensure((workdir / "teste.txt").is_file(), "runtime Python direto precisa criar o arquivo simples")
         ensure(not direct_proc.stderr.strip(), "runtime Python direto não pode vazar stderr em criação simples de arquivo")
 
         status, output, stderr = run_public(["criar", "arquivo", "teste.txt"], cwd=workdir)
         ensure(status == 0, "entrada pública precisa sair com 0 para criar arquivo suportado agora")
-        ensure("eu criei o arquivo 'teste.txt'" in output, "entrada pública precisa preservar a mensagem canônica de criação de arquivo")
+        ensure("✅ | 💜 Pronto, eu criei o arquivo 'teste.txt'." in output, "entrada pública precisa preservar a mensagem canônica de criação de arquivo")
         ensure((workdir / "teste.txt").is_file(), "entrada pública precisa manter o arquivo criado")
         ensure(not stderr, "criação pública de arquivo não pode vazar stderr")
     ok("criação simples de arquivo já fecha direto em Python com superfície pública preservada")
@@ -159,13 +160,13 @@ def main() -> int:
         (workdir / "Downloads").mkdir(parents=True, exist_ok=True)
         direct_proc = run_python(["criar", "pasta", "Relatorios", "em", "Downloads"], cwd=workdir)
         ensure(direct_proc.returncode == 0, "runtime Python direto precisa sair com 0 para criar pasta localizada suportada agora")
-        ensure("eu criei a pasta 'Downloads/Relatorios'" in direct_proc.stdout, "runtime Python direto precisa materializar a criação localizada de pasta")
+        ensure("✅ | 💜 Pronto, eu criei a pasta 'Downloads/Relatorios'." in direct_proc.stdout, "runtime Python direto precisa materializar a criação localizada de pasta com a superfície pública canônica")
         ensure((workdir / "Downloads" / "Relatorios").is_dir(), "runtime Python direto precisa criar a pasta localizada")
         ensure(not direct_proc.stderr.strip(), "runtime Python direto não pode vazar stderr em criação localizada de pasta")
 
         status, output, stderr = run_public(["criar", "pasta", "Relatorios", "em", "Downloads"], cwd=workdir)
         ensure(status == 0, "entrada pública precisa sair com 0 para criar pasta localizada suportada agora")
-        ensure("eu criei a pasta 'Downloads/Relatorios'" in output, "entrada pública precisa preservar a mensagem canônica de criação localizada de pasta")
+        ensure("✅ | 💜 Pronto, eu criei a pasta 'Downloads/Relatorios'." in output, "entrada pública precisa preservar a mensagem canônica de criação localizada de pasta")
         ensure((workdir / "Downloads" / "Relatorios").is_dir(), "entrada pública precisa manter a pasta localizada criada")
         ensure(not stderr, "criação pública localizada de pasta não pode vazar stderr")
     ok("criação localizada de pasta já fecha direto em Python com superfície pública preservada")
@@ -189,7 +190,7 @@ def main() -> int:
 
         status, output, stderr = run_public(["compactar", "arquivo", "teste.txt", "para", "teste.zip"], env=env, cwd=workdir)
         ensure(status == 0, "entrada pública precisa sair com 0 quando a compactação fecha no Fish")
-        ensure("eu compactei 'teste.txt' em 'teste.zip'" in output, "compactação pública precisa materializar o sucesso no Fish")
+        ensure("✅ | 💜 Pronto, eu compactei 'teste.txt' em 'teste.zip'." in output, "compactação pública precisa materializar o sucesso no Fish")
         ensure((workdir / "teste.zip").is_file(), "compactação pública precisa produzir o arquivo final esperado")
         ensure(not stderr, "compactação pública bem-sucedida não pode vazar stderr")
     ok("fronteira Python 120 -> Fish 0 também permanece explícita para compactação")
@@ -201,23 +202,23 @@ def main() -> int:
 
         status, output, stderr = run_public(["compactar", "arquivo", "ausente.txt", "para", "teste.zip"], cwd=workdir)
         ensure(status == 1, "compactação com arquivo inexistente precisa sair com status 1")
-        ensure("não encontrei o arquivo 'ausente.txt' para compactar." in output, "compactação com arquivo inexistente precisa expor erro honesto")
+        ensure("Não encontrei o arquivo 'ausente.txt' para compactar." in output, "compactação com arquivo inexistente precisa expor erro honesto")
         ensure(not stderr, "compactação com arquivo inexistente não pode vazar stderr")
 
         status, output, stderr = run_public(["compactar", "arquivo", "projetos/", "para", "teste.zip"], cwd=workdir)
         ensure(status == 1, "compactação com tipo de origem incompatível precisa sair com status 1")
-        ensure("esperei um arquivo para compactar, mas 'projetos/' é uma pasta." in output, "compactação com tipo incompatível precisa expor erro honesto")
+        ensure("Esperei um arquivo para compactar, mas 'projetos/' é uma pasta." in output, "compactação com tipo incompatível precisa expor erro honesto")
         ensure(not stderr, "compactação com tipo incompatível não pode vazar stderr")
 
         status, output, stderr = run_public(["compactar", "arquivo", "teste.txt", "para", "saida/teste.zip"], cwd=workdir)
         ensure(status == 1, "compactação com diretório-pai inexistente precisa sair com status 1")
-        ensure("o arquivo de saída precisa ser um caminho válido terminado em .zip ou .tar.gz." in output, "compactação com saída inválida precisa expor erro honesto")
+        ensure("O arquivo de saída precisa ser um caminho válido terminado em .zip ou .tar.gz." in output, "compactação com saída inválida precisa expor erro honesto")
         ensure(not stderr, "compactação com saída inválida não pode vazar stderr")
 
         (workdir / "teste.zip").write_text("old\n", encoding="utf-8")
         status, output, stderr = run_public(["compactar", "arquivo", "teste.txt", "para", "teste.zip"], cwd=workdir)
         ensure(status == 1, "compactação com conflito de saída precisa sair com status 1")
-        ensure("o arquivo de saída já existe: 'teste.zip'." in output, "compactação com conflito de saída precisa expor erro honesto")
+        ensure("O arquivo de saída já existe: 'teste.zip'." in output, "compactação com conflito de saída precisa expor erro honesto")
         ensure(not stderr, "compactação com conflito de saída não pode vazar stderr")
     ok("bloqueios públicos mínimos da compactação saem com 1 e sem ruído")
 
@@ -233,7 +234,7 @@ def main() -> int:
             cwd=workdir,
         )
         ensure(status == 1, "compactação sem backend precisa sair com status 1")
-        ensure("não encontrei o backend necessário para criar 'teste.zip'." in output, "compactação sem backend precisa expor erro honesto")
+        ensure("Não encontrei o backend necessário para criar 'teste.zip'." in output, "compactação sem backend precisa expor erro honesto")
         ensure(not stderr, "compactação sem backend não pode vazar stderr")
     ok("ausência do backend de compactação sai com 1")
 
@@ -251,7 +252,7 @@ def main() -> int:
 
         status, output, stderr = run_public(["compactar", "arquivo", "teste.txt", "para", "teste.zip"], env=env, cwd=workdir)
         ensure(status == 1, "falha operacional da compactação precisa sair com status 1")
-        ensure("não consegui compactar 'teste.txt' em 'teste.zip'." in output, "falha operacional da compactação precisa expor erro honesto")
+        ensure("Não consegui compactar 'teste.txt' em 'teste.zip'." in output, "falha operacional da compactação precisa expor erro honesto")
         ensure(not stderr, "falha operacional da compactação não pode vazar stderr")
         ensure(not (workdir / "teste.zip").exists(), "falha operacional da compactação não pode deixar o arquivo final")
         ensure(
@@ -275,7 +276,7 @@ def main() -> int:
         os_release = write_os_release(workdir, distro_id="cachyos", distro_like="arch", name="CachyOS")
         direct_proc = run_python(["procurar", "steam"], env={"PATH": "", "AURY_OS_RELEASE_PATH": str(os_release)}, cwd=workdir)
         ensure(direct_proc.returncode == 1, "backend ausente em rota Python suportada precisa sair com status 1")
-        ensure("backend 'pacman' não está disponível" in direct_proc.stdout, "backend ausente em rota Python suportada precisa expor erro honesto")
+        ensure("❌ | 💜 Não consegui usar o backend 'pacman' porque ele não está disponível." in direct_proc.stdout, "backend ausente em rota Python suportada precisa expor erro honesto")
         ensure(not direct_proc.stderr.strip(), "backend ausente em rota Python suportada não pode vazar stderr")
     ok("backend ausente em rota Python suportada sai com 1")
 
@@ -287,7 +288,7 @@ def main() -> int:
         os_release = write_os_release(workdir, distro_id="cachyos", distro_like="arch", name="CachyOS")
         direct_proc = run_python(["procurar", "steam"], env={"PATH": str(bin_dir), "AURY_OS_RELEASE_PATH": str(os_release)}, cwd=workdir)
         ensure(direct_proc.returncode == 1, "falha operacional em rota Python suportada precisa sair com status 1")
-        ensure("backend 'pacman' retornou erro operacional" in direct_proc.stdout, "falha operacional em rota Python suportada precisa expor erro honesto")
+        ensure("❌ | 💜 Não consegui concluir a operação no backend 'pacman' porque ele retornou erro operacional." in direct_proc.stdout, "falha operacional em rota Python suportada precisa expor erro honesto")
         ensure(not direct_proc.stderr.strip(), "falha operacional em rota Python suportada não pode vazar stderr")
     ok("falha operacional em rota Python suportada sai com 1")
 
@@ -301,7 +302,7 @@ def main() -> int:
 
         direct_proc = run_python(["instalar", "firefox"], env=env, cwd=workdir)
         ensure(direct_proc.returncode == 1, "host Atomic bloqueado precisa sair com status 1 no runtime Python direto")
-        ensure("bloqueado por política" in direct_proc.stdout, "host Atomic bloqueado precisa expor explicitamente o bloqueio por política")
+        ensure("Bloqueado por política" in direct_proc.stdout, "host Atomic bloqueado precisa expor explicitamente o bloqueio por política")
         ensure("detectado como Atomic/imutável" in direct_proc.stdout, "host Atomic bloqueado precisa expor a mensagem pública honesta")
         ensure("DNF_SHOULD_NOT_RUN" not in direct_proc.stdout, "host Atomic bloqueado não pode tentar mutar pacote do sistema")
         ensure("backend '" not in direct_proc.stdout, "host Atomic bloqueado não pode parecer ausência simples de backend")
@@ -310,7 +311,7 @@ def main() -> int:
 
         status, output, stderr = run_public(["instalar", "firefox"], env=env, cwd=workdir)
         ensure(status == 1, "host Atomic bloqueado precisa sair com status 1 também pela entrada pública")
-        ensure("bloqueado por política" in output, "entrada pública precisa expor explicitamente o bloqueio por política em host Atomic")
+        ensure("Bloqueado por política" in output, "entrada pública precisa expor explicitamente o bloqueio por política em host Atomic")
         ensure("detectado como Atomic/imutável" in output, "entrada pública precisa preservar o bloqueio honesto para host Atomic")
         ensure("DNF_SHOULD_NOT_RUN" not in output, "entrada pública não pode tentar rodar backend de pacote no host Atomic")
         ensure("backend '" not in output, "entrada pública não pode tratar host Atomic como ausência simples de backend")
@@ -331,7 +332,7 @@ def main() -> int:
 
         direct_proc = run_python(["instalar", "firefox"], env=env, cwd=workdir)
         ensure(direct_proc.returncode == 1, "host Atomic sem backend aparente precisa continuar bloqueado por política")
-        ensure("bloqueado por política" in direct_proc.stdout, "host Atomic sem backend aparente precisa continuar saindo como política de produto")
+        ensure("Bloqueado por política" in direct_proc.stdout, "host Atomic sem backend aparente precisa continuar saindo como política de produto")
         ensure("backend '" not in direct_proc.stdout, "host Atomic sem backend aparente não pode parecer simples ausência de backend")
         ensure("ferramenta auxiliar" not in direct_proc.stdout, "host Atomic sem backend aparente não pode parecer simples ausência de sonda auxiliar")
         ensure(not direct_proc.stderr.strip(), "host Atomic sem backend aparente não pode vazar stderr")
@@ -401,14 +402,14 @@ def main() -> int:
 
         direct_proc = run_python(["otimizar", "sistema"], env=env, cwd=workdir)
         ensure(direct_proc.returncode == 1, "host Atomic precisa sair com status 1 ao bloquear otimizar sistema no runtime Python direto")
-        ensure("bloqueado por política" in direct_proc.stdout, "host Atomic precisa expor bloqueio por política em otimizar sistema")
+        ensure("Bloqueado por política" in direct_proc.stdout, "host Atomic precisa expor bloqueio por política em otimizar sistema")
         ensure("DNF_SHOULD_NOT_RUN" not in direct_proc.stdout, "host Atomic não pode tentar backend local para otimizar sistema")
         ensure("backend '" not in direct_proc.stdout, "host Atomic não pode parecer ausência simples de backend em otimizar sistema")
         ensure(not direct_proc.stderr.strip(), "host Atomic não pode vazar stderr ao bloquear otimizar sistema")
 
         status, output, stderr = run_public(["otimizar", "sistema"], env=env, cwd=workdir)
         ensure(status == 1, "entrada pública precisa sair com status 1 para otimizar sistema em host Atomic")
-        ensure("bloqueado por política" in output, "entrada pública precisa preservar o bloqueio por política em otimizar sistema")
+        ensure("Bloqueado por política" in output, "entrada pública precisa preservar o bloqueio por política em otimizar sistema")
         ensure("DNF_SHOULD_NOT_RUN" not in output, "entrada pública não pode tentar backend local em otimizar sistema no host Atomic")
         ensure("backend '" not in output, "entrada pública não pode tratar host Atomic como backend ausente em otimizar sistema")
         ensure(not stderr, "entrada pública não pode vazar stderr ao bloquear otimizar sistema em host Atomic")
@@ -512,13 +513,13 @@ def main() -> int:
 
         direct_proc = run_python(["procurar", "steam"], env=env, cwd=workdir)
         ensure(direct_proc.returncode == 0, "busca sem resultado em OpenSUSE mutável precisa sair com 0 no runtime Python direto")
-        ensure("não encontrei resultados para 'steam' no backend 'zypper'" in direct_proc.stdout, "busca sem resultado em OpenSUSE mutável precisa expor a superfície honesta da Aury")
+        ensure("Não encontrei resultados para 'steam' no backend 'zypper'" in direct_proc.stdout, "busca sem resultado em OpenSUSE mutável precisa expor a superfície honesta da Aury")
         ensure("No matching items found." not in direct_proc.stdout, "busca sem resultado em OpenSUSE mutável não pode vazar a saída crua do zypper")
         ensure(not direct_proc.stderr.strip(), "busca sem resultado em OpenSUSE mutável não pode vazar stderr")
 
         status, output, stderr = run_public(["procurar", "steam"], env=env, cwd=workdir)
         ensure(status == 0, "entrada pública precisa sair com 0 para busca sem resultado em OpenSUSE mutável")
-        ensure("não encontrei resultados para 'steam' no backend 'zypper'" in output, "entrada pública precisa preservar a mensagem honesta de busca sem resultado em OpenSUSE mutável")
+        ensure("Não encontrei resultados para 'steam' no backend 'zypper'" in output, "entrada pública precisa preservar a mensagem honesta de busca sem resultado em OpenSUSE mutável")
         ensure("No matching items found." not in output, "entrada pública não pode vazar a saída crua do zypper em busca sem resultado")
         ensure(not stderr, "entrada pública não pode vazar stderr em busca sem resultado em OpenSUSE mutável")
     ok("OpenSUSE mutável mantém saída honesta para busca sem resultado")
@@ -607,7 +608,7 @@ def main() -> int:
         status, output, stderr = run_public(["instalar", "firefox"], env=path_env)
         ensure(status == 1, "pacote público precisa sair com status 1 quando o runtime Python não sobe")
         ensure(
-            "não consegui aplicar a política canônica de pacote porque o runtime Python não está disponível." in output,
+            "❌ | 💜 Não consegui aplicar a política canônica de pacote porque o runtime Python não está disponível." in output,
             "pacote público precisa bloquear honestamente quando a política canônica não pode subir",
         )
         ensure(not stderr, "bloqueio público de pacote sem runtime Python não pode vazar stderr")

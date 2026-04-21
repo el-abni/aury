@@ -4,6 +4,20 @@ Esta pasta guarda a base pública mínima de regressão auditável que sustenta 
 
 Ela nasceu como **Fase 0** na linha 1.6.x e continua pequena de propósito. Na abertura operacional da v1.7.0, essa mesma base ganhou um tooling inicial curto de preflight e auditoria para blindar melhor o chão público já herdado, sem virar framework.
 
+Para a leitura pública da ladder, o documento primário é `docs/WORKFLOW.md`.
+Este README explica a base executável e como cada audit/gate entra nessa ladder.
+
+## Leitura pública desta pasta
+
+Abra este arquivo depois de:
+
+- `README.md`, para a superfície pública curta do repositório
+- `docs/COMPATIBILITY.md`, para o contrato host-centric da linha
+- `docs/WORKFLOW.md`, para a ladder e a diferença entre worktree hygiene e release hygiene
+- `docs/ARCHITECTURE.md`, para ownership e fronteira Fish/Python
+
+Este README existe para a base executável: audits, smokes, gates e o papel de cada um.
+
 ## Papel atual
 
 Esta pasta existe para:
@@ -35,13 +49,15 @@ Para iteração local curta, os comandos mínimos continuam sendo:
 
 ```bash
 bash tests/preflight_canonico.sh
+bash tests/worktree_gate_minimo.sh
 bash tests/public_ux_smoke.sh
 python3 tests/python_core_smoke.py
 ```
 
 Na prática:
 
-- `preflight_canonico.sh` junta a checagem mínima de sintaxe, coerência pública, paridade normal vs `aury dev` e os dois smokes já canonizados
+- `preflight_canonico.sh` junta a checagem mínima de sintaxe, coerência pública, paridade normal vs `aury dev` e os dois smokes já canonizados, sem inspecionar a stage pública
+- `worktree_gate_minimo.sh` sobe um degrau e valida a worktree atual sem exigir stage pública
 - `public_ux_smoke.sh` protege a superfície pública do adaptador Fish
 - `python_core_smoke.py` protege o núcleo Python já canonizado
 
@@ -58,17 +74,24 @@ Se você precisar validar esse gate sem tocar na stage real do usuário, use um 
 Esse wrapper é o gate final porque ele já reúne, em cima da stage pública explícita:
 
 - higiene da stage pública
-- `preflight_canonico.sh`
-- `audit_exit_surfaces.py`
+- `worktree_gate_minimo.sh`
 
 Ferramentas de suporte do gate final, úteis quando houver iteração direta no contrato de saída ou na superfície pública:
 
 ```bash
 bash tests/preflight_canonico.sh
+bash tests/worktree_gate_minimo.sh
 python3 tests/audit_exit_surfaces.py
 ```
 
-Esses dois checks continuam importantes, mas não entram como itens separados da régua final quando `release_gate_minimo.sh` já está sendo usado.
+Esses checks continuam importantes, mas não mudam a semântica do gate final: `release_gate_minimo.sh` continua sendo o degrau stage-based da ladder.
+
+## Tipos de hygiene
+
+- **worktree hygiene**: worktree sem erro textual, `preflight_canonico.sh` já aprovado, `audit_exit_surfaces.py` e unittests canônicos do `core_api` aprovados, ainda sem depender de stage pública.
+- **release hygiene**: `worktree_gate_minimo.sh` já aprovado, stage pública explícita e coerente, nenhum arquivo privado/sensível staged e `git diff --cached --check` limpo.
+
+Sem stage pública explícita, `release_gate_minimo.sh` deve falhar cedo. Esse fail não indica regressão funcional; só indica que a rodada ainda não entrou no degrau final da release hygiene.
 
 ## Arquivos atuais
 
@@ -108,13 +131,51 @@ Hoje ele cobre de forma executável:
 
 ### `audit_public_coherence.py`
 
-Este auditor pequeno verifica o chão público mínimo que o encerramento canônico da v1.9.8 precisa manter coerente:
+Este auditor pequeno verifica o chão público mínimo que o encerramento canônico da v1.9.9 precisa manter coerente:
 
 - `VERSION` preenchida
-- `resources/help.txt` com placeholder de versão e nota honesta sobre `aury dev`
-- `README.md`, `CHANGELOG.md`, `docs/ARCHITECTURE.md` e `tests/README.md` alinhados à versão pública atual, à matriz final da linha 1.x e ao handoff limpo para a Aurora
+- `resources/help.txt` com placeholder de versão, chamada curta (`aury` / `ay`) e superfície prática sem virar mini-doc
+- `README.md`, `CHANGELOG.md`, `docs/ARCHITECTURE.md`, `docs/COMPATIBILITY.md`, `docs/WORKFLOW.md` e `tests/README.md` alinhados à versão pública atual, à matriz final da linha 1.x e ao handoff limpo para a Aurora
+- contrato curto de voz pública alinhado entre Fish e Python
 - ausência de hardcode de versão no runtime público e nos scripts de instalação
 - renderização real de `help` e `version` via entrada pública Fish
+
+### `audit_canonical_layout.py`
+
+Este auditor pequeno protege a canonização estrutural mínima da Onda 0:
+
+- raiz viva resolvida pelo adaptador Fish e pelo runtime Python
+- isolamento do artefato histórico `./aury/` no root Git
+- existência da superfície canônica `python/aury/core_api.py`
+- coerência mínima entre `docs/ARCHITECTURE.md`, `docs/COMPATIBILITY.md` e `docs/WORKFLOW.md`
+
+### `audit_hybrid_boundary.py`
+
+Este auditor pequeno protege a classificação estrutural da Onda 1:
+
+- `bin/aury.fish` como entrypoint vivo
+- `python/aury/fish_bridge.py` como bridge Python vivo da fronteira Fish/Python
+- `python/aury/cli.py` como shim de compatibilidade, e não como fronteira canônica
+- coerência mínima de `docs/ARCHITECTURE.md` e `docs/WORKFLOW.md` sobre `entrypoint`, `bridge`, `runtime`, `host` e `helpers`
+
+### `audit_docs_pv_workflow.py`
+
+Este auditor pequeno protege a consolidação documental da Onda 2:
+
+- `README.md` como entrada pública mínima do checkout canônico
+- `docs/WORKFLOW.md` distinguindo worktree hygiene e release hygiene
+- `tests/README.md` refletindo a ladder sem disputar papel com `docs/WORKFLOW.md`
+- `PV_VIVO_E_HISTORICO.md` e `arquivo/contexto/README.md` deixando operacional a leitura da PV viva vs histórica
+- `WORKFLOW_CANONICO_RELEASE_AURY.md`, `CHECKLIST_RELEASE_SEGURA_AURY.md` e `FLUXO_FECHAMENTO_DE_VERSAO_AURY.md` com papéis explícitos e não conflitantes
+
+### `audit_gate_ladder.py`
+
+Este auditor pequeno protege a composição executável da ladder:
+
+- `preflight_canonico.sh` continua sendo stage-agnostic e curto
+- `worktree_gate_minimo.sh` continua compondo `preflight`, `audit_exit_surfaces.py` e os unittests canônicos do `core_api`
+- `release_gate_minimo.sh` continua sendo o degrau stage-based e compõe o gate de worktree, em vez de duplicar seus checks
+- `tests/_gate_common.sh` continua concentrando apenas o helper mínimo compartilhado entre os gates
 
 ### `audit_dev_parity.py`
 
@@ -124,7 +185,7 @@ Este auditor pequeno verifica um recorte de paridade operacional entre:
 - o executor realmente observado no modo normal
 
 O foco é manter auditáveis as rotas já assumidas como Python e as que seguem canonicamente no adaptador Fish.
-Na v1.9.8, isso inclui o enquadramento de `atualizar` / `otimizar` como manutenção do host local, sem paridade portátil com o domínio de pacote, e a distinção entre backends ativos do contrato e ferramentas apenas observadas.
+Na v1.9.9, isso inclui o enquadramento de `atualizar` / `otimizar` como manutenção do host local, sem paridade portátil com o domínio de pacote, e a distinção entre backends ativos do contrato e ferramentas apenas observadas.
 
 ### `audit_exit_surfaces.py`
 
@@ -153,16 +214,36 @@ Este é o gate final mínimo canônico da linha 1.x. Ele roda em cima da stage p
 - stage vazia ou fora do recorte público esperado
 - arquivo privado/sensível staged
 - erro textual em `git diff --cached --check`
-- falha no preflight canônico
-- falha no auditor de exit status
+- falha no gate de worktree já composto
 
 Os checks abaixo continuam existindo, mas entram no gate final por composição e não como itens paralelos da régua canônica:
 
 - `audit_public_coherence.py`
+- `audit_canonical_layout.py`
+- `audit_hybrid_boundary.py`
+- `audit_docs_pv_workflow.py`
 - `audit_dev_parity.py`
 - `public_ux_smoke.sh`
 - `python_core_smoke.py`
 - `audit_exit_surfaces.py`
+- `tests.test_canonical_core_surface`
+- `tests.test_core_api_characterization`
+
+### `worktree_gate_minimo.sh`
+
+Este é o gate canônico de worktree da linha 1.x. Ele roda sem exigir stage pública e reúne:
+
+- `preflight_canonico.sh`
+- `audit_exit_surfaces.py`
+- `tests.test_canonical_core_surface`
+- `tests.test_core_api_characterization`
+
+Ele existe para separar claramente:
+
+- iteração local e validação da worktree
+- gate final público em cima da stage explícita
+
+O `preflight_canonico.sh` continua sendo o degrau curto da rodada e não inspeciona a stage pública.
 
 Esses auditores e o gate não substituem o `casos.yaml`. Os papéis continuam separados:
 

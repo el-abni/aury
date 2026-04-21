@@ -87,6 +87,32 @@ def assert_help_dev_note(text: str, source: str) -> None:
     ensure("provisorio" not in normalized, f"{source} não deve mais tratar 'aury dev' sem frase como provisório")
 
 
+def assert_help_practical_sections(text: str, source: str) -> None:
+    normalized = normalize(text)
+    ensure("chamada" in normalized, f"{source} precisa ter a seção 'CHAMADA'")
+    ensure("o que ela faz" in normalized, f"{source} precisa ter a seção 'O QUE ELA FAZ'")
+    ensure("exemplos" in normalized, f"{source} precisa ter a seção 'EXEMPLOS'")
+    ensure("recorte da linha" in normalized, f"{source} precisa ter a seção 'RECORTE DA LINHA'")
+    ensure("mais leitura" in normalized, f"{source} precisa ter a seção 'MAIS LEITURA'")
+    ensure("aury <pedido>" in text, f"{source} precisa mostrar a chamada com 'aury <pedido>'")
+    ensure("ay <pedido>" in text, f"{source} precisa mostrar a chamada com 'ay <pedido>'")
+    ensure("matriz final" not in normalized, f"{source} não deve empurrar a matriz final completa para o help")
+    ensure("handoff" not in normalized, f"{source} não deve empurrar o handoff completo para o help")
+    ensure("flatpak" not in normalized and "rpm-ostree" not in normalized, f"{source} não deve duplicar a matriz longa de ferramentas observadas")
+    non_empty_lines = [line for line in text.splitlines() if line.strip()]
+    ensure(len(non_empty_lines) <= 30, f"{source} precisa permanecer curto e prático")
+
+
+def assert_public_voice_contract(text: str, source: str) -> None:
+    normalized = normalize(text)
+    ensure("✅ | 💜" in text, f"{source} precisa registrar a forma curta de sucesso")
+    ensure("❌ | 💜" in text, f"{source} precisa registrar a forma curta de falha/bloqueio")
+    ensure("ℹ️ | 💜" in text, f"{source} precisa registrar a forma curta de informação")
+    ensure("pronto, eu" in normalized, f"{source} precisa preservar a forma curta de sucesso")
+    ensure("nao consegui" in normalized, f"{source} precisa preservar a forma curta de falha operacional")
+    ensure("bloqueado" in normalized, f"{source} precisa preservar a forma curta de bloqueio")
+
+
 def assert_package_contract_note(text: str, source: str) -> None:
     normalized = normalize(text)
     ensure("pacote do host" in normalized, f"{source} precisa explicitar o pacote do host como contrato público")
@@ -144,6 +170,8 @@ def assert_readme_state(readme: str) -> None:
     normalized = normalize(readme)
     ensure(CURRENT_VERSION in readme, "README.md precisa citar a versão pública atual")
     ensure("linha 1.6" in normalized, "README.md precisa manter a linha 1.6.x como referência já entregue")
+    ensure("git_index_file" in normalized, "README.md precisa registrar o uso de GIT_INDEX_FILE no fechamento curto da linha")
+    ensure("stage vazia" in normalized, "README.md precisa explicar a semântica de stage vazia no gate final")
     ensure_any(
         normalized,
         ("fechada", "encerrada"),
@@ -165,13 +193,18 @@ def assert_readme_state(readme: str) -> None:
     assert_final_matrix_note(readme, "README.md")
     assert_aurora_handoff_note(readme, "README.md")
     assert_line_closure_note(readme, "README.md")
+    assert_public_voice_contract(readme, "README.md")
 
 
 def assert_architecture_state(architecture: str) -> None:
     normalized = normalize(architecture)
     ensure(CURRENT_VERSION in architecture, "docs/ARCHITECTURE.md precisa citar a versão pública atual")
+    ensure("raiz canonica" in normalized, "docs/ARCHITECTURE.md precisa registrar a raiz canônica")
+    ensure("artefato historico" in normalized, "docs/ARCHITECTURE.md precisa classificar o artefato histórico")
     ensure("adaptador fish" in normalized, "docs/ARCHITECTURE.md precisa manter o papel público do adaptador Fish")
     ensure("runtime python" in normalized, "docs/ARCHITECTURE.md precisa explicitar o runtime Python atual")
+    ensure("ownership fish / python" in normalized, "docs/ARCHITECTURE.md precisa explicitar o ownership Fish / Python")
+    ensure("hotspot hibrido" in normalized, "docs/ARCHITECTURE.md precisa explicitar o hotspot híbrido")
     ensure("criar arquivo" in normalized, "docs/ARCHITECTURE.md precisa registrar a micro-migração de criar arquivo")
     ensure("criar pasta" in normalized, "docs/ARCHITECTURE.md precisa registrar a micro-migração de criar pasta")
     ensure_any(
@@ -185,18 +218,55 @@ def assert_architecture_state(architecture: str) -> None:
     assert_line_closure_note(architecture, "docs/ARCHITECTURE.md")
 
 
+def assert_compatibility_state(text: str) -> None:
+    normalized = normalize(text)
+    ensure(CURRENT_VERSION in text, "docs/COMPATIBILITY.md precisa citar a versão pública atual")
+    ensure("manutencao do host" in normalized, "docs/COMPATIBILITY.md precisa enquadrar manutenção do host")
+    assert_package_contract_note(text, "docs/COMPATIBILITY.md")
+    assert_final_matrix_note(text, "docs/COMPATIBILITY.md")
+    assert_aurora_handoff_note(text, "docs/COMPATIBILITY.md")
+    assert_line_closure_note(text, "docs/COMPATIBILITY.md")
+
+
+def assert_workflow_state(text: str) -> None:
+    normalized = normalize(text)
+    ensure(CURRENT_VERSION in text, "docs/WORKFLOW.md precisa citar a versão pública atual")
+    ensure("raiz canonica" in normalized, "docs/WORKFLOW.md precisa explicitar a raiz canônica")
+    ensure("artefato historico" in normalized, "docs/WORKFLOW.md precisa classificar o artefato histórico")
+    ensure("preflight_canonico.sh" in text, "docs/WORKFLOW.md precisa citar o preflight")
+    ensure("worktree_gate_minimo.sh" in text, "docs/WORKFLOW.md precisa citar o gate de worktree")
+    ensure("release_gate_minimo.sh" in text, "docs/WORKFLOW.md precisa citar o gate final")
+    ensure("stage" in normalized and "worktree" in normalized, "docs/WORKFLOW.md precisa distinguir worktree e stage pública")
+    ensure_any(
+        normalized,
+        ("git_index_file", "indice git temporario", "indice git"),
+        "docs/WORKFLOW.md precisa registrar o uso de índice Git temporário quando necessário",
+    )
+
+
 def assert_tests_readme_state(text: str) -> None:
     normalized = normalize(text)
     ensure("gate final canonico" in normalized, "tests/README.md precisa explicitar o gate final canônico")
+    ensure("gate canonico de worktree" in normalized or "gate de worktree" in normalized, "tests/README.md precisa explicitar o gate de worktree")
     ensure("release_gate_minimo.sh" in text, "tests/README.md precisa apontar para release_gate_minimo.sh")
+    ensure("worktree_gate_minimo.sh" in text, "tests/README.md precisa apontar para worktree_gate_minimo.sh")
     assert_final_matrix_note(text, "tests/README.md")
     assert_aurora_handoff_note(text, "tests/README.md")
     assert_line_closure_note(text, "tests/README.md")
 
 
 def assert_changelog_state(changelog: str) -> None:
-    ensure(f"## {CURRENT_VERSION}" in changelog, "CHANGELOG.md precisa expor a versão pública atual")
-    current_section = changelog.partition(f"## {CURRENT_VERSION}")[2].partition("\n## ")[0]
+    section_heading = None
+    for candidate in (
+        f"## {CURRENT_VERSION}",
+        f"## 💜 {CURRENT_VERSION}",
+        f"## 💜 Aury {CURRENT_VERSION}",
+    ):
+        if candidate in changelog:
+            section_heading = candidate
+            break
+    ensure(section_heading is not None, "CHANGELOG.md precisa expor a versão pública atual")
+    current_section = changelog.partition(section_heading)[2].partition("\n## ")[0]
     ensure(current_section.strip(), "CHANGELOG.md precisa manter a seção pública da versão atual")
     assert_final_matrix_note(current_section, "CHANGELOG.md")
     assert_aurora_handoff_note(current_section, "CHANGELOG.md")
@@ -232,10 +302,7 @@ def main() -> int:
     help_text = read("resources/help.txt")
     ensure("{version}" in help_text, "resources/help.txt precisa manter o placeholder {version}")
     assert_help_dev_note(help_text, "resources/help.txt")
-    assert_package_contract_note(help_text, "resources/help.txt")
-    assert_final_matrix_note(help_text, "resources/help.txt")
-    assert_aurora_handoff_note(help_text, "resources/help.txt")
-    assert_line_closure_note(help_text, "resources/help.txt")
+    assert_help_practical_sections(help_text, "resources/help.txt")
     ok("help público mantém placeholder e nota honesta sobre aury dev")
 
     readme = read("README.md")
@@ -250,6 +317,14 @@ def main() -> int:
     assert_architecture_state(architecture)
     ok("docs/ARCHITECTURE.md alinhado ao estado público atual")
 
+    compatibility = read("docs/COMPATIBILITY.md")
+    assert_compatibility_state(compatibility)
+    ok("docs/COMPATIBILITY.md alinhado ao estado público atual")
+
+    workflow = read("docs/WORKFLOW.md")
+    assert_workflow_state(workflow)
+    ok("docs/WORKFLOW.md alinhado ao workflow público atual")
+
     tests_readme = read("tests/README.md")
     assert_tests_readme_state(tests_readme)
     ok("tests/README.md alinhado ao fechamento canônico da linha 1.x")
@@ -260,10 +335,7 @@ def main() -> int:
     help_output = run_fish("ajuda")
     ensure(f"💜 Aury {CURRENT_VERSION}" in help_output, "aury ajuda precisa renderizar a versão ativa")
     assert_help_dev_note(help_output, "aury ajuda")
-    assert_package_contract_note(help_output, "aury ajuda")
-    assert_final_matrix_note(help_output, "aury ajuda")
-    assert_aurora_handoff_note(help_output, "aury ajuda")
-    assert_line_closure_note(help_output, "aury ajuda")
+    assert_help_practical_sections(help_output, "aury ajuda")
     ok("ajuda renderizada pela entrada pública Fish")
 
     version_output = run_fish("--version")
