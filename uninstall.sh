@@ -14,5 +14,5 @@ rm -f "$FISH_FUNCTIONS_DIR/ay.fish"
 rm -rf "$SHARE_DIR"
 
 echo ""
-echo "✅ A Aury foi removida do sistema."
+echo "✅ | 💜 A Aury foi removida do sistema."
 echo ""
