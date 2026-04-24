@@ -91,7 +91,7 @@ No checkout local, `source bin/aury.fish` usa o próprio root do repositório co
 - `aury dev <frase>` continua auditável, com fronteira explícita entre núcleo Python, adaptador Fish, política de host e fallback honesto
 - `criar arquivo` e `criar pasta` permanecem como micro-recorte operacional já sustentado no runtime Python
 - a compactação local simples herdada da `v1.7.0` continua curta por decisão de produto, não por esquecimento
-- a matriz final permanece congelada: suporte agora em Arch, Debian/Ubuntu e Fedora mutável; suporte contido em OpenSUSE mutável; bloco **bloqueado por política** em Atomic, Universal Blue, `opensuse-microos` e `microos`
+- a matriz final permanece congelada: **suportado agora** em Arch, Debian/Ubuntu e Fedora mutável; **suportado contido** em OpenSUSE mutável; bloco **bloqueado por política** em Atomic, Universal Blue, `opensuse-microos` e `microos`
 - `flatpak` e `rpm-ostree` seguem apenas como ferramentas observadas fora do contrato ativo
 - o handoff final continua explícito: software do usuário, múltiplas origens, política de origem/source/trust e suporte operacional real a hosts imutáveis pertencem à Aurora, não à Aury `1.x`
 

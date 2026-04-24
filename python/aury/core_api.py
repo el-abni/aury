@@ -15,7 +15,7 @@ from .runtime import plan_action_execution, plan_sequence_execution
 
 # Canonical internal consumption surface for the Aury core.
 # Aurora and other internal consumers must import from python/aury, not from
-# the divergent tree at /home/abni/aury/aury/python/aury.
+# the legacy nested tree.
 __all__ = [
     "HostProfile",
     "PackageActionPolicy",

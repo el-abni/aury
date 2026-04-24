@@ -15,9 +15,20 @@ gate_require_commands() {
 gate_is_allowed_public_path() {
     case "$1" in
         README.md|CHANGELOG.md|VERSION|install.sh|uninstall.sh|LICENSE.md|.gitignore)
-            return 0
             ;;
         bin/*|python/*|resources/*|tests/*|docs/*)
+            ;;
+        *)
+            return 1
+            ;;
+    esac
+
+    git cat-file -e "HEAD:$1" >/dev/null 2>&1
+}
+
+gate_is_sensitive_stage_path() {
+    case "$1" in
+        .*/*|*/.*/*|*private*|*Private*|*PRIVATE*|*privado*|*privada*|*PRIVADO*|*PRIVADA*|*estrategic*|*Estrategic*|*ESTRATEGIC*|*estrategico*|*estrategica*|*ESTRATEGICO*|*ESTRATEGICA*|*strategy*|*Strategy*|*STRATEGY*|*secret*|*Secret*|*SECRET*|*local-only*|*Local-only*|*LOCAL-ONLY*)
             return 0
             ;;
     esac
@@ -41,14 +52,20 @@ gate_require_public_stage() {
 
 gate_assert_public_stage_scope() {
     local staged="$1"
-    local blocked_regex='^(\.aury-private/|README_V15_PREP\.md|V15_CODEX_PROMPT\.md|PROJETO_TRIPLE_A\.md|TRIPLE_A_RESUMO\.md|ROADMAP_ESTRATEGICO_PRIVADO_AURY_V1\.6_A_V1\.9\.md|DIRECAO_SEGURANCA_FUTURA_AURY\.md|docs/V1\.5_MEGA_DICIONARIO_INICIAL\.md|docs/V1\.5_CORPUS_CONVERSACIONAL_INICIAL\.md)$'
-    local blocked
+    local blocked=()
     local unexpected=()
     local path
 
-    blocked="$(printf '%s\n' "$staged" | grep -E "$blocked_regex" || true)"
-    if [[ -n "$blocked" ]]; then
-        printf 'FAIL: stage contém arquivo privado/sensível:\n%s\n' "$blocked" >&2
+    while IFS= read -r path; do
+        [[ -z "$path" ]] && continue
+        if gate_is_sensitive_stage_path "$path"; then
+            blocked+=("$path")
+        fi
+    done <<<"$staged"
+
+    if ((${#blocked[@]} > 0)); then
+        printf 'FAIL: stage contém arquivo privado/sensível:\n' >&2
+        printf '%s\n' "${blocked[@]}" >&2
         exit 1
     fi
 

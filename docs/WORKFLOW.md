@@ -37,7 +37,7 @@ Uso:
 - sintaxe Fish;
 - coerência pública;
 - guardrail de layout canônico;
-- guardrail curto de docs + PV + workflow;
+- guardrail curto de docs e workflow públicos;
 - guardrail curto da própria composição da ladder;
 - paridade curta `aury dev` vs modo normal;
 - smokes públicos e do núcleo Python.

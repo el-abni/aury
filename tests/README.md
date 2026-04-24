@@ -160,13 +160,11 @@ Este auditor pequeno protege a classificação estrutural da Onda 1:
 
 ### `audit_docs_pv_workflow.py`
 
-Este auditor pequeno protege a consolidação documental da Onda 2:
+Este auditor pequeno protege a consolidação documental pública da Onda 2:
 
 - `README.md` como entrada pública mínima do checkout canônico
 - `docs/WORKFLOW.md` distinguindo worktree hygiene e release hygiene
 - `tests/README.md` refletindo a ladder sem disputar papel com `docs/WORKFLOW.md`
-- `PV_VIVO_E_HISTORICO.md` e `arquivo/contexto/README.md` deixando operacional a leitura da PV viva vs histórica
-- `WORKFLOW_CANONICO_RELEASE_AURY.md`, `CHECKLIST_RELEASE_SEGURA_AURY.md` e `FLUXO_FECHAMENTO_DE_VERSAO_AURY.md` com papéis explícitos e não conflitantes
 
 ### `audit_gate_ladder.py`
 
