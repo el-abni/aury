@@ -6,6 +6,11 @@ ay <pedido>
 aury ajuda
 ay ajuda
 
+USO RÁPIDO
+- use pedidos curtos e explícitos;
+- use ay como alias curto quando preferir;
+- use aury dev <frase> para leitura técnica antes de confiar numa frase maior.
+
 O QUE ELA FAZ
 - pacote do host: procurar, instalar e remover
 - sistema e rede: status, cpu, memória, ip, ping e velocidade da internet
@@ -14,15 +19,38 @@ O QUE ELA FAZ
 - leitura técnica: aury dev <frase>
 
 EXEMPLOS
+Pacotes do host:
 aury instalar firefox
 ay procurar steam
+aury remover vlc
+
+Sistema e rede:
+aury atualizar sistema
+aury otimizar sistema
 aury mostrar cpu
+aury ver cpu e memória
+aury testar internet
+aury velocidade da internet
+
+Arquivos:
 aury criar arquivo teste.txt
+aury criar pasta Relatorios em Downloads
+aury copie a pasta Aury que fica em Documentos para Downloads
+aury mova o arquivo teste.txt que fica em Documentos para Downloads
+aury renomeie o arquivo teste.txt que fica em Downloads para teste-final.txt
+
+Extração e compactação:
+aury extraia pacote.tar.gz para extracao
 aury compactar pasta projetos/ para projetos.tar.gz
+
+Leitura técnica:
 aury dev "instalar firefox"
+aury dev "copie a pasta Aury que fica em Documentos para Downloads"
 
 RECORTE DA LINHA
 - procurar, instalar e remover significam pacote do host.
+- atualizar e otimizar são manutenção local do host no recorte sustentado.
+- linguagem natural é conservadora: prefira frases curtas, com ação e alvo claros.
 - software do usuário, múltiplas origens e hosts imutáveis ficam fora desta linha.
 - aury dev <frase> é o relatório canônico da linha 1.x.
 - aury dev sem frase fica como verificação local curta do adaptador Fish, em uso secundário nesta linha.

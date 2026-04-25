@@ -100,7 +100,7 @@ def assert_help_practical_sections(text: str, source: str) -> None:
     ensure("handoff" not in normalized, f"{source} não deve empurrar o handoff completo para o help")
     ensure("flatpak" not in normalized and "rpm-ostree" not in normalized, f"{source} não deve duplicar a matriz longa de ferramentas observadas")
     non_empty_lines = [line for line in text.splitlines() if line.strip()]
-    ensure(len(non_empty_lines) <= 30, f"{source} precisa permanecer curto e prático")
+    ensure(len(non_empty_lines) <= 60, f"{source} precisa permanecer contido e prático")
 
 
 def assert_public_voice_contract(text: str, source: str) -> None:
@@ -169,28 +169,23 @@ def assert_line_closure_note(text: str, source: str) -> None:
 def assert_readme_state(readme: str) -> None:
     normalized = normalize(readme)
     ensure(CURRENT_VERSION in readme, "README.md precisa citar a versão pública atual")
-    ensure("linha 1.6" in normalized, "README.md precisa manter a linha 1.6.x como referência já entregue")
-    ensure("git_index_file" in normalized, "README.md precisa registrar o uso de GIT_INDEX_FILE no fechamento curto da linha")
-    ensure("stage vazia" in normalized, "README.md precisa explicar a semântica de stage vazia no gate final")
-    ensure_any(
-        normalized,
-        ("fechada", "encerrada"),
-        "README.md precisa tratar a linha 1.6.x como fechada/encerrada",
-    )
-    state_section = readme.partition(f"## Estado público da {CURRENT_VERSION}")[2].partition("## Roadmap")[0]
-    ensure(state_section.strip(), f"README.md precisa manter a seção pública do estado da {CURRENT_VERSION}")
-    scope_hits = concept_hits(
-        normalize(state_section),
-        (
-            ("abertura operacional", "fechamento estrutural", "superficie publica"),
-            ("compactacao local simples", ".zip", ".tar.gz"),
-            ("fronteira fish/python", "fronteira hibrida", "adaptador fish", "nucleo python"),
-            ("workflow canonico", "auditoria publica", "auditoria minima"),
-        ),
-    )
-    ensure(scope_hits >= 2, f"README.md precisa manter o estado da {CURRENT_VERSION} descrito por conceitos centrais, sem depender de uma frase única")
+    for section in (
+        "## O que é",
+        "## Uso rápido",
+        "## Exemplos",
+        "## Linguagem natural",
+        "## Recorte da linha 1.x",
+        "## Instalação",
+        "## Mais detalhes",
+    ):
+        ensure(section in readme, f"README.md precisa manter a seção {section!r}")
+    ensure("ay" in normalized and "alias curto" in normalized, "README.md precisa registrar ay como alias curto")
+    ensure("aury ajuda" in normalized and "ay ajuda" in normalized, "README.md precisa mostrar as chamadas básicas de ajuda")
+    ensure("nao promete entender qualquer frase" in normalized, "README.md precisa manter a linguagem natural conservadora")
+    ensure("aury dev <frase>" in normalized, "README.md precisa apontar para a leitura técnica de aury dev <frase>")
+    ensure("estado publico da" not in normalized, "README.md não deve voltar a duplicar release notes como seção de estado público")
+    ensure("git_index_file" not in normalized and "stage vazia" not in normalized, "README.md não deve duplicar detalhes de workflow")
     assert_package_contract_note(readme, "README.md")
-    assert_final_matrix_note(readme, "README.md")
     assert_aurora_handoff_note(readme, "README.md")
     assert_line_closure_note(readme, "README.md")
     assert_public_voice_contract(readme, "README.md")

@@ -7,42 +7,87 @@
 
 **Aury** é uma assistente de terminal para **Linux** com linha pública **host-centric** e superfície deliberadamente pequena. Hoje ela continua híbrida: o entrypoint público segue em Fish, e o runtime Python rastreado já sustenta `help`, `version`, `aury dev <frase>` e as rotas normais explicitamente migradas.
 
-## O que a Aury é hoje
+## O que é
 
-A Aury não tenta virar uma Aurora menor. A linha `1.x` fecha um recorte pequeno, útil e auditável: pacote do host por família, leituras simples de sistema/rede, arquivos básicos, extração e compactação local simples, com handoff explícito quando o pedido já pertence ao domínio da Aurora.
+A Aury recebe pedidos de terminal em português, tenta enquadrar a ação com segurança e então executa, bloqueia ou volta para o adaptador Fish de forma explícita. O foco público da linha `1.x` é utilidade local pequena: pacote do host, leituras simples de sistema/rede, arquivos básicos, extração e compactação local simples.
 
-A linha 1.x encerrada canonicamente continua a mesma; a `v1.9.9` reorganiza a leitura pública sem reabrir esse contrato.
+A linha 1.x encerrada canonicamente mantém esse recorte. A `v1.9.9` não abre backend, família Linux ou domínio operacional novo.
 
-## O que a linha 1.x faz
+## Uso rápido
 
-- pacote do host: `procurar`, `instalar` e `remover`
-- sistema e rede: status, CPU, memória, IP, ping e velocidade da internet
-- arquivos: criar, copiar, mover, renomear e remover
-- extração e compactação local simples
-- leitura técnica e auditável com `aury dev <frase>`
+```fish
+aury ajuda
+ay ajuda
+aury --version
+aury dev "instalar firefox"
+```
 
-## Contrato público mínimo
+`ay` é o alias curto de `aury`. A saída pública curta usa `✅ | 💜`, `❌ | 💜` e `ℹ️ | 💜`, com mensagens práticas como `Pronto, eu ...`, `Não consegui ...` e `Bloqueado ...`.
 
-- `aury ajuda` e `ay ajuda` renderizam `resources/help.txt` com a `VERSION` da base ativa.
-- `aury --version` e `ay --version` imprimem `💜 Aury <VERSION>` a partir da mesma base ativa.
-- a camada curta de saída usa `✅ | 💜`, `❌ | 💜` e `ℹ️ | 💜`.
-- a forma curta canônica continua sendo `Pronto, eu ...`, `Não consegui ...` e `Bloqueado ...`.
-- `aury dev <frase>` continua sendo o relatório canônico da linha `1.x`.
-- `aury dev` sem frase continua apenas como verificação local curta do adaptador Fish, em uso secundário nesta linha.
-- `procurar`, `instalar` e `remover` continuam significando **pacote do host por família/host**, não software do usuário, app store, múltiplas rotas ou política pública de origem.
-- `atualizar` e `otimizar` continuam como **manutenção do host**: locais em Arch/derivadas mutáveis, fora do recorte equivalente em Debian/Fedora/OpenSUSE e bloqueados por política em Atomic/imutáveis.
+## Exemplos
 
-## Exemplos rápidos
+Pacotes do host:
 
 ```fish
 aury instalar firefox
 ay procurar steam
+aury remover vlc
+```
+
+Sistema e rede:
+
+```fish
+aury atualizar sistema
+aury otimizar sistema
 aury mostrar cpu
 aury ver cpu e memória
+aury testar internet
+aury velocidade da internet
+```
+
+Arquivos:
+
+```fish
 aury criar arquivo teste.txt
+aury criar pasta Relatorios em Downloads
+aury copie a pasta Aury que fica em Documentos para Downloads
+aury mova o arquivo teste.txt que fica em Documentos para Downloads
+aury renomeie o arquivo teste.txt que fica em Downloads para teste-final.txt
+```
+
+Extração, compactação e leitura técnica:
+
+```fish
+aury extraia pacote.tar.gz para extracao
 aury compactar pasta projetos/ para projetos.tar.gz
 aury dev "instalar firefox"
+aury dev "copie a pasta Aury que fica em Documentos para Downloads"
 ```
+
+## Linguagem natural
+
+A Aury aceita algumas frases naturais conservadoras, principalmente quando a ação e o alvo estão claros. Ela não promete entender qualquer frase.
+
+Use `aury dev <frase>` quando quiser uma leitura técnica antes de confiar numa frase maior. Esse relatório mostra o enquadramento da ação e se a rota fica no runtime Python, volta para o adaptador Fish ou sai do recorte atual.
+
+`aury dev` sem frase é só uma verificação local curta do adaptador Fish, em uso secundário nesta linha.
+
+## Recorte da linha 1.x
+
+- `procurar`, `instalar` e `remover` significam **pacote do host por família/host**.
+- `atualizar` e `otimizar` pertencem à manutenção local do host no recorte sustentado.
+- sistema e rede cobrem leituras simples como CPU, memória, IP, ping e velocidade da internet.
+- arquivos cobrem criação, cópia, movimento, renomeação e remoção nos casos seguros já sustentados.
+- extração e compactação continuam locais e simples.
+
+Limites honestos:
+
+- a linha não cobre software do usuário, app store, múltiplas rotas, múltiplas fontes nem política pública de origem;
+- a linha não promete flatpak, rpm-ostree, AUR, hosts imutáveis ou equivalência multi-distro;
+- `aury velocidade da internet` depende de `librespeed-cli` e `python3` disponíveis no ambiente;
+- frases ambíguas ou fora do recorte devem falhar, bloquear ou voltar para fallback honesto.
+
+Quando o pedido já envolve software do usuário, múltiplas origens, política de origem/source/trust, suporte real a hosts imutáveis ou rotas mais altas de decisão, o domínio pertence à Aurora, não à Aury 1.x.
 
 ## Instalação
 
@@ -52,77 +97,15 @@ cd aury
 ./install.sh
 ```
 
-O fluxo público instala:
+A instalação pública assume **Fish** e **python3** disponíveis no host. Depois de instalar, use `aury ajuda` para ver a superfície operacional curta.
 
-- `~/.config/fish/functions/aury.fish`
-- `~/.config/fish/functions/ay.fish`
-- `~/.local/share/aury/python/`
-- `~/.local/share/aury/resources/`
-- `~/.local/share/aury/VERSION`
-- `~/.local/share/aury/LICENSE.md`
+## Mais detalhes
 
-A instalação pública assume **Fish** e **python3** disponíveis no host.
-
-## Uso
-
-```fish
-aury ajuda
-ay ajuda
-aury --version
-aury dev "ver cpu e memória"
-```
-
-No checkout local, `source bin/aury.fish` usa o próprio root do repositório como base ativa. Na instalação, a base ativa passa a ser `~/.local/share/aury`.
-
-## Limites honestos
-
-- a `v1.9.9` encerra a compatibilidade Linux da linha `1.x` sem abrir backend, família, operação ou host novo
-- o runtime Python atual cobre `help`, `version`, `dev <frase>`, algumas leituras simples de sistema/rede, `criar arquivo`, `criar pasta` e a política de pacote por host Linux; o restante continua voltando ao adaptador Fish
-- a linha não promete paridade simétrica entre famílias Linux nem manutenção do host multi-distro
-- a linha não abre software do usuário, app store, múltiplas rotas nem política pública de origem
-- Atomic, Universal Blue, `opensuse-microos`, `microos` e equivalentes continuam fora por política de host
-- `aury velocidade da internet` depende de `librespeed-cli` e `python3` disponíveis no ambiente
-- a compactação local simples continua curta: um único arquivo ou uma única pasta, saída explícita e apenas `.zip` ou `.tar.gz`
-
-## Estado público da v1.9.9
-
-- a linha 1.6.x permanece como referência histórica já entregue e encerrada da base híbrida pública anterior
-- a `v1.9.0` fechou a base híbrida contida; a `v1.9.1` até a `v1.9.8` fecharam a compatibilidade Linux host-centric; a `v1.9.9` só fecha organização pública, help curto e release hygiene sobre essa mesma superfície pública
-- `aury dev <frase>` continua auditável, com fronteira explícita entre núcleo Python, adaptador Fish, política de host e fallback honesto
-- `criar arquivo` e `criar pasta` permanecem como micro-recorte operacional já sustentado no runtime Python
-- a compactação local simples herdada da `v1.7.0` continua curta por decisão de produto, não por esquecimento
-- a matriz final permanece congelada: **suportado agora** em Arch, Debian/Ubuntu e Fedora mutável; **suportado contido** em OpenSUSE mutável; bloco **bloqueado por política** em Atomic, Universal Blue, `opensuse-microos` e `microos`
-- `flatpak` e `rpm-ostree` seguem apenas como ferramentas observadas fora do contrato ativo
-- o handoff final continua explícito: software do usuário, múltiplas origens, política de origem/source/trust e suporte operacional real a hosts imutáveis pertencem à Aurora, não à Aury `1.x`
-
-## Leitura do checkout canônico
-
-- a única raiz viva é o checkout Git de topo; `./aury/` permanece apenas como artefato histórico/aninhado
-- o entrypoint público continua em `bin/aury.fish`
-- o bridge Python vivo da borda híbrida fica em `python/aury/fish_bridge.py`
-- `python/aury/cli.py` continua apenas como shim de compatibilidade para imports históricos
-
-## Workflow curto
-
-```bash
-bash tests/preflight_canonico.sh
-bash tests/worktree_gate_minimo.sh
-bash tests/release_gate_minimo.sh
-```
-
-- `preflight_canonico.sh` é a checagem curta da rodada e não inspeciona a stage pública
-- `worktree_gate_minimo.sh` fecha a **worktree hygiene** antes de qualquer staging público
-- `release_gate_minimo.sh` fecha a **release hygiene** da stage pública explícita
-- falha por **stage vazia** no gate final não indica regressão funcional; indica apenas que a rodada ainda não entrou no degrau final
-- quando a seleção staged precisar ser validada sem tocar na stage real do usuário, a prática canônica continua sendo usar `GIT_INDEX_FILE`
-
-## Documentação
-
-- [Compatibilidade](docs/COMPATIBILITY.md): contrato host-centric, matriz final, manutenção do host e handoff para a Aurora
-- [Workflow](docs/WORKFLOW.md): ladder mínima, worktree hygiene, release hygiene e uso de `GIT_INDEX_FILE`
-- [Arquitetura](docs/ARCHITECTURE.md): ownership, entrypoint vivo e fronteira Fish/Python
-- [Base de testes](tests/README.md): audits, smokes, gates e papel executável da pasta `tests/`
-- [Changelog](CHANGELOG.md): histórico das releases públicas e shape atual da `v1.9.9`
+- [Compatibilidade](docs/COMPATIBILITY.md): contrato host-centric, matriz final, manutenção do host e handoff para a Aurora.
+- [Workflow](docs/WORKFLOW.md): gates, worktree hygiene e release hygiene.
+- [Arquitetura](docs/ARCHITECTURE.md): fronteira Fish/Python, ownership e base instalada.
+- [Base de testes](tests/README.md): audits, smokes e gates públicos.
+- [Changelog](CHANGELOG.md): histórico das releases públicas.
 
 Ordem de leitura pública: `README.md` -> `docs/COMPATIBILITY.md` -> `docs/WORKFLOW.md` -> `docs/ARCHITECTURE.md` -> `tests/README.md` -> `CHANGELOG.md`.
 

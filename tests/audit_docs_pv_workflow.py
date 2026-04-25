@@ -33,12 +33,8 @@ def main() -> int:
     ensure("docs/compatibility.md" in readme_n, "README.md precisa apontar para docs/COMPATIBILITY.md")
     ensure("docs/workflow.md" in readme_n, "README.md precisa apontar para docs/WORKFLOW.md")
     ensure("tests/readme.md" in readme_n, "README.md precisa apontar para tests/README.md")
-    ensure("python/aury/fish_bridge.py" in readme, "README.md precisa citar python/aury/fish_bridge.py")
-    ensure("python/aury/cli.py" in readme, "README.md precisa citar python/aury/cli.py")
-    ensure("release_gate_minimo.sh" in readme, "README.md precisa citar release_gate_minimo.sh")
-    ensure("worktree_gate_minimo.sh" in readme, "README.md precisa citar worktree_gate_minimo.sh")
     ensure("ordem de leitura" in readme_n, "README.md precisa explicitar a ordem de leitura pública")
-    ensure("documentacao" in readme_n, "README.md precisa manter a indexação pública de documentação")
+    ensure("mais detalhes" in readme_n, "README.md precisa manter a indexação pública de documentação")
     ensure("contrato" in readme_n and "workflow" in readme_n and "arquitetura" in readme_n, "README.md precisa distinguir os papéis de contrato, workflow e arquitetura")
 
     workflow = read("docs/WORKFLOW.md")
